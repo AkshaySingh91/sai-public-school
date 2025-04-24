@@ -16,7 +16,7 @@ function ProtectedApp() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navbar now receives role from context */}
-      <AppRoutes />
+      <AppRoutes/>
     </div>
   );
 }
