@@ -11,12 +11,12 @@ function ProtectedApp() {
     // Show only login page if not logged in.
     return <Navigate to="/login" replace />;
   }
-
+  // new line
   // now user have firebase auth access & he also exisit in user schema , we just need to check role
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Navbar now receives role from context */}
-      <AppRoutes />
+      <AppRoutes/>
     </div>
   );
 }
