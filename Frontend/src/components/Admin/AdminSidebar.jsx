@@ -7,7 +7,7 @@ import {
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useState } from "react";
-
+//hello dost kaisa h
 const menuItems = [
     { icon: FiActivity, text: "Dashboard", path: "/" },
     { icon: FiUsers, text: "Students", path: "/students" },
