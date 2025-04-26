@@ -21,6 +21,26 @@ const menuItems = [
         ]
     },
     { icon: FiBook, text: "Employee", path: "/employee" },
+    {
+        icon: FiHome,
+        text: "Transport",
+        path: "/transport",
+        subItems: [
+            { text: "Bus List", path: "/buslist" },
+            { text: "Bus Destination", path: "/busdest" },
+            { text: "Bus Allocation", path: "/busallocate" },
+        ]
+    },
+    {
+        icon: FiHome,
+        text: "Stock Management",
+        path: "/stock",
+        subItems: [
+            { text: "Stock Master", path: "/stocklist" },
+            { text: "Stock Group", path: "/stockgroup" },
+            { text: "Stock Allocation", path: "/stockallocate" },
+        ]
+    },
     { icon: FiPieChart, text: "Analytics", path: "/analytics" },
     { icon: FiHelpCircle, text: "Help center", path: "/help-center" },
     { icon: FiBell, text: "Notice", path: "/notice" },
