@@ -12,7 +12,13 @@ import AddStudent from './Student/AddStudent';
 import StudentDetail from './Student/StudentDetail';
 import FeeReceiptPage from './Student/FeeReceiptPage';
 import DailyBook from './Student/DailyBook';
-import OutstandingFee from './Student/OutstandingFee';
+import OutstandingFee from './Student/OutstandingFee';import { Bus } from 'lucide-react';
+import BusList from './Student/BusList';
+import BusDestination from './Student/BusDestination';
+import BusAllocation from './Student/BusAllocation';
+import StockList from './Student/StockList';
+import StockGroup from './Student/StockGroup';
+
 const AdminLayout = () => {
   return (
     <div className="bg-gray-50 min-h-screen overflow-hidden">
@@ -46,6 +52,11 @@ const AdminIndex = () => {
           path="/student/:studentId/receipt/:receiptId"
           element={<FeeReceiptPage />}
         />
+        <Route path="/buslist" element={<BusList/>}/>
+        <Route path='/busdest' element={<BusDestination/>}/>
+        <Route path='/busallocate' element={<BusAllocation/>}/>
+        <Route path='/stocklist' element={<StockList/>}/>
+        <Route path='/stockgroup' element={<StockGroup/>}/>
       </Route>
     </Routes>
   );
