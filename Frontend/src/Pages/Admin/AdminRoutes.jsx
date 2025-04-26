@@ -10,6 +10,12 @@ import PaymentStructure from './Schools/SchoolPaymentStructure';
 import StudentList from './Student/StudentList';
 import AddStudent from './Student/AddStudent';
 import StudentDetail from './Student/StudentDetail';
+import { Bus } from 'lucide-react';
+import BusList from './Student/BusList';
+import BusDestination from './Student/BusDestination';
+import BusAllocation from './Student/BusAllocation';
+import StockList from './Student/StockList';
+import StockGroup from './Student/StockGroup';
 
 const AdminLayout = () => {
   return (
@@ -37,6 +43,11 @@ const AdminIndex = () => {
         <Route path="/students" element={<StudentList />} />
         <Route path="/students/add" element={<AddStudent />} />
         <Route path="/student/:studentId" element={<StudentDetail />} />
+        <Route path="/buslist" element={<BusList/>}/>
+        <Route path='/busdest' element={<BusDestination/>}/>
+        <Route path='/busallocate' element={<BusAllocation/>}/>
+        <Route path='/stocklist' element={<StockList/>}/>
+        <Route path='/stockgroup' element={<StockGroup/>}/>
       </Route>
     </Routes>
   );

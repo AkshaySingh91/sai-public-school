@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Wallet, Save } from 'lucide-react';
 
-export default function FeeManagement({ student, transactions, handleFeeUpdate }) {
+export default function FeeManagement({ student, transactions, handleFeeUpdate,formData,setFormData }) {
     // local copy of fees
     const [fees, setFees] = useState({
         // ensure the shape exists immediately
@@ -36,6 +36,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate }
 
     // whenever any contributing field changes, recompute school total and summary
     useEffect(() => {
+        console.log("formData",formData);
         const tuition = Number(fees.schoolFees?.TutionFees) || 0;
         const academic = Number(fees.schoolFees?.AcademicFees) || 0;
         console.log(fees.schoolFees)

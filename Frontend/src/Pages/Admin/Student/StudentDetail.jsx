@@ -76,6 +76,7 @@ export default function StudentDetail() {
 
     const handleStudentUpdate = async () => {
         try {
+            
             await updateDoc(doc(db, 'students', studentId), formData);
             Swal.fire('Success!', 'Student details updated', 'success');
         } catch (error) {
@@ -86,7 +87,7 @@ export default function StudentDetail() {
     const handleFeeUpdate = async (updatedFees) => {
         try {
             await updateDoc(doc(db, 'students', studentId), { 'allFee': updatedFees });
-            setStudent(prev => ({ ...prev, allFee: updatedFees }));
+            setStudent(prev => ({ ...prev, allFee: updatedFees, }));
             Swal.fire('Success!', 'Fee structure updated', 'success');
         } catch (error) {
             Swal.fire('Error', error.message, 'error');
@@ -150,13 +151,15 @@ export default function StudentDetail() {
                         ))}
                     </div>
 
-                    {activeTab === 0 && <PersonalInfo formData={formData} setFormData={setFormData} student={student} />}
+                    {activeTab === 0 && <PersonalInfo formData={formData}  setFormData={setFormData} studentId={student} handleFeeUpdate={handleFeeUpdate} />}
 
                     {activeTab === 1 && (
                         <div className="space-y-6">
                             <FeeManagement
                                 student={student}
                                 transactions={transactions}
+                                formData={formData}
+                                setFormData={setFormData}
                                 handleFeeUpdate={handleFeeUpdate}
                             />
                             <TransactionForm
@@ -164,6 +167,8 @@ export default function StudentDetail() {
                                 setNewTransaction={setNewTransaction}
                                 student={student}
                                 schoolData={schoolData}
+                                formData={formData}
+                                setFormData={setFormData}
                                 handleTransactionSubmit={handleTransactionSubmit}
                             />
                         </div>
