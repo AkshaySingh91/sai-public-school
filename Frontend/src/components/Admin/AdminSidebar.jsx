@@ -10,7 +10,17 @@ import { useState } from "react";
 
 const menuItems = [
     { icon: FiActivity, text: "Dashboard", path: "/" },
-    { icon: FiUsers, text: "Students", path: "/students" },
+    {
+        icon: FiUsers,
+        text: "Students",
+        path: "/students",
+        subItems: [
+            { text: "All Student", path: "/students" },
+            { text: "Daily Book", path: "/students/daily-book" },
+            { text: "Outstanding Fees", path: "/students/outstanding-fee" },
+            { text: "Student reports", path: "/students/reports" },
+        ]
+    },
     {
         icon: FiHome,
         text: "School",

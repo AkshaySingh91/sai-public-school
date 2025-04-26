@@ -5,7 +5,7 @@ import {
 import { InputField } from './InputField'
 import { SelectField } from './SelectField'
 
-function TransactionForm({ newTransaction, setNewTransaction, student, schoolData, handleTransactionSubmit }) {
+function TransactionForm({ newTransaction, setNewTransaction, schoolData, handleTransactionSubmit, student }) {
     return (
         <>
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -15,10 +15,10 @@ function TransactionForm({ newTransaction, setNewTransaction, student, schoolDat
                 </h3>
 
                 <form onSubmit={handleTransactionSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SelectField
+                    <InputField
                         icon={<CalendarDays />}
                         label="Academic Year"
-                        options={schoolData.feeStructures?.map(s => s.year) || []}
+                        type="text"
                         value={newTransaction.academicYear}
                         onChange={(e) => setNewTransaction({ ...newTransaction, academicYear: e.target.value })}
                     />
@@ -50,7 +50,8 @@ function TransactionForm({ newTransaction, setNewTransaction, student, schoolDat
                     <SelectField
                         icon={<FileTextIcon />}
                         label="Fee Type"
-                        options={schoolData.feeTypes || []}
+                        // schoolData.feeTypes will only have AcademicFee, TutionFee that only school fees thus we need to add all fee
+                        options={["SchoolFee", "MessFee", "HostelFee", "TransportFee"]}
                         value={newTransaction.feeType}
                         onChange={(e) => setNewTransaction({ ...newTransaction, feeType: e.target.value })}
                     />

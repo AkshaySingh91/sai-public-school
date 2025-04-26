@@ -1,0 +1,33 @@
+
+{
+    "academicYear": "2425",
+    allFee = {
+        lastYearBalanceFee: 0,
+        lastYearDiscount: 0,
+        lastYearTransportFee: 0,
+        lastYearTransportFeeDiscount: 0,
+        schoolFees: { ...baseFees, total: 12131 }, 
+        schoolFeesDiscount: 1311, 
+        transportFee: 0,
+        transportFeeDiscount: 0,
+        messFee: 0,
+        hostelFee: 0,
+      };
+    "busStop": "dest 5",
+    "class": "Nursery",
+    "createdAt": "26 April 2025 at 14:17:20 UTC+5:30",
+    "dob": "2023-04-09",
+    "fatherName": "sdfasd",
+    "feeId": "FEE-B43N8L",
+    "fname": "new",
+    "gender": "Male",
+    "id": "kNDEak3GGCKDYOXsu8s",
+    "lname": "sdf",
+    "mname": "",
+    "motherName": "dfdf",
+    "schoolCode": "12",
+    "status": "active",
+    "transactions": [], 
+    "type": "DSS"
+  }
+  

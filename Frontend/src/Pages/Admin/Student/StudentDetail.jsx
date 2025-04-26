@@ -54,6 +54,7 @@ export default function StudentDetail() {
                 const schoolData = schoolDoc.data(); // Get the data from the document 
 
                 setSchoolData(schoolDoc.data());
+                console.log({ studentData })
                 setNewTransaction(prev => ({
                     ...prev,
                     academicYear: studentData.academicYear,
@@ -95,11 +96,69 @@ export default function StudentDetail() {
 
     const handleTransactionSubmit = async (e) => {
         e.preventDefault();
+        // Check for empty fields
+        const requiredFields = [
+            { key: 'academicYear', name: 'Academic Year' },
+            { key: 'paymentMode', name: 'Payment Mode' },
+            { key: 'account', name: 'Account' },
+            { key: 'date', name: 'Date' },
+            { key: 'feeType', name: 'Fee Type' },
+            { key: 'amount', name: 'Amount' }
+        ];
+
+        // Check for empty required fields
+        for (const field of requiredFields) {
+            if (!newTransaction[field.key] || newTransaction[field.key].trim() === '') {
+                Swal.fire('Validation Error', `${field.name} is required.`, 'error');
+                return;
+            }
+        }
+
+        // Validate academic year format (format like "24-25")
+        const academicYearRegex = /^\d{2}-\d{2}$/;
+        if (!academicYearRegex.test(newTransaction.academicYear)) {
+            Swal.fire('Validation Error', 'Academic Year should be in format YY-YY (e.g., 24-25)', 'error');
+            return;
+        }
+        // Validate date format
+        if (isNaN(new Date(newTransaction.date).getTime())) {
+            Swal.fire('Validation Error', 'Please enter a valid date', 'error');
+            return;
+        }
+
+        // Validate amount (must be a positive number)
+        const amount = parseFloat(newTransaction.amount);
+        if (isNaN(amount) || amount <= 0) {
+            Swal.fire('Validation Error', 'Amount must be a positive number', 'error');
+            return;
+        }
+
+        // Validate payment mode from available options
+        if (!schoolData.paymentModes?.includes(newTransaction.paymentMode)) {
+            Swal.fire('Validation Error', 'Please select a valid Payment Mode', 'error');
+            return;
+        }
+
+        // Validate account from available options
+        const validAccounts = schoolData.accounts?.map(a => `${a.AccountNo} (${a.Branch})`) || [];
+        if (!validAccounts.includes(newTransaction.account)) {
+            Swal.fire('Validation Error', 'Please select a valid Account', 'error');
+            return;
+        }
+
+        // Validate fee type from available options
+        const validFeeTypes = ["SchoolFee", "MessFee", "HostelFee", "TransportFee"];
+        if (!validFeeTypes.includes(newTransaction.feeType)) {
+            Swal.fire('Validation Error', 'Please select a valid Fee Type', 'error');
+            return;
+        }
+
         try {
             const transaction = {
                 ...newTransaction,
                 receiptId: `${student.feeId}-${nanoid(4)}`,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                amount: amount // Store as number, not string
             };
 
             const updatedTransactions = [...transactions, transaction];
@@ -162,18 +221,16 @@ export default function StudentDetail() {
                             <TransactionForm
                                 newTransaction={newTransaction}
                                 setNewTransaction={setNewTransaction}
-                                student={student}
                                 schoolData={schoolData}
                                 handleTransactionSubmit={handleTransactionSubmit}
+                                student={student}
                             />
                         </div>
                     )}
 
-                    {activeTab === 2 && <TransactionHistory transactions={transactions} />}
+                    {activeTab === 2 && <TransactionHistory student={student} transactions={transactions} setTransactions={setTransactions} />}
                 </div>
             </div>
         </div>
     );
 }
-
-

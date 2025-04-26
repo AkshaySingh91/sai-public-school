@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -21,7 +21,63 @@ const StudentList = () => {
     div: 'all',
     search: ''
   });
+  const { activeRows, inactiveRows } = useMemo(() => {
+    const processStudents = (statusFilter) => {
+      const classMap = new Map();
 
+      students.filter(s => s.status === statusFilter).forEach(student => {
+        const cls = student.class || 'Unknown';
+        const existing = classMap.get(cls) || {
+          lastYear: 0,
+          original: 0,
+          discount: 0,
+          paid: 0,
+          count: 0
+        };
+        console.log({ existing })
+        const fees = student.allFee || {};
+
+        // Last Year Fees
+        existing.lastYear += (fees.lastYearTransportFee || 0) + (fees.lastYearBalanceFee || 0);
+        console.log(fees, existing.lastYear)
+        // Original Fees (pre-discount totals)
+        existing.original += (fees.schoolFees?.total || 0) + (fees.transportFee || 0) + (fees.messFee || 0) + (fees.hostelFee || 0) + (fees.transportFeeDiscount || 0) + (fees.schoolFeesDiscount || 0);
+
+        // Discounts
+        const discounts = (fees.schoolFeesDiscount || 0) + (fees.transportFeeDiscount || 0);
+        existing.discount += discounts;
+
+        console.log({ existing })
+        // Paid Amounts
+        const paid = (student.transactions || [])
+          .filter(t => t.academicYear === student.academicYear)
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        existing.paid += paid;
+        console.log(classMap.get(cls))
+        existing.count += 1;
+        classMap.set(cls, existing);
+      });
+
+      return Array.from(classMap.entries()).map(([cls, data], index) => ({
+        no: index + 1,
+        class: cls,
+        students: data.count,
+        lastYear: data.lastYear,
+        original: data.original,
+        discount: data.discount,
+        afterDiscount: data.original - data.discount,
+        paid: data.paid,
+        outstanding: (data.original - data.discount) - data.paid
+      }));
+    };
+
+    return {
+      activeRows: processStudents('active'),
+      inactiveRows: processStudents('inactive')
+    };
+  }, [students]);
+
+  console.log(activeRows, inactiveRows)
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -40,7 +96,16 @@ const StudentList = () => {
       setStudents(list);
       console.log({ list })
       setFilteredStudents(list);
-
+      const l = list.reduce((sum, stu) => {
+        return (stu.allFee?.lastYearBalanceFee || 0) + (stu.allFee?.lastYearTransportFee || 0)
+      })
+      const c = list.reduce((sum, stu) => {
+        return (stu.allFee?.hostelFee || 0) + (stu.allFee?.messFee || 0) + (stu.allFee?.schoolFeesDiscount || 0) + (stu.allFee?.transportFee || 0) + (stu.allFee?.transportFeeDiscount || 0) + (stu.allFee?.schoolFees?.total || 0)
+      })
+      const a = list.reduce((sum, stu) => {
+        return (stu.allFee?.hostelFee || 0) + (stu.allFee?.messFee || 0) + (stu.allFee?.transportFee || 0) + + (stu.allFee?.schoolFees?.total || 0)
+      })
+      console.log({ l, c, a })
       // Extract unique classes and divisions
       const uniqueClasses = [...new Set(list.map(s => s.class))];
       setClasses(uniqueClasses);
@@ -60,7 +125,14 @@ const StudentList = () => {
 
       return matchesSearch && matchesClass && matchesDiv;
     });
-
+    let s = 0;
+    // console.log(students)
+    // students[0].transactions.forEach((t) => {
+    //   if (t.academicYear === students[0].academicYear) {
+    //     s += t.amount
+    //   }
+    // })
+    // console.log(s)
     setFilteredStudents(result);
     setCurrentPage(1);
   }, [filters, students]);
