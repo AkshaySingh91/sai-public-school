@@ -4,11 +4,11 @@ import { Wallet, Save } from 'lucide-react';
 import { PieChart, FeeBar } from './FeeVisualizations';
 import { SchoolFeeInputs, OtherFeeInputs } from './FeeInputs';
 
-export default function FeeManagement({ student, transactions, handleFeeUpdate,formData,setFormData }) {
+export default function FeeManagement({ student, transactions, handleFeeUpdate, formData, setFormData }) {
     // local copy of fees
     const [fees, setFees] = useState({
         // ensure the shape exists immediately
-        schoolFees: { AcademicFees: 0, TutionFees: 0, total: 0 },
+        schoolFees: { AcademicFee: 0, TutionFee: 0, total: 0 },
         messFee: 0,
         hostelFee: 0,
         transportFee: 0,
@@ -39,24 +39,26 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate,f
 
     // whenever any contributing field changes, recompute school total and summary
     useEffect(() => {
-        console.log("formData",formData);
-        const tuition = Number(fees.schoolFees?.TutionFees) || 0;
-        const academic = Number(fees.schoolFees?.AcademicFees) || 0;
-        const schoolTotal = tuition + academic;
+        if (((fees.schoolFees?.total || 0) > 0) && (fees.messFee >= 0) && (fees.hostelFee >= 0) && (fees.transportFee >= 0)) {
+            console.log("formData", formData);
+            const tution = Number(fees.schoolFees?.TutionFee) || 0;
+            const academic = Number(fees.schoolFees?.AcademicFee) || 0;
+            const schoolTotal = tution + academic;
+            console.log({ fees })
+            const mess = Number(fees.messFee) || 0;
+            const hostel = Number(fees.hostelFee) || 0;
+            const transport = Number(fees.transportFee) || 0;
 
-        const mess = Number(fees.messFee) || 0;
-        const hostel = Number(fees.hostelFee) || 0;
-        const transport = Number(fees.transportFee) || 0;
+            setFees((prev) => ({
+                ...prev,
+                schoolFees: { ...prev.schoolFees, total: schoolTotal },
+            }));
 
-        setFees((prev) => ({
-            ...prev,
-            schoolFees: { ...prev.schoolFees, total: schoolTotal },
-        }));
-
-        setSummaryTotal(schoolTotal + mess + hostel + transport);
+            setSummaryTotal(schoolTotal + mess + hostel + transport);
+        }
     }, [
-        fees.schoolFees?.TutionFees,
-        fees.schoolFees?.AcademicFees,
+        fees.schoolFees?.TutionFee,
+        fees.schoolFees?.AcademicFee,
         fees.messFee,
         fees.hostelFee,
         fees.transportFee,
@@ -100,22 +102,15 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate,f
             lastYearPaid: { balance: 0, transport: 0 }
         });
     }, [transactions, student.academicYear]);
-
+    console.log(currentYearPaid, lastYearPaid)
     // Calculate current year totals
     const currentYearTotals = useMemo(() => ({
-        SchoolFee: (fees.schoolFees?.AcademicFees || 0) + (fees.schoolFees?.TutionFees || 0),
+        SchoolFee: (fees.schoolFees?.AcademicFee || 0) + (fees.schoolFees?.TutionFee || 0),
         TransportFee: fees.transportFee || 0,
         MessFee: fees.messFee || 0,
         HostelFee: fees.hostelFee || 0
     }), [fees]);
 
-    // Calculate remaining amounts
-    const currentYearRemaining = useMemo(() => ({
-        SchoolFee: currentYearTotals.SchoolFee - currentYearPaid.SchoolFee,
-        TransportFee: currentYearTotals.TransportFee - currentYearPaid.TransportFee,
-        MessFee: currentYearTotals.MessFee - currentYearPaid.MessFee,
-        HostelFee: currentYearTotals.HostelFee - currentYearPaid.HostelFee
-    }), [currentYearTotals, currentYearPaid]);
 
     return (
         <div className="space-y-8">
@@ -159,13 +154,13 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate,f
                             <PieChart
                                 title="Last Year School Balance"
                                 paid={lastYearPaid.balance}
-                                total={fees.lastYearBalanceFee}
+                                total={fees.lastYearBalanceFee + lastYearPaid.balance}
                                 color="#7e22ce"
                             />
                             <PieChart
                                 title="Last Year Transport Balance"
                                 paid={lastYearPaid.transport}
-                                total={fees.lastYearTransportFee}
+                                total={fees.lastYearTransportFee + lastYearPaid.transport}
                                 color="#3b82f6"
                             />
                         </div>

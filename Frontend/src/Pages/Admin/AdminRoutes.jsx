@@ -12,7 +12,7 @@ import AddStudent from './Student/AddStudent';
 import StudentDetail from './Student/StudentDetail';
 import FeeReceiptPage from './Student/FeeReceiptPage';
 import DailyBook from './Student/DailyBook';
-import OutstandingFee from './Student/OutstandingFee';import { Bus } from 'lucide-react';
+import FeeReportContainer from './Student/FeeReportContainer'; 
 import BusList from './Student/BusList';
 import BusDestination from './Student/BusDestination';
 import BusAllocation from './Student/BusAllocation';
@@ -46,7 +46,7 @@ const AdminIndex = () => {
         <Route path="/students/add" element={<AddStudent />} />
         <Route path="/student/:studentId" element={<StudentDetail />} />
         <Route path="/students/daily-book" element={<DailyBook />} />
-        <Route path="/students/outstanding-fee" element={<OutstandingFee />} />
+        <Route path="/students/outstanding-fee" element={<FeeReportContainer />} />
         <Route path="/students/reports" element={<StudentDetail />} />
         <Route
           path="/student/:studentId/receipt/:receiptId"

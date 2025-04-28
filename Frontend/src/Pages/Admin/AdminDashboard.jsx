@@ -95,69 +95,9 @@ const AdminDashboard = () => {
                         <span>Girls: 1000</span>
                     </div>
                 </div>
-
-                <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
-                    <div className="flex flex-col lg:flex-row justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold mb-2 lg:mb-0">Attendance</h2>
-                        <div className="flex space-x-2">
-                            <select className="border rounded-lg px-3 py-1 text-sm focus:outline-none">
-                                <option>This week</option>
-                                <option>Last week</option>
-                            </select>
-                            <select className="border rounded-lg px-3 py-1 text-sm focus:outline-none">
-                                <option>Class 10</option>
-                                <option>Class 9</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div className="aspect-video bg-gray-100 rounded-xl animate-pulse"></div>
-                </div>
             </div>
 
-            {/* Notice Board */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
-                <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold">Notice Board</h2>
-                        <button className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors">
-                            <FiPlus className="text-lg" />
-                        </button>
-                    </div>
 
-                    <div className="space-y-4">
-                        {notices.map((notice, index) => (
-                            <motion.div
-                                key={index}
-                                whileHover={{ scale: 1.02 }}
-                                className="p-4 hover:bg-gray-50 rounded-lg transition-colors"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-12 h-12 bg-gray-100 rounded-lg animate-pulse"></div>
-                                        <div>
-                                            <p className="font-medium">{notice.title}</p>
-                                            <p className="text-gray-500 text-sm">{notice.date}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center space-x-3">
-                                        <span className="bg-blue-100 text-blue-500 px-3 py-1 rounded-full text-sm">
-                                            {notice.views}
-                                        </span>
-                                        <button className="text-gray-400 hover:text-gray-600">
-                                            •••
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm">
-                    <h2 className="text-lg font-bold mb-4">Event Calendar</h2>
-                    <div className="aspect-square bg-gray-100 rounded-xl animate-pulse"></div>
-                </div>
-            </div>
         </div>
     );
 };
