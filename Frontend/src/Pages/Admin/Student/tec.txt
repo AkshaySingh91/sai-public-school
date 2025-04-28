@@ -170,5 +170,14 @@ Employee:
 i have to create a dashboard where i will show different statistic some of like: 
 1. header :  
   A: we will show total no of students, whose Code = userData.SchoolCode & status active (means they dont left)
-  B: total staff 
- 
+  B: total staff will get from Employee schema whose 
+  C: total teacher from Employee schema whose type: "Teaching"
+2. on left show different card: 
+    A. Todays Collection (eg; 12,300) it is sum of amount of transaction happend in past 24hrs
+    B. Discounted amount: it is sum of allFee.transportFeeDiscount + allFee.schoolFeesDiscount of all student whose academicYear(eg; "24-25") equal to school.academicYear & student status = "active"
+    C. Expected Collection (eg; 1,12,300): it is sum of allFee.schoolFee.total + allFee.hostelFee + allFee.transportFee + allFee.messFee for all student of academicYear = school.academicYear   
+    D. Collected Fee Till date: sum of all transaction  for all student whose transaction academic = school.academicYear
+    E. pending Fee: Expected - Collected fee Till date
+    F. lastYearBalanceFee: it is sum of allfee.lastYearBalanceFee + allFee.lastYearTransportFee for all student
+3. Card showing beautiful pie Charts showing total no of  girsl & Boys in school & there count , we can get it from schoolSchema whose Code = userData.schoolCode using student.Gender & only inc  student whose status = "active"
+give complete & beautiful dashboard with best UI use as many line of code as you wont you can also include other analytic also based on provided data & schema & give complete code

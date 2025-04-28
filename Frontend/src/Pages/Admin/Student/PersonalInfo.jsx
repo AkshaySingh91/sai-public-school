@@ -17,13 +17,44 @@ import {
 import { InputField } from "./InputField";
 import { SelectField } from "./SelectField";
 import { db } from "../../../config/firebase";
-import { doc, getDoc, collection, getDocs, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 
-export default function PersonalInfo({ formData, setFormData, studentId, handleFeeUpdate, schoolData, handleClassChange }) {
+export default function PersonalInfo({
+  formData,
+  setFormData,
+  studentId,
+  handleFeeUpdate, schoolData, handleClassChange,
+}) {
+
+  // State variables
   const [destinationOptions, setDestinationOptions] = useState([]);
   const [busOptions, setBusOptions] = useState([]);
   const [selectedBus, setSelectedBus] = useState(null);
   const [transportDiscount, setTransportDiscount] = useState(0);
+  console.log('formData', formData);
+  const handleDivChange = async (e) => {
+    const newDiv = e.target.value;
+    setFormData({ ...formData, div: newDiv });
+
+    // Update the division in Firestore
+    if (studentId && studentId.id) {
+      try {
+        const studentRef = doc(db, "students", studentId.id);
+        await updateDoc(studentRef, {
+          div: newDiv, // Update the division field in Firestore
+        });
+        console.log("Division updated successfully in Firestore.");
+      } catch (err) {
+        console.error("Error updating division in Firestore:", err);
+      }
+    }
+  };
 
   // Fetch destinations
   useEffect(() => {
@@ -35,6 +66,7 @@ export default function PersonalInfo({ formData, setFormData, studentId, handleF
           ...doc.data(),
         }));
         setDestinationOptions(destinations);
+        console.log("destinationOptions", destinationOptions);
       } catch (err) {
         console.error("Error fetching destinations:", err);
       }
@@ -44,26 +76,40 @@ export default function PersonalInfo({ formData, setFormData, studentId, handleF
 
   // Handle bus stop selection
   const handleBusStopChange = async (e) => {
-    const selectedName = e.target.value;
-    setFormData({ ...formData, busStop: selectedName });
-    setSelectedBus(null);
-    setTransportDiscount(0);
+    const selectedName = e.target.value; // Get the selected bus stop name
+    setFormData({ ...formData, busStop: selectedName }); // Update local state
 
     try {
+      // Update the busStop field in Firestore for the current student
+      if (studentId) {
+        const studentRef = doc(db, "students", studentId.id);
+        await updateDoc(studentRef, {
+          busStop: selectedName, // Save the bus stop name in Firestore
+        });
+
+        console.log("Bus stop updated successfully in Firestore.");
+      }
+
+      setSelectedBus(null); // Reset selected bus
+      setTransportDiscount(0); // Reset discount
+      setBusOptions([]); // Clear bus options until new destination is selected
+
+      // Fetch buses based on the selected bus stop
       const busSnapshot = await getDocs(collection(db, "allBuses"));
       const buses = busSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
 
+      // Filter buses for the selected bus stop
       const busesForDestination = buses.filter(
         (bus) =>
           Array.isArray(bus.destinations) &&
           bus.destinations.some((dest) => dest.name === selectedName)
       );
-      setBusOptions(busesForDestination);
+      setBusOptions(busesForDestination); // Set bus options based on selected destination
     } catch (err) {
-      console.error("Failed to fetch bus details:", err);
+      console.error("Error updating bus stop in Firestore:", err);
     }
   };
 
@@ -133,7 +179,10 @@ export default function PersonalInfo({ formData, setFormData, studentId, handleF
       if (!selectedDestination) return;
 
       const originalTransportFee = selectedDestination.fee || 0;
-      const discountedFee = Math.max(originalTransportFee - transportDiscount, 0);
+      const discountedFee = Math.max(
+        originalTransportFee - transportDiscount,
+        0
+      );
 
       const studentRef = doc(db, "students", studentId.id);
       await updateDoc(studentRef, {
@@ -163,21 +212,94 @@ export default function PersonalInfo({ formData, setFormData, studentId, handleF
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section title="Personal Information">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <InputField icon={<User />} label="First Name" value={formData.fname} onChange={(e) => setFormData({ ...formData, fname: e.target.value })} />
-            <InputField icon={<User />} label="Last Name" value={formData.lname} onChange={(e) => setFormData({ ...formData, lname: e.target.value })} />
-            <InputField icon={<User />} label="Father Name" value={formData.fatherName} onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })} />
-            <InputField icon={<User />} label="Mother Name" value={formData.motherName} onChange={(e) => setFormData({ ...formData, motherName: e.target.value })} />
-            <InputField icon={<CalendarDays />} label="Date of Birth" type="date" value={formData.dob} onChange={(e) => setFormData({ ...formData, dob: e.target.value })} />
-            <SelectField icon={<VenusAndMars />} label="Gender" options={["Male", "Female", "Other"]} value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} />
+            <InputField
+              icon={<User />}
+              label="First Name"
+              value={formData.fname}
+              onChange={(e) =>
+                setFormData({ ...formData, fname: e.target.value })
+              }
+            />
+            <InputField
+              icon={<User />}
+              label="Last Name"
+              value={formData.lname}
+              onChange={(e) =>
+                setFormData({ ...formData, lname: e.target.value })
+              }
+            />
+            <InputField
+              icon={<User />}
+              label="Father Name"
+              value={formData.fatherName}
+              onChange={(e) =>
+                setFormData({ ...formData, fatherName: e.target.value })
+              }
+            />
+            <InputField
+              icon={<User />}
+              label="Mother Name"
+              value={formData.motherName}
+              onChange={(e) =>
+                setFormData({ ...formData, motherName: e.target.value })
+              }
+            />
+            <InputField
+              icon={<CalendarDays />}
+              label="Date of Birth"
+              type="date"
+              value={formData.dob}
+              onChange={(e) =>
+                setFormData({ ...formData, dob: e.target.value })
+              }
+            />
+            <SelectField
+              icon={<VenusAndMars />}
+              label="Gender"
+              options={["Male", "Female", "Other"]}
+              value={formData.gender}
+              onChange={(e) =>
+                setFormData({ ...formData, gender: e.target.value })
+              }
+            />
           </div>
         </Section>
 
         <Section title="Contact Information">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputField icon={<Mail />} label="Student Email" type="email" value={formData.studentEmail} onChange={(e) => setFormData({ ...formData, studentEmail: e.target.value })} />
-            <InputField icon={<Phone />} label="Student Mobile" value={formData.studentMobile} onChange={(e) => setFormData({ ...formData, studentMobile: e.target.value })} />
-            <InputField icon={<Phone />} label="Father's Mobile" value={formData.fatherMobile} onChange={(e) => setFormData({ ...formData, fatherMobile: e.target.value })} />
-            <InputField icon={<Phone />} label="Mother's Mobile" value={formData.motherMobile} onChange={(e) => setFormData({ ...formData, motherMobile: e.target.value })} />
+            <InputField
+              icon={<Mail />}
+              label="Student Email"
+              type="email"
+              value={formData.studentEmail}
+              onChange={(e) =>
+                setFormData({ ...formData, studentEmail: e.target.value })
+              }
+            />
+            <InputField
+              icon={<Phone />}
+              label="Student Mobile"
+              value={formData.studentMobile}
+              onChange={(e) =>
+                setFormData({ ...formData, studentMobile: e.target.value })
+              }
+            />
+            <InputField
+              icon={<Phone />}
+              label="Father's Mobile"
+              value={formData.fatherMobile}
+              onChange={(e) =>
+                setFormData({ ...formData, fatherMobile: e.target.value })
+              }
+            />
+            <InputField
+              icon={<Phone />}
+              label="Mother's Mobile"
+              value={formData.motherMobile}
+              onChange={(e) =>
+                setFormData({ ...formData, motherMobile: e.target.value })
+              }
+            />
           </div>
         </Section>
 
@@ -218,19 +340,57 @@ export default function PersonalInfo({ formData, setFormData, studentId, handleF
 
         <Section title="Additional Details">
           <div className="grid grid-cols-1 gap-4">
-            <InputField icon={<HomeIcon />} label="Address" textarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
-            <InputField icon={<CreditCardIcon />} label="Aadhar Number" value={formData.addharNo} onChange={(e) => setFormData({ ...formData, addharNo: e.target.value })} />
-            <SelectField icon={<Utensils />} label="Meal Service" options={["Yes", "No"]} value={formData.mealService} onChange={(e) => setFormData({ ...formData, mealService: e.target.value })} />
+            <InputField
+              icon={<HomeIcon />}
+              label="Address"
+              textarea
+              value={formData.address}
+              onChange={(e) =>
+                setFormData({ ...formData, address: e.target.value })
+              }
+            />
+            <InputField
+              icon={<CreditCardIcon />}
+              label="Aadhar Number"
+              value={formData.addharNo}
+              onChange={(e) =>
+                setFormData({ ...formData, addharNo: e.target.value })
+              }
+            />
+            <SelectField
+              icon={<Utensils />}
+              label="Meal Service"
+              options={["Yes", "No"]}
+              value={formData.mealService}
+              onChange={(e) =>
+                setFormData({ ...formData, mealService: e.target.value })
+              }
+            />
 
             {/* Custom Row Layout for Bus Stop, Bus Selection, and Discount */}
             <div className="flex flex-wrap gap-4 items-end">
               <div className="flex-1 min-w-[200px]">
-                <SelectField icon={<Bus />} label="Bus Stop" options={destinationOptions.map((d) => d.name)} value={formData.busStop} onChange={handleBusStopChange} />
+                <SelectField
+                  icon={<Bus />}
+                  label="Bus Stop"
+                  options={destinationOptions.map((d) => d.name)}
+                  value={formData.busStop}
+                  onChange={handleBusStopChange}
+                />
               </div>
 
               {busOptions.length > 0 && (
                 <div className="flex-1 min-w-[200px]">
-                  <SelectField icon={<Bus />} label="Select Bus" value={selectedBus?.id || ""} options={busOptions.map((bus) => ({ value: bus.id, label: bus.busNo }))} onChange={handleBusSelection} />
+                  <SelectField
+                    icon={<Bus />}
+                    label="Select Bus"
+                    value={selectedBus?.id || ""}
+                    options={busOptions.map((bus) => ({
+                      value: bus.id,
+                      label: bus.busNo,
+                    }))}
+                    onChange={handleBusSelection}
+                  />
                 </div>
               )}
 
@@ -241,7 +401,9 @@ export default function PersonalInfo({ formData, setFormData, studentId, handleF
                     label="Transport Discount"
                     type="number"
                     value={transportDiscount}
-                    onChange={(e) => setTransportDiscount(parseInt(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setTransportDiscount(parseInt(e.target.value) || 0)
+                    }
                   />
                   <button
                     className="bg-purple-600 text-white px-4 py-2 rounded-md w-full mt-2 hover:bg-purple-700 transition"
@@ -253,7 +415,14 @@ export default function PersonalInfo({ formData, setFormData, studentId, handleF
               )}
             </div>
 
-            <InputField icon={<HeartPulseIcon />} label="Blood Group" value={formData.bloodGroup} onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })} />
+            <InputField
+              icon={<HeartPulseIcon />}
+              label="Blood Group"
+              value={formData.bloodGroup}
+              onChange={(e) =>
+                setFormData({ ...formData, bloodGroup: e.target.value })
+              }
+            />
           </div>
         </Section>
       </div>
@@ -264,7 +433,9 @@ export default function PersonalInfo({ formData, setFormData, studentId, handleF
 function Section({ title, children }) {
   return (
     <div className="md:col-span-2">
-      <h3 className="text-lg font-semibold mb-4 flex items-center text-purple-600">{title}</h3>
+      <h3 className="text-lg font-semibold mb-4 flex items-center text-purple-600">
+        {title}
+      </h3>
       {children}
     </div>
   );
