@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../../../config/firebase";
+import { FaPlus } from "react-icons/fa6";
 import {
   collection,
   getDocs,
@@ -94,9 +95,9 @@ function BusDestination() {
         const prevBusSnap = await getDoc(prevBusRef);
         if (prevBusSnap.exists()) {
           const prevBusData = prevBusSnap.data();
-          const updatedPrevDestinations = (prevBusData.destinations || []).filter(
-            (d) => d.name !== destination.name
-          );
+          const updatedPrevDestinations = (
+            prevBusData.destinations || []
+          ).filter((d) => d.name !== destination.name);
           await updateDoc(prevBusRef, {
             destinations: updatedPrevDestinations,
           });
@@ -181,13 +182,16 @@ function BusDestination() {
     <div className="p-6 bg-gray-50 min-h-screen">
       <button
         onClick={() => setShowDestinationModal(true)}
-        className="px-4 py-2 bg-blue-600 text-white rounded mb-4"
+        className="px-4 py-2 flex items-center gap-2 bg-[#9810fa] text-white rounded mb-4"
       >
-        ➕ Add Destination
+        <span className="text-white">
+          <FaPlus />
+        </span>{" "}
+        Add Destination
       </button>
 
       <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-md p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        <h2 className="text-2xl font-bold text-[#9810fa] mb-6">
           Bus Destination Assignment
         </h2>
 
@@ -196,13 +200,13 @@ function BusDestination() {
           <input
             type="text"
             placeholder="Search destination..."
-            className="w-full md:w-1/2 px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
 
           <select
-            className="w-full md:w-1/3 px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+            className="w-1/3 px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
             value={busFilter}
             onChange={(e) => setBusFilter(e.target.value)}
           >
@@ -216,30 +220,35 @@ function BusDestination() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm border rounded-md">
-            <thead className="bg-gray-100 text-gray-700 font-semibold">
+        <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+          <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+            <thead className="text-xs text-white uppercase bg-[#9810fa] dark:bg-gray-700 dark:text-gray-400">
               <tr>
-                <th className="border px-4 py-2 text-left">Academic Year</th>
-                <th className="border px-4 py-2 text-left">Destination</th>
-                <th className="border px-4 py-2 text-left">Other Students Fee</th>
-                <th className="border px-4 py-2 text-left">Assign Bus</th>
-                <th className="border px-4 py-2 text-left">Status</th>
+                <th className="px-6 py-3">Academic Year</th>
+                <th className="px-6 py-3">Destination</th>
+                <th className="px-6 py-3">Other Students Fee</th>
+                <th className="px-6 py-3">Assign Bus</th>
+                <th className="px-6 py-3">Status</th>
               </tr>
             </thead>
-            <tbody className="text-gray-700">
+            <tbody>
               {filteredDestinations.map((dest, index) => {
                 const assignment = assignedMap[dest.name] || {};
                 const assignedBusNo = assignment.busDocId || "";
 
                 return (
-                  <tr key={index} className="hover:bg-gray-50 transition">
-                    <td className="border px-4 py-2">{dest.academicYear}</td>
-                    <td className="border px-4 py-2">{dest.name}</td>
-                    <td className="border px-4 py-2">₹{dest.fee}</td>
-                    <td className="border px-4 py-2">
+                  <tr
+                    key={index}
+                    className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200"
+                  >
+                    <td className="px-6 py-4 font-medium text-[#9810fa] whitespace-nowrap dark:text-white">
+                      {dest.academicYear}
+                    </td>
+                    <td className="px-6 py-4 font-semibold">{dest.name}</td>
+                    <td className="px-6 py-4 text-green-700 font-bold">₹{dest.fee}</td>
+                    <td className="px-6 py-4">
                       <select
-                        className="w-full border rounded-md px-2 py-1"
+                        className="w-full border rounded-md text-[#9810fa] px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         value={assignedBusNo}
                         onChange={(e) => assignBus(dest, e.target.value)}
                       >
@@ -251,7 +260,7 @@ function BusDestination() {
                         ))}
                       </select>
                     </td>
-                    <td className="border px-4 py-2 text-center">
+                    <td className="px-6 py-4 text-center">
                       {assignedBusNo ? (
                         <button
                           onClick={() => toggleStatus(dest)}
@@ -264,7 +273,7 @@ function BusDestination() {
                           {assignment.active ? "Active" : "Inactive"}
                         </button>
                       ) : (
-                        <span className="text-gray-400">Not Assigned</span>
+                        <span className="text-red-600 font-bold">Not Assigned</span>
                       )}
                     </td>
                   </tr>
@@ -272,7 +281,10 @@ function BusDestination() {
               })}
               {filteredDestinations.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="text-center text-gray-400 py-6">
+                  <td
+                    colSpan="5"
+                    className="text-center text-gray-400 py-6 dark:text-gray-500"
+                  >
                     No destinations found.
                   </td>
                 </tr>
@@ -284,13 +296,15 @@ function BusDestination() {
 
       {/* Add Destination Modal */}
       {showDestinationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-96 space-y-4">
-            <h2 className="text-lg font-semibold mb-4">Add New Destination</h2>
+        <div className="fixed inset-0 bg-opacity-40 backdrop-blur-3xl flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl w-96 space-y-6">
+            <h2 className="text-2xl mb-2 text-[#9810fa] font-bold text-center">
+              Add New Destination
+            </h2>
             <input
               type="text"
               placeholder="Destination Name"
-              className="w-full px-4 py-2 border rounded-md"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newDestination.name}
               onChange={(e) =>
                 setNewDestination((prev) => ({ ...prev, name: e.target.value }))
@@ -299,22 +313,22 @@ function BusDestination() {
             <input
               type="number"
               placeholder="Fee (₹)"
-              className="w-full px-4 py-2 border rounded-md"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newDestination.fee}
               onChange={(e) =>
                 setNewDestination((prev) => ({ ...prev, fee: e.target.value }))
               }
             />
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowDestinationModal(false)}
-                className="px-4 py-2 bg-gray-300 rounded"
+                className="px-5 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 transition duration-300"
               >
                 Cancel
               </button>
               <button
                 onClick={addDestination}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
+                className="px-5 py-2 rounded-xl bg-[#9810fa] hover:bg-[#7e0ccc] text-white transition duration-300"
               >
                 Add
               </button>

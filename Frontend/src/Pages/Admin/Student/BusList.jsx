@@ -57,35 +57,47 @@ function BusList() {
       <div className="flex gap-4">
         <button
           onClick={() => setShowBusModal(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded"
+          className="px-4 py-2 bg-[#9810fa] font-semibold text-white rounded"
         >
           🚌 Add Bus
         </button>
       </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full table-auto border border-gray-300">
-          <thead className="bg-gray-100">
+      <div className="overflow-x-auto bg-white rounded-lg shadow-md">
+        <table className="min-w-full table-auto">
+          <thead className="bg-[#9810FA] text-white text-sm font-semibold">
             <tr>
-              <th className="px-3 py-2 border">Bus No</th>
-              <th className="px-3 py-2 border">Number Plate</th>
-              <th className="px-3 py-2 border">Driver</th>
-              <th className="px-3 py-2 border">Mobile</th>
-              <th className="px-3 py-2 border">Assistant</th>
-              <th className="px-3 py-2 border">Status</th>
-              <th className="px-3 py-2 border">Insurance Date</th>
+              <th className="px-6 py-4 text-left">Bus No</th>
+              <th className="px-6 py-4 text-left">Number Plate</th>
+              <th className="px-6 py-4 text-left">Driver</th>
+              <th className="px-6 py-4 text-left">Mobile</th>
+              <th className="px-6 py-4 text-left">Assistant</th>
+              <th className="px-6 py-4 text-left">Status</th>
+              <th className="px-6 py-4 text-left">Insurance Date</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-gray-600 text-sm divide-y divide-gray-200">
             {buses.map((bus) => (
-              <tr key={bus.id} className="text-center border-t">
-                <td className="px-3 py-2 border">{bus.busNo}</td>
-                <td className="px-3 py-2 border">{bus.numberPlate}</td>
-                <td className="px-3 py-2 border">{bus.driverName}</td>
-                <td className="px-3 py-2 border">{bus.mobile}</td>
-                <td className="px-3 py-2 border">{bus.assistant}</td>
-                <td className="px-3 py-2 border">{bus.status}</td>
-                <td className="px-3 py-2 border">{bus.insuranceDate}</td>
+              <tr
+                key={bus.id}
+                className="hover:bg-gray-100 transition-all duration-300"
+              >
+                <td className="px-6 py-4">{bus.busNo}</td>
+                <td className="px-6 py-4">{bus.numberPlate}</td>
+                <td className="px-6 py-4">{bus.driverName}</td>
+                <td className="px-6 py-4">{bus.mobile}</td>
+                <td className="px-6 py-4">{bus.assistant}</td>
+                <td className="px-6 py-4">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      bus.status === "Active"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {bus.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4">{bus.insuranceDate}</td>
               </tr>
             ))}
           </tbody>
@@ -94,13 +106,13 @@ function BusList() {
 
       {/* Bus Modal */}
       {showBusModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+        <div className="fixed inset-0 backdrop-blur-3xl bg-opacity-40 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded shadow-lg w-96 space-y-3">
-            <h2 className="text-lg font-semibold">Add New Bus</h2>
+            <h2 className="text-lg  text-[#9810fa] font-bold">Add New Bus</h2>
             <input
               type="text"
               placeholder="Bus Number Plate"
-              className="border w-full p-2 rounded"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newBus.numberPlate}
               onChange={(e) =>
                 setNewBus({ ...newBus, numberPlate: e.target.value })
@@ -109,14 +121,14 @@ function BusList() {
             <input
               type="text"
               placeholder="Bus No"
-              className="border w-full p-2 rounded"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newBus.busNo}
               onChange={(e) => setNewBus({ ...newBus, busNo: e.target.value })}
             />
             <input
               type="text"
               placeholder="Driver Name"
-              className="border w-full p-2 rounded"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newBus.driverName}
               onChange={(e) =>
                 setNewBus({ ...newBus, driverName: e.target.value })
@@ -125,21 +137,21 @@ function BusList() {
             <input
               type="text"
               placeholder="Mobile No"
-              className="border w-full p-2 rounded"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newBus.mobile}
               onChange={(e) => setNewBus({ ...newBus, mobile: e.target.value })}
             />
             <input
               type="text"
               placeholder="Assistant Name"
-              className="border w-full p-2 rounded"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newBus.assistant}
               onChange={(e) =>
                 setNewBus({ ...newBus, assistant: e.target.value })
               }
             />
             <select
-              className="border w-full p-2 rounded"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newBus.status}
               onChange={(e) => setNewBus({ ...newBus, status: e.target.value })}
             >
@@ -149,7 +161,7 @@ function BusList() {
             </select>
             <input
               type="date"
-              className="border w-full p-2 rounded"
+              className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
               value={newBus.insuranceDate}
               onChange={(e) =>
                 setNewBus({ ...newBus, insuranceDate: e.target.value })
