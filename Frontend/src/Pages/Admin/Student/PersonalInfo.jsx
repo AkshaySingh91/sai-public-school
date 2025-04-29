@@ -321,6 +321,24 @@ export default function PersonalInfo({
             />
 
             <InputField
+              icon={<Hash />}
+              label="PEN Number"
+              value={formData.penNumber}
+              onChange={(e) => setFormData({ ...formData, penNumber: e.target.value })}
+            />
+            <InputField
+              icon={<Hash />}
+              label="Serial ID"
+              value={formData.serialNumber}
+              onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+            />
+            <InputField
+              icon={<Hash />}
+              label="Gr No"
+              value={formData.GrNumber}
+              onChange={(e) => setFormData({ ...formData, GrNumber: e.target.value })}
+            />
+              <InputField
               icon={<CalendarDays />}
               label="Academic Year"
               type="text"
@@ -336,6 +354,7 @@ export default function PersonalInfo({
               onChange={(e) => setFormData({ ...formData, couponCode: e.target.value })}
             />
           </div>
+
         </Section>
 
         <Section title="Additional Details">
