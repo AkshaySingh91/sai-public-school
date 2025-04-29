@@ -57,7 +57,9 @@ export default function StudentEmployeeAnalytics() {
     }, [userData]);
 
     if (loading) {
-        return <div className="text-center py-8">Loading analytics…</div>;
+        return <div className="text-center py-8">
+            Loading analytics…
+        </div>;
     }
 
     // Utility: donut geometry
@@ -100,10 +102,10 @@ export default function StudentEmployeeAnalytics() {
 
     const renderDonut = (data, colors, title) => (
         <div className="bg-gradient-to-br from-indigo-50 to-violet-50 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-            <h2 className="text-lg font-semibold text-gray-800 mb-6 border-b border-violet-100 pb-3">
+            <h2 className="text-md text-center  font-bold text-gray-800 mb-6 border-b border-violet-100 pb-3">
                 {title}
             </h2>
-            <div className="relative w-40 h-40 mx-auto">
+            <div className="relative w-32 h-32 mx-auto">
                 <svg viewBox="0 0 100 100" className="-rotate-90 w-full h-full">
                     {data.segments.map((seg, i) => (
                         <circle
@@ -157,7 +159,7 @@ export default function StudentEmployeeAnalytics() {
 
     console.log(studentData, studentColors)
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto p-4">
+        <div className="grid grid-rows-1 md:grid-rows-2 gap-6 max-w-4xl mx-auto p-4">
             {/* Students Breakdown */}
             {renderDonut(studentData, studentColors, "Student Gender Distribution")}
 

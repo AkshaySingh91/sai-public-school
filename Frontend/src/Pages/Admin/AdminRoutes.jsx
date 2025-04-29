@@ -23,9 +23,9 @@ import StockAllocate from './Student/StockAllocate';
 const AdminLayout = () => {
   return (
     <div className="bg-gray-50 min-h-screen overflow-hidden">
-      <div className="flex">
+      <div className="flex w-full">
         <AdminSidebar />
-        <div className="flex-1 p-5 ml-20 lg:ml-64 h-screen overflow-y-auto w-screen">
+        <div className="p-5 ml-20 lg:ml-64 h-screen overflow-y-auto w-auto">
           <Outlet />
         </div>
       </div>

@@ -138,7 +138,7 @@ export default function AddStudent() {
           messFee: 0,
           hostelFee: 0,
         },
-        transaction: [],
+        transactions: [],
         status: 'active',
         createdAt: new Date()
       };
