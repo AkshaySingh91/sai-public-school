@@ -7,6 +7,8 @@ import {
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useState } from "react";
+import { TbBus } from "react-icons/tb";
+import { MdOutlineInventory2 } from "react-icons/md";
 //hello dost kaisa h
 const menuItems = [
     { icon: FiActivity, text: "Dashboard", path: "/" },
@@ -16,6 +18,7 @@ const menuItems = [
         path: "/students",
         subItems: [
             { text: "All Student", path: "/students" },
+            { text: "Add Student", path: "/students/add" },
             { text: "Daily Book", path: "/students/daily-book" },
             { text: "Outstanding Fees", path: "/students/outstanding-fee" },
             { text: "Student reports", path: "/students/reports" },
@@ -32,7 +35,7 @@ const menuItems = [
     },
     { icon: FiBook, text: "Employee", path: "/employee" },
     {
-        icon: FiHome,
+        icon: TbBus,
         text: "Transport",
         path: "/transport",
         subItems: [
@@ -42,7 +45,7 @@ const menuItems = [
         ]
     },
     {
-        icon: FiHome,
+        icon: MdOutlineInventory2,
         text: "Stock Management",
         path: "/stock",
         subItems: [

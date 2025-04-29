@@ -16,6 +16,7 @@ function StockAllocate() {
   const [expandedStudent, setExpandedStudent] = useState(null);
   const [studentStock, setStudentStock] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]); // New state to track selected items
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -27,7 +28,6 @@ function StockAllocate() {
           id: doc.id,
           schoolCode: doc.data().schoolCode, // Get schoolCode from the student
         }));
-        console.log("studentsList",studentsList);
 
         // Now we need to find the schoolId based on schoolCode
         const schoolsCollection = collection(db, "schools");
@@ -37,11 +37,8 @@ function StockAllocate() {
               schoolsCollection,
               where("Code", "==", student.schoolCode)
             );
-            console.log("schoolQuery",schoolQuery);
             const schoolSnapshot = await getDocs(schoolQuery);
-            console.log("schoolSnapshot",schoolSnapshot);
             const schoolDoc = schoolSnapshot.docs[0];
-            console.log("schoolDoc",schoolDoc.id);
             return {
               ...student,
               schoolId: schoolDoc ? schoolDoc.id : null, // Attach schoolId to student
@@ -50,7 +47,6 @@ function StockAllocate() {
         );
 
         setStudents(updatedStudents);
-        console.log("updatedStudents",updatedStudents);
         setFilteredStudents(updatedStudents);
       } catch (error) {
         console.error("Error fetching students:", error);
@@ -75,6 +71,7 @@ function StockAllocate() {
           const updatedStockList = stockList.map((stock) => ({
             ...stock,
             quantity: 1,
+            selected: false, // Initialize the selection status
           }));
           setStudentStock(updatedStockList);
         } catch (error) {
@@ -112,6 +109,18 @@ function StockAllocate() {
     } else {
       setExpandedStudent(student);
     }
+  };
+
+  const handleCheckboxChange = (index) => {
+    const updatedStock = [...studentStock];
+    updatedStock[index].selected = !updatedStock[index].selected;
+    setStudentStock(updatedStock);
+    updateSelectedItems(updatedStock);
+  };
+
+  const updateSelectedItems = (updatedStock) => {
+    const selectedItems = updatedStock.filter((stock) => stock.selected);
+    setSelectedItems(selectedItems);
   };
 
   const handleQuantityChange = (index, value) => {
@@ -279,45 +288,62 @@ function StockAllocate() {
                           <table className="min-w-full table-auto bg-white shadow-lg rounded-xl overflow-hidden">
                             <thead className="bg-gradient-to-r from-indigo-100 to-purple-100">
                               <tr>
-                                <th className="px-6 py-4 text-left text-indigo-800 font-bold text-sm uppercase">
+                                <th className="px-6 py-4 text-left font-semibold text-lg rounded-tl-xl">
                                   Item Name
                                 </th>
-                                <th className="px-6 py-4 text-center text-indigo-800 font-bold text-sm uppercase">
-                                  Quantity
+                                <th className="px-6 py-4 text-left font-semibold text-lg">
+                                  Selling Price
                                 </th>
-                                <th className="px-6 py-4 text-center text-indigo-800 font-bold text-sm uppercase">
-                                  Unit Price
+                                <th className="px-6 py-4 text-left font-semibold text-lg">
+                                  Select
                                 </th>
-                                <th className="px-6 py-4 text-center text-indigo-800 font-bold text-sm uppercase">
-                                  Total Price
+                                <th className="px-6 py-4 text-left font-semibold text-lg rounded-tr-xl">
+                                  Action
                                 </th>
                               </tr>
                             </thead>
+
                             <tbody>
                               {studentStock.map((stock, index) => (
-                                <tr key={index} className="hover:bg-indigo-50">
-                                  <td className="px-6 py-4 text-sm text-gray-700">{stock.itemName}</td>
-                                  <td className="px-6 py-4 text-center text-sm">
-                                    <input
-                                      type="number"
-                                      value={stock.quantity}
-                                      onChange={(e) =>
-                                        handleQuantityChange(index, e.target.value)
-                                      }
-                                      className="w-20 px-4 py-2 text-center border-2 border-gray-300 rounded-md focus:outline-none focus:border-[#9810fa]"
-                                    />
+                                <tr key={index}>
+                                  <td className="px-6 py-4">
+                                    {stock.itemName}
                                   </td>
-                                  <td className="px-6 py-4 text-center text-sm">
+                                  <td className="px-6 py-4">
                                     {stock.sellingPrice}
                                   </td>
-                                  <td className="px-6 py-4 text-center text-sm">
-                                    {stock.sellingPrice * stock.quantity}
+                                  <td className="px-6 py-4">
+                                    <input
+                                      type="checkbox"
+                                      className="h-5 w-5 text-indigo-600 focus:ring-indigo-500"
+                                      checked={stock.selected}
+                                      onChange={() =>
+                                        handleCheckboxChange(index)
+                                      }
+                                    />
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <button
+                                      onClick={() => handleDeleteItem(index)}
+                                      className="text-red-500"
+                                    >
+                                      Delete
+                                    </button>
                                   </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
-                          <AddPaymentTable studentId={student.id} schoolId={student.schoolId} studentClass={student.class}/>
+                          <div className="text-right font-bold text-xl mt-4">
+                            <p>Total Price: ₹{calculateTotalPrice()}</p>
+                          </div>
+                          {/* Pass the selected items and other necessary data to AddPaymentTable */}
+                          <AddPaymentTable
+                            selectedItems={selectedItems}
+                            studentId={expandedStudent.id} // Pass studentId
+                            schoolId={expandedStudent.schoolId} // Pass schoolId
+                            studentClass={expandedStudent.class} // Pass studentClass
+                          />
                         </div>
                       )}
                     </td>
@@ -327,17 +353,13 @@ function StockAllocate() {
             ))}
           </tbody>
         </table>
-
-        {expandedStudent && (
-          <div className="mt-6 flex justify-end text-lg font-semibold text-indigo-800">
-            <span>Total Price: ₹{calculateTotalPrice()}</span>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
 export default StockAllocate;
+
+
 
 

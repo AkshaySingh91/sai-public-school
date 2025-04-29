@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Download, FileText, UserCheck, UserX, Search, ArrowUp, ArrowDown, X } from 'react-feather';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import {autoTable} from 'jspdf-autotable';
 import { PieChart, FeeBar } from './FeeVisualizations';
 
 const StudentFeeDetails = ({
@@ -52,7 +52,7 @@ const StudentFeeDetails = ({
     const exportPDF = useCallback(() => {
         const doc = new jsPDF();
         doc.text(`${studentActiveTab.toUpperCase()} Student Fee Details`, 14, 16);
-        doc.autoTable({
+        autoTable(doc, {
             startY: 25,
             head: [
                 ['Name', 'Class', 'Fee ID', 'Last Year', 'Total Fees',
