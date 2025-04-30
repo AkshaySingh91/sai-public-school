@@ -12,7 +12,7 @@ const AppRoutes = () => {
   return (
     <>
       {/* <Navbar /> */}
-      <main className="container w-full overflow-x-hidden">
+      <main className="w-full overflow-x-hidden">
         <Routes>
           {role === "superadmin" && (
             <>

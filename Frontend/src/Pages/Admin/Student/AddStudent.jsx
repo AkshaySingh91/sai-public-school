@@ -61,7 +61,7 @@ export default function AddStudent() {
       }
     };
 
-    fetchSchoolData();
+    fetchSchoolData();  
   }, [userData.schoolCode]);
 
   const handleSubmit = async (e) => {
@@ -138,8 +138,8 @@ export default function AddStudent() {
           messFee: 0,
           hostelFee: 0,
         },
-        transaction: [],
-        status: 'active',
+        transactions: [],
+        status: 'new',
         createdAt: new Date()
       };
 

@@ -109,9 +109,9 @@ export default function FeeStructure() {
       prev.map((s) =>
         s.year === year
           ? {
-              ...s,
-              classes: [...s.classes, { name: className, studentType: [] }],
-            }
+            ...s,
+            classes: [...s.classes, { name: className, studentType: [] }],
+          }
           : s
       )
     );
@@ -153,14 +153,14 @@ export default function FeeStructure() {
               ...c,
               studentType: existing
                 ? c.studentType.map((st) =>
-                    st.name === stName
-                      ? { ...st, feeStructure: validatedFees }
-                      : st
-                  )
+                  st.name === stName
+                    ? { ...st, feeStructure: validatedFees }
+                    : st
+                )
                 : [
-                    ...c.studentType,
-                    { name: stName, feeStructure: validatedFees },
-                  ],
+                  ...c.studentType,
+                  { name: stName, feeStructure: validatedFees },
+                ],
             };
           }),
         };
