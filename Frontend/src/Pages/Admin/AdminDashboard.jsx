@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, or } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { FiUsers, FiTrendingUp, FiClock, FiBook } from "react-icons/fi"
 import { useAuth } from '../../contexts/AuthContext';
@@ -51,16 +51,19 @@ const AdminDashboard = () => {
             const schoolData = schoolSnap.docs[0].data();
             const currentYear = schoolData.academicYear;
 
-            //   Active students
-            const studentSnap = await getDocs(
-                query(
-                    collection(db, "students"),
-                    where("schoolCode", "==", code),
-                    where("status", "==", "active")
-                )
+            const newStudentsSnap = await getDocs(
+                query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "new"))
             );
-            const totalStudents = studentSnap.size;
 
+            const currentStudentsSnap = await getDocs(
+                query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "current"))
+            );
+            // Combine results
+            const studentSnap = [
+                ...newStudentsSnap.docs,
+                ...currentStudentsSnap.docs
+            ];
+            const totalStudents = studentSnap.length;
             //   Employees & teachers
             const empSnap = await getDocs(
                 query(
@@ -75,8 +78,9 @@ const AdminDashboard = () => {
 
             //   Sum up “current‐year” earnings by walking each student’s array
             let totalEarnings = 0;
-            studentSnap.docs.forEach(docSnap => {
+            studentSnap.forEach(docSnap => {
                 const student = docSnap.data();
+                console.log({ student })
                 const txs = Array.isArray(student.transactions) ? student.transactions : [];
                 txs.forEach(t => {
                     if (t.academicYear === currentYear) {
@@ -84,7 +88,10 @@ const AdminDashboard = () => {
                     }
                 });
             });
-
+            console.log(totalStudents,
+                totalTeachers,
+                totalEmployees,
+                totalEarnings)
             // Finally, stash it all in state
             setStats({
                 totalStudents,

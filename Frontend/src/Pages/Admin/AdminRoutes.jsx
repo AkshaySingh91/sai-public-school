@@ -23,7 +23,7 @@ import StockAllocate from './Student/StockAllocate';
 const AdminLayout = () => {
   return (
     <div className="bg-gray-50 min-h-screen overflow-hidden">
-      <div className="flex w-full">
+      <div className="">
         <AdminSidebar />
         <div className="p-5 ml-20 lg:ml-64 h-screen overflow-y-auto w-auto">
           <Outlet />
@@ -48,7 +48,6 @@ const AdminIndex = () => {
         <Route path="/student/:studentId" element={<StudentDetail />} />
         <Route path="/students/daily-book" element={<DailyBook />} />
         <Route path="/students/outstanding-fee" element={<FeeReportContainer />} />
-        <Route path="/students/reports" element={<StudentDetail />} />
         <Route
           path="/student/:studentId/receipt/:receiptId"
           element={<FeeReceiptPage />}

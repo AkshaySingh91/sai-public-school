@@ -9,9 +9,11 @@ import Skeleton from 'react-loading-skeleton';
 const MetricCard = ({ icon: Icon, label, value, isCurrency = false, loading }) => {
     return (
         <motion.div
-            className="bg-white/90 backdrop-blur-sm p-6 rounded-xl border border-gray-100 hover:border-purple-100 hover:shadow-lg transition-all h-fit"
+            className="bg-white/90 backdrop-blur-sm p-6 rounded-xl border border-gray-100 hover:border-purple-100 hover:shadow-lg transition-all"
             whileHover={{ y: -4 }}
         >
+
+
             <div className=" gap-5">
                 <div className="w-full flex justify-between ">
                     <div className="p-2 text-center h-fit rounded-xl bg-gradient-to-br from-purple-600 to-blue-500 text-white">
@@ -91,7 +93,7 @@ export default function SchoolMetricsCards() {
                 const s = docSnap.data();
                 const all = s.allFee || {};
 
-                if (s.status !== 'inactive') {
+                // if (s.status !== 'inactive') {
                     metricsData.discountedAmount += (all.transportFeeDiscount || 0) + (all.schoolFeesDiscount || 0);
                     metricsData.expectedCollection +=
                         (all.schoolFees?.total || 0) +
@@ -99,7 +101,7 @@ export default function SchoolMetricsCards() {
                         (all.messFee || 0) +
                         (all.hostelFee || 0);
                     metricsData.lastYearBalance += (all.lastYearBalanceFee || 0) + (all.lastYearTransportFee || 0);
-                }
+                // }
 
                 (s.transactions || []).forEach(tx => {
                     const ts = new Date(tx.timestamp).getTime();
@@ -123,7 +125,7 @@ export default function SchoolMetricsCards() {
     }, [userData]);
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 content-start ">
             <MetricCard
                 icon={Clock}
                 label="Today's Collection"

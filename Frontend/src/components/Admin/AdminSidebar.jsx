@@ -21,7 +21,6 @@ const menuItems = [
             { text: "Add Student", path: "/students/add" },
             { text: "Daily Book", path: "/students/daily-book" },
             { text: "Outstanding Fees", path: "/students/outstanding-fee" },
-            { text: "Student reports", path: "/students/reports" },
         ]
     },
     {
@@ -72,7 +71,8 @@ const AdminSidebar = () => {
         <motion.div
             initial={{ x: -100 }}
             animate={{ x: 0 }}
-            className="lg:w-64 w-20 bg-white h-screen p-5 fixed top-0 left-0 transition-all duration-300"
+            className="lg:w-64 w-20 bg-white h-screen overflow-y-auto  p-5 fixed top-0 left-0 transition-all duration-300"
+            style={{ "scrollbar-width": "none", "-ms-overflow-style": "none" }}
         >
             <div className="flex items-center mb-10">
                 <img

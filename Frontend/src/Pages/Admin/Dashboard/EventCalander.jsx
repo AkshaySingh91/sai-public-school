@@ -1,308 +1,382 @@
 import React, { useState, useEffect } from 'react';
-import {
-    ChevronLeft,
-    ChevronRight,
-    Plus,
-    Upload,
-    Calendar as CalendarIcon,
-    X,
-    AlertCircle,
-    CheckCircle2
-} from 'lucide-react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isBefore } from 'date-fns';
-import * as XLSX from 'xlsx';
+import { ChevronLeft, ChevronRight, Plus, Upload, Calendar as CalendarIcon, Home } from 'lucide-react';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isAfter, differenceInDays } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as XLSX from 'xlsx';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../../../config/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const EventCalendar = () => {
+    // Add state for tracking file upload
+    const [uploading, setUploading] = useState(false);
+    const [fileKey, setFileKey] = useState(Date.now());
+    const { userData } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [events, setEvents] = useState([
-        { id: 1, date: '2023-08-01', title: 'Sports Day', color: 'sky', type: 'sports' },
-        { id: 2, date: '2023-08-15', title: 'Independence Day', color: 'orange', type: 'holiday' },
-        { id: 3, date: '2023-08-20', title: 'Science Fair', color: 'emerald', type: 'academic' },
-    ]);
-    const [selectedDate, setSelectedDate] = useState(null);
-    const [showAddEvent, setShowAddEvent] = useState(false);
-    const [newEvent, setNewEvent] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd') });
-    const [viewMode, setViewMode] = useState('month'); // 'month' or 'week'
+    const [school, setSchool] = useState(null);
+    const [events, setEvents] = useState([]);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [newEvent, setNewEvent] = useState({ title: '', date: '' });
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const currentEvents = events.filter(e =>
+        isSameDay(parseISO(e.date), selectedDate) &&
+        e.academicYear === school?.academicYear
+    );
 
-    // Color mappings
-    const colorMap = {
-        sky: 'bg-sky-500',
-        orange: 'bg-orange-500',
-        emerald: 'bg-emerald-500',
-        violet: 'bg-violet-500',
-        rose: 'bg-rose-500'
+    const nextEvent = events
+        .filter(e => isAfter(parseISO(e.date), selectedDate))
+        .sort((a, b) => parseISO(a.date) - parseISO(b.date))[0];
+
+    useEffect(() => {
+        const fetchSchool = async () => {
+            try {
+                if (!userData?.schoolCode) return;
+                const schoolQuery = query(
+                    collection(db, "schools"),
+                    where("Code", "==", userData.schoolCode)
+                );
+                const snapshot = await getDocs(schoolQuery);
+
+                if (snapshot.empty) {
+                    setError("School not found");
+                    return;
+                }
+
+                const schoolData = snapshot.docs[0].data();
+                setSchool({
+                    id: snapshot.docs[0].id,
+                    ...schoolData,
+                    events: schoolData.events?.filter(e => e.academicYear === schoolData.academicYear) || []
+                });
+                setEvents(schoolData.events?.filter(e => e.academicYear === schoolData.academicYear) || []);
+            } catch (err) {
+                setError("Failed to load school data");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSchool();
+    }, [userData?.schoolCode]);
+
+    const handleTodayClick = () => {
+        const today = new Date();
+        setCurrentDate(today);
+        setSelectedDate(today);
     };
 
-    const typeIcons = {
-        sports: '🏆',
-        holiday: '🎉',
-        academic: '📚',
-        meeting: '📅',
-        other: '🌟'
+    const handleAddEvent = async (e) => {
+        e.preventDefault();
+        if (!newEvent.title || !newEvent.date) return;
+
+        try {
+            const academicYear = school?.academicYear;
+            const eventDate = format(new Date(newEvent.date), 'yyyy-MM-dd');
+
+            const existingIndex = events.findIndex(e =>
+                e.date === eventDate && e.academicYear === academicYear
+            );
+
+            const updatedEvents = [...events];
+            if (existingIndex > -1) {
+                updatedEvents[existingIndex] = {
+                    ...updatedEvents[existingIndex],
+                    title: newEvent.title
+                };
+            } else {
+                updatedEvents.push({
+                    date: eventDate,
+                    title: newEvent.title,
+                    type: 'holiday',
+                    academicYear
+                });
+            }
+
+            await updateDoc(doc(db, 'schools', school.id), {
+                events: updatedEvents.sort((a, b) => parseISO(a.date) - parseISO(b.date))
+            });
+            setEvents(updatedEvents);
+            setNewEvent({ title: '', date: '' });
+            setShowAddForm(false);
+        } catch (err) {
+            setError('Failed to save event');
+        }
     };
 
-    // Calendar navigation
-    const nextPeriod = () => setCurrentDate(addMonths(currentDate, viewMode === 'month' ? 1 : 1));
-    const prevPeriod = () => setCurrentDate(subMonths(currentDate, viewMode === 'month' ? 1 : 1));
 
-    // Date calculations
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        setError('');
+
+        try {
+            const reader = new FileReader();
+            const fileData = await new Promise((resolve, reject) => {
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (error) => reject(error);
+                reader.readAsArrayBuffer(file);
+            });
+
+            const data = new Uint8Array(fileData);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+            // Validate columns
+            if (!jsonData[0] || !('Date' in jsonData[0]) || !('Event' in jsonData[0])) {
+                throw new Error('Invalid file format - required columns: Date, Event');
+            }
+
+            const academicYear = school?.academicYear;
+            const importedEvents = jsonData.map((row, index) => {
+                try {
+                    let parsedDate;
+
+                    // Handle different date formats
+                    if (typeof row.Date === 'number') {
+                        // Excel serial number date
+                        const dateData = XLSX.SSF.parse_date_code(row.Date);
+                        parsedDate = new Date(Date.UTC(dateData.y, dateData.m - 1, dateData.d));
+                    } else if (row.Date instanceof Date) {
+                        // JS Date object from Excel
+                        parsedDate = new Date(Date.UTC(
+                            row.Date.getFullYear(),
+                            row.Date.getMonth(),
+                            row.Date.getDate()
+                        ));
+                    } else {
+                        // String date (DD-MM-YYYY)
+                        const dateParts = String(row.Date).split('-');
+                        if (dateParts.length !== 3) throw new Error('Invalid date format');
+
+                        const [day, month, year] = dateParts.map(Number);
+                        if (isNaN(day) || isNaN(month) || isNaN(year)) {
+                            throw new Error('Invalid date components');
+                        }
+
+                        parsedDate = new Date(Date.UTC(year, month - 1, day));
+                    }
+
+                    if (isNaN(parsedDate.getTime())) {
+                        throw new Error('Invalid date value');
+                    }
+
+                    return {
+                        date: format(parsedDate, 'yyyy-MM-dd'),
+                        title: row.Event,
+                        type: 'holiday',
+                        academicYear
+                    };
+                } catch (err) {
+                    throw new Error(`Row ${index + 2}: ${err.message} - Value: "${row.Date}"`);
+                }
+            });
+
+            const updatedEvents = [
+                ...events.filter(e => e.academicYear !== academicYear),
+                ...importedEvents
+            ].sort((a, b) => parseISO(a.date) - parseISO(b.date));
+
+            await updateDoc(doc(db, 'schools', school.id), { events: updatedEvents });
+            setEvents(updatedEvents);
+            setFileKey(Date.now());
+
+        } catch (err) {
+            setError(err.message.includes('Row') ? err.message : 'Invalid file. Ensure dates are in DD-MM-YYYY format');
+            console.error('Upload error:', err);
+        } finally {
+            setUploading(false);
+        }
+    };
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-    // Event helpers
-    const getDateEvents = (date) => events.filter(e => isSameDay(parseISO(e.date), date));
-    const hasEvents = (date) => getDateEvents(date).length > 0;
+    // number of blank slots before the 1st of the month
+    const startWeekday = monthStart.getDay(); // 0–6
+    const blankDays = Array(startWeekday).fill(null);
 
-    // File upload handling
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-                const importedEvents = jsonData.map((row, i) => ({
-                    id: Date.now() + i,
-                    date: row.date,
-                    title: row.event,
-                    color: Object.keys(colorMap)[i % 5],
-                    type: row.type || 'other'
-                }));
-
-                setEvents(prev => [...prev, ...importedEvents]);
-                setError('');
-            } catch (err) {
-                setError('Invalid file format. Please use the provided template.');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    };
-
-    // Add new event
-    const validateEvent = () => {
-        if (!newEvent.title.trim()) return 'Event title is required';
-        if (isBefore(parseISO(newEvent.date), new Date())) return 'Date cannot be in the past';
-        return '';
-    };
-
-    const handleAddEvent = () => {
-        const validationError = validateEvent();
-        if (validationError) return setError(validationError);
-
-        setEvents(prev => [...prev, {
-            id: Date.now(),
-            ...newEvent,
-            color: Object.keys(colorMap)[Math.floor(Math.random() * 5)],
-            type: 'other'
-        }]);
-        setNewEvent({ title: '', date: format(new Date(), 'yyyy-MM-dd') });
-        setError('');
-        setShowAddEvent(false);
-    };
-
-    // Mobile swipe handlers
-    const [touchStart, setTouchStart] = useState(0);
-    const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX);
-    const handleTouchEnd = (e) => {
-        const touchEnd = e.changedTouches[0].clientX;
-        if (touchStart - touchEnd > 50) nextPeriod();
-        if (touchStart - touchEnd < -50) prevPeriod();
-    };
+    if (loading) return (
+        <div className="p-6 bg-white rounded-2xl shadow-lg animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div className="grid grid-cols-7 gap-2 mb-4">
+                {[...Array(42)].map((_, i) => (
+                    <div key={i} className="h-12 bg-gray-100 rounded"></div>
+                ))}
+            </div>
+        </div>
+    );
 
     return (
-        <div className="max-w-md mx-auto p-4 bg-white rounded-2xl shadow-lg">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">{format(currentDate, 'MMMM yyyy')}</h1>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <CalendarIcon size={16} />
-                        <span>{events.length} events scheduled</span>
-                    </div>
-                </div>
-                <div className="flex gap-2">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            {/* Calendar Header */}
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setViewMode(prev => prev === 'month' ? 'week' : 'month')}
-                        className="p-2 bg-gray-100 rounded-lg text-sm font-medium"
+                        onClick={handleTodayClick}
+                        className="p-1 hover:bg-gray-100 rounded-lg text-gray-500 tooltip"
+                        data-tooltip="Jump to Today"
                     >
-                        {viewMode === 'month' ? 'Week' : 'Month'} View
+                        <Home size={18} />
+                    </button>
+                    <span className="text-lg font-semibold text-gray-800">
+                        {format(currentDate, 'MMM yyyy')}
+                    </span>
+                    {isSameMonth(currentDate, new Date()) && (
+                        <span className="text-sm text-gray-500">
+                            ({format(new Date(), 'd')})
+                        </span>
+                    )}
+                </div>
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+                        className="p-1 hover:bg-gray-100 rounded-lg text-gray-500"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <button
+                        onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+                        className="p-1 hover:bg-gray-100 rounded-lg text-gray-500"
+                    >
+                        <ChevronRight size={20} />
                     </button>
                 </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div
-                className="grid grid-cols-7 gap-px mb-4 bg-gray-100 rounded-xl overflow-hidden shadow-sm"
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-            >
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="bg-white p-2 text-center text-sm font-medium text-gray-500">
+            {/* Compact Calendar Grid */}
+            <div className="grid grid-cols-7 gap-1 mb-4">
+                {['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'].map(day => (
+                    <div key={day} className="text-center text-xs text-gray-500 font-medium">
                         {day}
                     </div>
                 ))}
-                {daysInMonth.map((date, index) => {
-                    const isCurrentMonth = isSameMonth(date, currentDate);
-                    const dayEvents = getDateEvents(date);
+                {blankDays.map((_, i) => (
+                    <div key={"blank-" + i} className="h-8" />
+                ))}
+                {daysInMonth.map(date => {
+                    const hasEvents = events.some(e =>
+                        isSameDay(parseISO(e.date), date) &&
+                        e.academicYear === school?.academicYear
+                    );
 
                     return (
-                        <motion.div
-                            key={date.toISOString()}
-                            className={`relative h-14 p-1 bg-white cursor-pointer hover:bg-gray-50 transition-colors
-                                ${isCurrentMonth ? '' : 'text-gray-300'}`}
+                        <button
+                            key={date.toString()}
                             onClick={() => setSelectedDate(date)}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: index * 0.01 }}
+                            className={`h-8 rounded text-sm flex items-center justify-center relative
+                            ${isSameDay(date, selectedDate) ? 'bg-purple-600 text-white' :
+                                    isSameMonth(date, currentDate) ? 'hover:bg-gray-100' : 'text-gray-400'}
+                            ${isSameDay(date, new Date()) && 'font-bold'}`}
                         >
-                            <div className={`w-6 h-6 flex items-center justify-center text-sm rounded-full
-                                ${isSameDay(date, new Date()) ? 'bg-blue-500 text-white' : ''}`}
-                            >
-                                {format(date, 'd')}
-                            </div>
-
-                            {dayEvents.length > 0 && (
-                                <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-1">
-                                    {dayEvents.slice(0, 2).map(event => (
-                                        <div
-                                            key={event.id}
-                                            className={`w-2 h-2 rounded-full ${colorMap[event.color]}`}
-                                        />
-                                    ))}
-                                    {dayEvents.length > 2 && (
-                                        <span className="text-xs text-gray-400">+{dayEvents.length - 2}</span>
-                                    )}
-                                </div>
+                            {format(date, 'd')}
+                            {hasEvents && (
+                                <div className="absolute bottom-1 w-1 h-1 rounded-full bg-purple-400"></div>
                             )}
-                        </motion.div>
+                        </button>
                     );
                 })}
             </div>
 
-            {/* Controls */}
-            <div className="flex justify-between mb-6">
-                <button
-                    onClick={prevPeriod}
-                    className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                    <ChevronLeft size={20} />
-                </button>
+
+            {/* Event Cards */}
+            <div className="flex gap-3">
+                <EventCard
+                    date={format(selectedDate, 'd MMM')}
+                    title={currentEvents[0]?.title || 'No Event'}
+                    color={isAfter(selectedDate, new Date()) ? 'blue' : 'amber'}
+                />
+                {nextEvent && (
+                    <EventCard
+                        date={format(parseISO(nextEvent.date), 'd MMM')}
+                        title={nextEvent.title}
+                        color="blue"
+                    />
+                )}
+            </div>
+
+            {/* Add Event Form */}
+            <div className="mt-4 border-t pt-4">
                 <div className="flex gap-2">
                     <button
-                        onClick={() => setShowAddEvent(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        onClick={() => setShowAddForm(!showAddForm)}
+                        className="flex items-center gap-1 text-sm text-purple-600 hover:bg-purple-50 px-3 py-1 rounded"
                     >
-                        <Plus size={16} />
-                        Add Event
+                        <Plus size={16} /> Add Event
                     </button>
-                    <label className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <label className="flex items-center gap-1 text-sm text-gray-600 hover:bg-gray-50 px-3 py-1 rounded cursor-pointer relative">
                         <Upload size={16} />
-                        Import
                         <input
+                            key={fileKey}
                             type="file"
-                            accept=".xlsx"
                             className="hidden"
-                            onChange={handleFileUpload}
+                            accept=".xls,.xlsx"
+                            onChange={(e) => {
+                                handleFileUpload(e);
+                                e.target.value = null; // Reset input after selection
+                            }}
                         />
+                        {uploading ? 'Uploading...' : 'Upload'}
+                        {uploading && (
+                            <span className="ml-2 inline-block h-3 w-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></span>
+                        )}
                     </label>
                 </div>
-                <button
-                    onClick={nextPeriod}
-                    className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                    <ChevronRight size={20} />
-                </button>
-            </div>
 
-            {/* Event List */}
-            <div className="space-y-3">
-                {events.filter(e => isSameMonth(parseISO(e.date), currentDate)).map(event => (
-                    <motion.div
-                        key={event.id}
-                        className="p-4 bg-gray-50 rounded-xl flex items-center gap-3"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                    >
-                        <div className={`w-3 h-3 rounded-full ${colorMap[event.color]}`} />
-                        <div>
-                            <h3 className="font-medium">{event.title}</h3>
-                            <p className="text-sm text-gray-500">
-                                {format(parseISO(event.date), 'MMM do, yyyy')}
-                                <span className="ml-2">{typeIcons[event.type]}</span>
-                            </p>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-
-            {/* Add Event Modal */}
-            <AnimatePresence>
-                {showAddEvent && (
-                    <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                    >
-                        <motion.div
-                            className="bg-white rounded-2xl p-6 w-full max-w-md"
-                            initial={{ y: 50 }}
-                            animate={{ y: 0 }}
+                <AnimatePresence>
+                    {showAddForm && (
+                        <motion.form
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            onSubmit={handleAddEvent}
+                            className="mt-3 flex gap-2"
                         >
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold">New Event</h2>
-                                <button
-                                    onClick={() => setShowAddEvent(false)}
-                                    className="p-1 hover:bg-gray-100 rounded-lg"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            {error && (
-                                <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg flex items-center gap-2">
-                                    <AlertCircle size={16} />
-                                    {error}
-                                </div>
-                            )}
-
-                            <div className="space-y-4">
-                                <input
-                                    type="text"
-                                    placeholder="Event title"
-                                    className="w-full p-3 border rounded-lg"
-                                    value={newEvent.title}
-                                    onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
-                                />
-                                <input
-                                    type="date"
-                                    className="w-full p-3 border rounded-lg"
-                                    value={newEvent.date}
-                                    min={format(new Date(), 'yyyy-MM-dd')}
-                                    onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
-                                />
-                                <button
-                                    onClick={handleAddEvent}
-                                    className="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2"
-                                >
-                                    <CheckCircle2 size={18} />
-                                    Create Event
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                            <input
+                                type="date"
+                                className="flex-1 text-sm px-2 py-1 border rounded"
+                                value={newEvent.date}
+                                onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Event name"
+                                className="flex-1 text-sm px-2 py-1 border rounded"
+                                value={newEvent.title}
+                                onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
+                            />
+                            <button
+                                type="submit"
+                                className="px-2 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                            >
+                                Save
+                            </button>
+                        </motion.form>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 };
+
+const EventCard = ({ date, title, color }) => (
+    <div className={`flex-1 p-3 rounded-lg border-l-4 ${color === 'amber' ?
+        'border-l-amber-400 bg-amber-50' :
+        'border-l-blue-400 bg-blue-50'
+        }`}>
+        <div className="flex items-center justify-between">
+            <div>
+                <div className="text-xs text-gray-600 mb-1">{date}</div>
+                <div className="text-sm font-medium text-gray-800">{title}</div>
+            </div>
+            <CalendarIcon size={16} className="text-gray-500" />
+        </div>
+    </div>
+);
+
 
 export default EventCalendar;
