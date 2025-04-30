@@ -1,3 +1,4 @@
+
 // src/components/StudentEmployeeAnalytics.jsx
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -17,16 +18,21 @@ export default function StudentEmployeeAnalytics() {
         const fetchData = async () => {
             const code = userData.schoolCode;
 
-            // 1) Active students
-            const studentsSnap = await getDocs(
-                query(
-                    collection(db, 'students'),
-                    where('schoolCode', '==', code),
-                    where('status', '==', 'active')
-                )
+            const newStudentsSnap = await getDocs(
+                query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "new"))
             );
+
+            const currentStudentsSnap = await getDocs(
+                query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "current"))
+            );
+            // Combine results
+            const studentsSnap = [
+                ...newStudentsSnap.docs,
+                ...currentStudentsSnap.docs
+            ];
+
             const sexes = { male: 0, female: 0, other: 0 };
-            studentsSnap.docs.forEach(doc => {
+            studentsSnap.forEach(doc => {
                 const g = (doc.data().gender || '').toLowerCase();
                 if (g === 'male') sexes.male++;
                 else if (g === 'female') sexes.female++;
@@ -100,37 +106,40 @@ export default function StudentEmployeeAnalytics() {
         other: '#a78bfa'     // Violet-400
     };
 
-    const renderDonut = (data, colors, title) => (
-        <div className="bg-gradient-to-br from-indigo-50 to-violet-50 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-            <h2 className="text-md text-center  font-bold text-gray-800 mb-6 border-b border-violet-100 pb-3">
-                {title}
-            </h2>
-            <div className="relative w-32 h-32 mx-auto">
-                <svg viewBox="0 0 100 100" className="-rotate-90 w-full h-full">
-                    {data.segments.map((seg, i) => (
-                        <circle
-                            key={seg.key}
-                            cx="50"
-                            cy="50"
-                            r={radius}
-                            fill="transparent"
-                            stroke={colors[seg.key]}
-                            strokeWidth="16"
-                            strokeDasharray={seg.dasharray}
-                            strokeDashoffset={seg.dashoffset}
-                            className="transition-all duration-1000 ease-out"
-                            strokeLinecap="round"
-                        />
-                    ))}
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-gray-800">{data.total}</span>
-                    <span className="text-sm text-gray-500">Total</span>
+    const renderDonut = (data, colors, title) => {
+        return (
+            <div className="bg-gradient-to-br from-indigo-50 to-violet-50 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+                <h2 className="text-md text-center  font-bold text-gray-800 mb-6 border-b border-violet-100 pb-3">
+                    {title}
+                </h2>
+                <div className="relative w-32 h-32 mx-auto">
+                    <svg viewBox="0 0 100 100" className="-rotate-90 w-full h-full">
+                        {data?.segments && data.segments.length &&
+                            data.segments.filter((seg) => seg.value).map((seg, i) => (
+                                <circle
+                                    key={seg.key}
+                                    cx="50"
+                                    cy="50"
+                                    r={radius}
+                                    fill="transparent"
+                                    stroke={colors[seg.key]}
+                                    strokeWidth="16"
+                                    strokeDasharray={seg.dasharray}
+                                    strokeDashoffset={seg.dashoffset}
+                                    className="transition-all duration-1000 ease-out"
+                                    strokeLinecap="round"
+                                />
+                            ))}
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-2xl font-bold text-gray-800">{data.total}</span>
+                        <span className="text-sm text-gray-500">Total</span>
+                    </div>
                 </div>
+                {renderLegend(data, colors)}
             </div>
-            {renderLegend(data, colors)}
-        </div>
-    );
+        )
+    };
 
     const renderLegend = (data, colors) => (
 

@@ -1,9 +1,17 @@
-// src/components/DayHourLineChart.jsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../../contexts/AuthContext';
 import { db } from '../../../config/firebase';
 import { Calendar, Clock, ChevronDown } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer
+} from 'recharts';
 
 const BIN_DEFS = [
   { label: '7–10 AM', start: 7, end: 10 },
@@ -14,204 +22,175 @@ const BIN_DEFS = [
   { label: '6–7 PM', start: 18, end: 19 },
 ];
 
-function formatDateISO(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function formatLabel(date) {
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
 export default function DayHourLineChart() {
   const { userData } = useAuth();
-  const chartRef = useRef();
-  const [last7Days] = useState(() => 
-    Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      return new Date(d.setHours(0,0,0,0));
-    })
-  );
-  const [selectedDate, setSelectedDate] = useState(last7Days[0]);
-  const [bins, setBins] = useState(BIN_DEFS);
-  const [maxValue, setMaxValue] = useState(1);
-  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, bin: null });
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [last7Days, setLast7Days] = useState([]);
 
-  const calculateXPosition = useCallback((hour) => {
-    const totalHours = 12; // 7 AM to 7 PM (12 hours)
-    const startHour = 7;
-    return ((hour - startHour) / totalHours) * 100;
+  // Generate last 7 days including today
+  useEffect(() => {
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      return {
+        date: date.toISOString().split('T')[0],
+        label: date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+        ...Object.fromEntries(BIN_DEFS.map(b => [b.label, 0]))
+      };
+    }).reverse();
+
+    setLast7Days(days);
+    setSelectedDate(days[days.length - 1].date);
   }, []);
 
-  const fetchData = useCallback(async (date) => {
-    if (!userData?.schoolCode) return;
+  const fetchData = useCallback(async () => {
+    if (!userData?.schoolCode || !selectedDate) return;
 
-    const schoolSnap = await getDocs(query(
-      collection(db, 'schools'),
-      where('Code', '==', userData.schoolCode)
-    ));
-    if (schoolSnap.empty) return;
-    
-    const schoolData = schoolSnap.docs[0].data();
-    const dateStr = formatDateISO(date);
-    const newBins = BIN_DEFS.map(bin => ({ ...bin, total: 0, txs: [] }));
+    try {
+      const schoolQuery = query(
+        collection(db, 'schools'),
+        where('Code', '==', userData.schoolCode)
+      );
+      const schoolSnap = await getDocs(schoolQuery);
 
-    const studSnap = await getDocs(query(
-      collection(db, 'students'),
-      where('schoolCode', '==', userData.schoolCode),
-      where('academicYear', '==', schoolData.academicYear)
-    ));
+      if (schoolSnap.empty) return;
 
-    studSnap.docs.forEach(doc => {
-      (doc.data().transactions || []).forEach(tx => {
-        if (!tx.timestamp?.startsWith(dateStr)) return;
-        const txHour = new Date(tx.timestamp).getHours();
-        const bin = newBins.find(b => txHour >= b.start && txHour < b.end);
-        if (bin) {
-          bin.total += Number(tx.amount) || 0;
-          bin.txs.push(tx);
-        }
+      const studentsQuery = query(
+        collection(db, 'students'),
+        where('schoolCode', '==', userData.schoolCode),
+        where('academicYear', '==', schoolSnap.docs[0].data().academicYear)
+      );
+
+      const studentsSnap = await getDocs(studentsQuery);
+      const daysData = last7Days.map(day => ({ ...day }));
+
+      studentsSnap.forEach(studentDoc => {
+        const student = studentDoc.data();
+        (student.transactions || []).forEach(tx => {
+          const txDate = new Date(tx.timestamp);
+          const txDay = txDate.toISOString().split('T')[0];
+          const txHour = txDate.getHours();
+
+          const dayEntry = daysData.find(d => d.date === txDay);
+          if (!dayEntry) return;
+
+          const bin = BIN_DEFS.find(b => txHour >= b.start && txHour < b.end);
+          if (bin) {
+            dayEntry[bin.label] += Number(tx.amount) || 0;
+          }
+        });
       });
-    });
 
-    const max = Math.max(...newBins.map(b => b.total), 1);
-    setBins(newBins);
-    setMaxValue(max);
-  }, [userData]);
+      setChartData(daysData);
+    } catch (error) {
+      console.error('Data fetch failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userData, last7Days, selectedDate]);
 
   useEffect(() => {
-    fetchData(selectedDate);
-  }, [selectedDate, fetchData]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleMouseMove = (e) => {
-    if (!chartRef.current) return;
-    const rect = chartRef.current.getBoundingClientRect();
-    const xPos = ((e.clientX - rect.left) / rect.width) * 100;
-    
-    const hoveredBin = bins.reduce((closest, bin) => {
-      const binStart = calculateXPosition(bin.start);
-      const binEnd = calculateXPosition(bin.end);
-      return (xPos >= binStart && xPos <= binEnd) ? bin : closest;
-    }, null);
+  const getSelectedDayData = () => {
+    const selectedDay = chartData.find(d => d.date === selectedDate);
+    if (!selectedDay) return [];
 
-    if (hoveredBin) {
-      setTooltip({
-        visible: true,
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-        bin: hoveredBin
-      });
-    } else {
-      setTooltip(t => ({ ...t, visible: false }));
-    }
+    return BIN_DEFS.map(bin => ({
+      time: bin.label,
+      amount: selectedDay[bin.label]
+    }));
   };
 
-  const pathData = bins.reduce((acc, bin, i) => {
-    const x1 = calculateXPosition(bin.start);
-    const x2 = calculateXPosition(bin.end);
-    const y = 100 - (bin.total / maxValue) * 100;
-    
-    if (i === 0) acc += `M ${x1},100 L ${x1},${y} `;
-    acc += `L ${x2},${y} `;
-    if (i === bins.length - 1) acc += `L 100,100 Z`;
-    
-    return acc;
-  }, '');
+  const totalCollection = getSelectedDayData().reduce((sum, item) => sum + item.amount, 0);
+
+  if (loading) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-lg animate-pulse">
+        <div className="h-8 bg-gray-200 rounded mb-4 w-1/2"></div>
+        <div className="h-64 bg-gray-100 rounded"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+    <div className="bg-white p-6 rounded-xl ">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
           <Clock className="text-purple-600" size={20} />
-          Hourly Collection Pattern
+          Daily Collection Pattern
         </h2>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 w-full sm:w-48">
           <Calendar className="text-gray-600" size={18} />
           <select
-            value={formatDateISO(selectedDate)}
-            onChange={e => setSelectedDate(new Date(e.target.value))}
-            className="appearance-none pl-3 pr-8 py-2 border rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-full pl-3 pr-8 py-2 border rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none"
           >
-            {last7Days.map(d => (
-              <option key={formatDateISO(d)} value={formatDateISO(d)}>
-                {formatLabel(d)}
+            {last7Days.map(day => (
+              <option key={day.date} value={day.date}>
+                {day.label}
               </option>
             ))}
           </select>
-          <ChevronDown className="text-gray-500 -ml-6" size={16} />
+          <ChevronDown className="text-gray-500 -ml-6 pointer-events-none" size={16} />
         </div>
       </div>
 
-      <div 
-        className="relative h-64"
-        ref={chartRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setTooltip(t => ({ ...t, visible: false }))}
-      >
-        {/* Chart Grid */}
-        <div className="absolute inset-0 flex flex-col justify-between pb-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="border-t border-gray-100"></div>
-          ))}
+      {totalCollection === 0 ? (
+        <div className="h-64 flex items-center justify-center text-gray-500">
+          No collections recorded for this day
         </div>
-
-        {/* Chart Area */}
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-          <path
-            d={pathData}
-            className="fill-purple-100 opacity-50"
-          />
-          <path
-            d={pathData.replace(/Z$/, '')}
-            className="stroke-purple-600 stroke-2 fill-none"
-            strokeLinejoin="round"
-          />
-        </svg>
-
-        {/* X-Axis Labels */}
-        <div className="absolute bottom-0 left-0 right-0 flex justify-between text-sm text-gray-500 px-1">
-          {BIN_DEFS.map((bin, i) => (
-            <span key={i} className="text-center" style={{ width: `${calculateXPosition(bin.end) - calculateXPosition(bin.start)}%` }}>
-              {bin.label}
-            </span>
-          ))}
+      ) : (
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={getSelectedDayData()}
+              margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis
+                dataKey="time"
+                tick={{ fill: '#6b7280', fontSize: 12 }}
+                interval={0}
+              />
+              <YAxis
+                tickFormatter={value => `₹${value}`}
+                domain={[0, 'auto']}
+                tick={{ fill: '#6b7280', fontSize: 12 }}
+                width={80}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  return (
+                    <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-100">
+                      <div className="text-sm font-semibold text-gray-700">
+                        {payload[0].payload.time}
+                      </div>
+                      <div className="text-lg font-medium text-purple-600">
+                        ₹{payload[0].value.toLocaleString()}
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="amount"
+                stroke="#7C3AED"
+                strokeWidth={2}
+                dot={{ r: 4, fill: '#7C3AED' }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-
-        {/* Tooltip */}
-        {tooltip.visible && tooltip.bin && (
-          <div 
-            className="absolute bg-white border border-gray-200 rounded-lg p-3 shadow-xl text-sm"
-            style={{
-              left: tooltip.x + 10,
-              top: tooltip.y + 10,
-              pointerEvents: 'none'
-            }}
-          >
-            <div className="font-semibold text-purple-600 mb-1">
-              {tooltip.bin.label}
-            </div>
-            <div className="text-gray-600">
-              Total: ₹{tooltip.bin.total.toLocaleString()}
-            </div>
-            {tooltip.bin.txs.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-gray-100">
-                {tooltip.bin.txs.slice(0, 3).map((tx, i) => (
-                  <div key={i} className="flex items-center gap-2 text-gray-500">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full" />
-                    <span className="truncate">{tx.feeType}</span>
-                    <span>₹{tx.amount}</span>
-                  </div>
-                ))}
-                {tooltip.bin.txs.length > 3 && (
-                  <div className="text-gray-400 mt-1">
-                    + {tooltip.bin.txs.length - 3} more transactions
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

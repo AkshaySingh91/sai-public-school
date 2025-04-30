@@ -61,7 +61,7 @@ export default function AddStudent() {
       }
     };
 
-    fetchSchoolData();
+    fetchSchoolData();  
   }, [userData.schoolCode]);
 
   const handleSubmit = async (e) => {
@@ -85,7 +85,6 @@ export default function AddStudent() {
       if (!yearStructure) {
         throw new Error(`No fee structure found for academic year ${formData.academicYear}`);
       }
-
       // Find matching class structure
       const classStructure = yearStructure.classes.find(c => c.name === formData.class);
       if (!classStructure) {
@@ -139,7 +138,7 @@ export default function AddStudent() {
           hostelFee: 0,
         },
         transactions: [],
-        status: 'active',
+        status: 'new',
         createdAt: new Date()
       };
 

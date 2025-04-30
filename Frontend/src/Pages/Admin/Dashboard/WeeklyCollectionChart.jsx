@@ -4,8 +4,6 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ChevronDown, RefreshCw, Info } from 'lucide-react';
-import { FiUsers, FiTrendingUp, FiClock, FiBook } from "react-icons/fi"
-
 export default function WeeklyCollectionChart() {
     const { userData } = useAuth();
     const [classes, setClasses] = useState([]);
@@ -90,7 +88,7 @@ export default function WeeklyCollectionChart() {
     }
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg p-6 max-w-3xl mx-auto hover:shadow-xl transition-shadow">
+        <div className="bg-white rounded-2xl p-6 max-w-3xl mx-auto  transition-shadow">
             <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
                 <div className="flex items-center gap-3">
                     <h2 className="text-xl font-semibold text-gray-800 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text flex">
@@ -183,7 +181,7 @@ export default function WeeklyCollectionChart() {
                                         >
                                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <div className="bg-gray-800 text-white px-2 py-1 rounded text-xs font-medium shadow-lg">
-                                                    ${amount.toLocaleString()}
+                                                    ₹{amount.toLocaleString()}
                                                     <div className="absolute w-2 h-2 bg-gray-800 rotate-45 -bottom-1 left-1/2 -translate-x-1/2" />
                                                 </div>
                                             </div>
@@ -210,7 +208,7 @@ export default function WeeklyCollectionChart() {
                     <span>Hover bars for exact amounts</span>
                 </div>
                 <span className="font-medium">
-                    Total: ${bars.reduce((sum, bar) => sum + bar.amount, 0).toLocaleString()}
+                    Total: ₹ {bars.reduce((sum, bar) => sum + bar.amount, 0).toLocaleString()}
                 </span>
             </div>
         </div>

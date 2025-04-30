@@ -27,7 +27,6 @@ export function HeaderSummary({
             t = Math.min(t + incTeacher, totalTeachers);
             e = Math.min(e + incEmployee, totalEmployees);
             g = Math.min(g + incEarnings, totalEarnings);
-            // console.log(s, t, e, g)
 
             setAnimated({ students: s, teachers: t, employees: e, earnings: g });
             if (s === totalStudents && t === totalTeachers && e === totalEmployees && g === totalEarnings) {
@@ -70,3 +69,5 @@ function SummaryCard({ icon, title, value, isCurrency = false }) {
         </div>
     );
 }
+
+

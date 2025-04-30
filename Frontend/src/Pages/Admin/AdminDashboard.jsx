@@ -31,7 +31,6 @@ const AdminDashboard = () => {
         totalEarnings: 0,
     });
     const [loading, setLoading] = useState(true);
-    const [genderData, setGenderData] = useState({ male: 0, female: 0 });
 
     useEffect(() => {
         async function fetchData() {
@@ -87,11 +86,7 @@ const AdminDashboard = () => {
                         totalEarnings += Number(t.amount) || 0;
                     }
                 });
-            });
-            console.log(totalStudents,
-                totalTeachers,
-                totalEmployees,
-                totalEarnings)
+            }); 
             // Finally, stash it all in state
             setStats({
                 totalStudents,

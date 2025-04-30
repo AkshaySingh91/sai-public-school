@@ -121,7 +121,7 @@ student.allFees = {
   "transportFee": 0,
   "transportFeeDiscount": 0
 }
-transaction schema
+transaction schema inside student.transactions array 
 {
   "academicYear": "24-25", (this is curr academic year of student if it is 23-24 means he paying prev year)
   "account": "cash", (fees are going to which acc of school)
