@@ -18,7 +18,7 @@ const EmployeeDetail = () => {
   const [isCustomDesignation, setIsCustomDesignation] = useState(false);
 
   const designationOptions = [
-    "Teacher", "Principal", "Accountant",
+    "Teacher", "Clerk", "Principal", "Accountant",
     "Security", "Sports Coach", "Librarian", "Other"
   ];
 

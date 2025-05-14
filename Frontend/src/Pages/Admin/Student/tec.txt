@@ -117,7 +117,7 @@ student.allFees = {
     "TutionFee": 0,
     "total": 0
   },
-  "schoolFeesDiscount": 13,
+  "tutionFeesDiscount": 13,
   "transportFee": 0,
   "transportFeeDiscount": 0
 }
@@ -176,7 +176,7 @@ i have to create a dashboard where i will show different statistic some of like:
 
 2. on left show different card: 
     A. Todays Collection (eg; 12,300) it is sum of amount of transaction happend in past 24hrs
-    B. Discounted amount: it is sum of allFee.transportFeeDiscount + allFee.schoolFeesDiscount of all student whose academicYear(eg; "24-25") equal to school.academicYear & student status = "active"
+    B. Discounted amount: it is sum of allFee.transportFeeDiscount + allFee.tutionFeesDiscount of all student whose academicYear(eg; "24-25") equal to school.academicYear & student status = "active"
     C. Expected Collection (eg; 1,12,300): it is sum of allFee.schoolFee.total + allFee.hostelFee + allFee.transportFee + allFee.messFee for all student of academicYear = school.academicYear   
     D. Collected Fee Till date: sum of all transacti.academion  for all student whose transaction academic = schoolcYear
     E. pending Fee: Expected - Collected fee Till date

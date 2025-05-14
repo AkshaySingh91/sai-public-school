@@ -9,9 +9,11 @@ import {
   collection,
   where,
   getDocs,
+  deleteDoc
 } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { nanoid } from "nanoid";
 import FeeManagement from "./FeeManagementTab";
@@ -19,6 +21,7 @@ import StudentProfile from "./StudentProfileCard";
 import TransactionHistory from "./TransactionHistoryTab";
 import TransactionForm from "./TransactionForm.jsx";
 import PersonalInfo from "./PersonalInfo.jsx";
+import StudentDocumentTab from "./StudentDocumentTab"
 
 export default function StudentDetail() {
   const { studentId } = useParams();
@@ -28,6 +31,7 @@ export default function StudentDetail() {
   const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState({});
   const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [newTransaction, setNewTransaction] = useState({
     academicYear: "",
     paymentMode: "",
@@ -37,22 +41,23 @@ export default function StudentDetail() {
     amount: "",
     remark: "",
   });
-
+  const navigate = useNavigate();
+  // first the student data will fetch using id /student/id using student data we will set form, student previous transaction, school details
   useEffect(() => {
+    setLoading(true);
+    // Fetch student data
     const fetchData = async () => {
       try {
-        // Fetch student data
         const studentDoc = await getDoc(doc(db, "students", studentId));
         if (!studentDoc.exists()) throw new Error("Student not found");
         const studentData = { id: studentDoc.id, ...studentDoc.data() };
-        console.log({ studentData });
         setStudent(studentData);
         setFormData(studentData);
 
         // Fetch school data
         const schoolQ = query(
           collection(db, "schools"),
-          where("Code", "==", userData.schoolCode) // Changed "Code" to "code"
+          where("Code", "==", userData.schoolCode)
         );
 
         const schoolSnap = await getDocs(schoolQ);
@@ -77,6 +82,8 @@ export default function StudentDetail() {
         }
       } catch (error) {
         Swal.fire("Error", error.message, "error");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -183,101 +190,146 @@ export default function StudentDetail() {
     }
 
     try {
-      // const transaction = {
-      //     ...newTransaction,
-      //     receiptId: `${student.feeId}-${nanoid(4)}`,
-      //     timestamp: new Date().toISOString(),
-      //     amount: amount // Store as number, not string
-      // };
+      const isCurrentYear = newTransaction.academicYear === student.academicYear;
+      const feeType = newTransaction.feeType;
+      const paymentAmount = parseFloat(newTransaction.amount);
+      const transactionDate = new Date(newTransaction.date);
+
+      // 1. Determine fee context and initial values
+      let initialFee = 0;
+      let applicableDiscount = 0;
+      let currentBalance = 0;
+
+      // 1. Calculate previous payments, it will usefull to check if transaction is valid or not
+      //  TO DO: what if cheque is pending. we do not have to add that amount but when click on cheque = success we have to avoid   
+      let previousPayments = 0;
+      previousPayments = transactions
+        .filter(tx =>
+          tx.feeType === feeType &&
+          tx.academicYear === newTransaction.academicYear &&
+          tx.status === 'completed'
+        )
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+      console.log({ currentBalance, previousPayments, paymentAmount })
+
+      if (isCurrentYear) {
+        // as this is fee from student.allfee is unchangable this adding previousPayments not required  
+        switch (feeType) {
+          case 'SchoolFee':
+            initialFee = (student.allFee.schoolFees?.total || 0) + (student.allFee.tutionFeesDiscount || 0);
+            applicableDiscount = student.allFee.tutionFeesDiscount || 0;
+            currentBalance = initialFee - applicableDiscount;
+            break;
+          case 'TransportFee':
+            initialFee = (student.allFee.transportFee || 0) + (student.allFee.transportFeeDiscount || 0);
+            applicableDiscount = student.allFee.transportFeeDiscount || 0;
+            currentBalance = initialFee - applicableDiscount;
+            break;
+          case 'MessFee':
+            initialFee = student.allFee.messFee || 0;
+            currentBalance = initialFee;
+            break;
+          case 'HostelFee':
+            initialFee = student.allFee.hostelFee || 0;
+            currentBalance = initialFee;
+            break;
+        }
+      } else {
+        switch (feeType) {
+          // last year fees input field change thus to know what is initial we have to add previousPayments
+          case 'SchoolFee':
+            initialFee = previousPayments + (student.allFee.lastYearBalanceFee || 0) + (student.allFee.lastYearDiscount || 0);
+            applicableDiscount = student.allFee.lastYearDiscount || 0;
+            currentBalance = initialFee - applicableDiscount;
+            break;
+          case 'TransportFee':
+            initialFee = previousPayments + (student.allFee.lastYearTransportFee || 0) + (student.allFee.lastYearTransportFeeDiscount || 0);
+            applicableDiscount = (student.allFee.lastYearTransportFeeDiscount || 0);
+            currentBalance = initialFee - applicableDiscount;
+            break;
+          default:
+            initialFee = previousPayments + (student.allFee.lastYearBalanceFee || 0) + (student.allFee.lastYearDiscount || 0);
+            currentBalance = initialFee;
+        }
+      }
+
+      console.log({ initialFee, applicableDiscount }, student.allFee.lastYearBalanceFee, student.allFee.lastYearDiscount)
+      console.log({ initialFee, applicableDiscount }, student.allFee.schoolFees?.total, student.allFee.tutionFeesDiscount)
+
+
+
+      // 3. Calculate remaining balances
+      const remainingBefore = Math.max(currentBalance - previousPayments, 0);
+      const remainingAfter = Math.max(remainingBefore - paymentAmount, 0);
+      console.log(
+        remainingBefore,
+        remainingAfter
+      )
+      // Validate payment amount
+      if (paymentAmount > remainingBefore) {
+        Swal.fire("Error", "Payment amount exceeds outstanding balance", "error");
+        return;
+      }
+
+      // 4. Create historical snapshot
+      const historicalSnapshot = {
+        initialFee,
+        applicableDiscount,
+        previousPayments,
+        remainingBefore,
+        remainingAfter,
+        transactionDate: transactionDate.toISOString(),
+        feeCategory: feeType.replace('Fee', '') // School/Transport/Mess/Hostel
+      };
+
+      // 5. Create transaction object
       const transaction = {
         ...newTransaction,
         receiptId: `${student.feeId}-${nanoid(4)}`,
         timestamp: new Date().toISOString(),
-        amount: amount,
+        amount: paymentAmount,
         status:
-          newTransaction.paymentMode.toLowerCase() === "cheque"
-            ? "pending"
-            : "completed", // Case-insensitive check
+          newTransaction.paymentMode.toLowerCase() === 'cheque'
+            ? 'pending'
+            : 'completed',
+        historicalSnapshot
       };
 
-      // Update fee balances based on transaction
-      // const updatedFees = { ...student.allFee };
-
-      // if (transaction.academicYear !== student.academicYear) {
-      //     // Deduct from previous year balances
-      //     switch (transaction.feeType) {
-      //         case 'HostelFee':
-      //         case 'MessFee':
-      //         case 'SchoolFee':
-      //             updatedFees.lastYearBalanceFee = Math.max((updatedFees.lastYearBalanceFee || 0) - amount, 0);
-      //             break;
-      //         case 'TransportFee':
-      //             updatedFees.lastYearTransportFee = Math.max((updatedFees.lastYearTransportFee || 0) - amount, 0);
-      //             break;
-      //     }
-
-      // }
-      // Update fee balances based on transaction (only if status is 'completed')
+      // 6. Update student's fee balance (only if transaction is completed)
       const updatedFees = { ...student.allFee };
-
-      if (transaction.status === "completed") {
-        if (transaction.academicYear !== student.academicYear) {
-          // Deduct from previous year balances
-          switch (transaction.feeType) {
-            case "HostelFee":
-            case "MessFee":
-            case "SchoolFee":
+      if (transaction.status === 'completed') {
+        if (!isCurrentYear) {
+          switch (feeType) {
+            case 'SchoolFee':
               updatedFees.lastYearBalanceFee = Math.max(
-                (updatedFees.lastYearBalanceFee || 0) - amount,
+                updatedFees.lastYearBalanceFee - paymentAmount,
                 0
               );
               break;
-            case "TransportFee":
+            case 'TransportFee':
               updatedFees.lastYearTransportFee = Math.max(
-                (updatedFees.lastYearTransportFee || 0) - amount,
+                updatedFees.lastYearTransportFee - paymentAmount,
                 0
               );
               break;
-          }
-        } else {
-          // Deduct from current year balances
-          switch (transaction.feeType) {
-            case "HostelFee":
-              updatedFees.hostelFee = Math.max(
-                (updatedFees.hostelFee || 0) - amount,
+            default:
+              updatedFees.lastYearBalanceFee = Math.max(
+                updatedFees.lastYearBalanceFee - paymentAmount,
                 0
               );
-              break;
-            case "MessFee":
-              updatedFees.messFee = Math.max(
-                (updatedFees.messFee || 0) - amount,
-                0
-              );
-              break;
-            case "SchoolFee":
-              updatedFees.schoolFees.total = Math.max(
-                (updatedFees.schoolFees?.total || 0) - amount,
-                0
-              );
-              break;
-            case "TransportFee":
-              updatedFees.transportFee = Math.max(
-                (updatedFees.transportFee || 0) - amount,
-                0
-              );
-              break;
           }
         }
       }
-      const updatedTransactions = [...transactions, transaction];
 
+      // 7. Update Firestore
+      const updatedTransactions = [...transactions, transaction];
       await updateDoc(doc(db, "students", studentId), {
         transactions: updatedTransactions,
-        allFee: updatedFees,
+        ...(transaction.status === 'completed' && { allFee: updatedFees })
       });
 
-      setStudent((prev) => ({ ...prev, allFee: updatedFees }));
-
+      // 8. Update local state
+      setStudent(prev => ({ ...prev, allFee: updatedFees }));
       setTransactions(updatedTransactions);
       setNewTransaction({
         academicYear: student.academicYear,
@@ -288,7 +340,8 @@ export default function StudentDetail() {
         amount: "",
         remark: "",
       });
-      Swal.fire("Success!", "Transaction recorded", "success");
+
+      Swal.fire("Success!", "Transaction recorded with historical context", "success");
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
@@ -309,8 +362,6 @@ export default function StudentDetail() {
 
         if (academicYear !== student.academicYear) {
           switch (feeType) {
-            case "HostelFee":
-            case "MessFee":
             case "SchoolFee":
               updatedFees.lastYearBalanceFee = Math.max(
                 (updatedFees.lastYearBalanceFee || 0) - amount,
@@ -320,33 +371,6 @@ export default function StudentDetail() {
             case "TransportFee":
               updatedFees.lastYearTransportFee = Math.max(
                 (updatedFees.lastYearTransportFee || 0) - amount,
-                0
-              );
-              break;
-          }
-        } else {
-          switch (feeType) {
-            case "HostelFee":
-              updatedFees.hostelFee = Math.max(
-                (updatedFees.hostelFee || 0) - amount,
-                0
-              );
-              break;
-            case "MessFee":
-              updatedFees.messFee = Math.max(
-                (updatedFees.messFee || 0) - amount,
-                0
-              );
-              break;
-            case "SchoolFee":
-              updatedFees.schoolFees.total = Math.max(
-                (updatedFees.schoolFees?.total || 0) - amount,
-                0
-              );
-              break;
-            case "TransportFee":
-              updatedFees.transportFee = Math.max(
-                (updatedFees.transportFee || 0) - amount,
                 0
               );
               break;
@@ -366,7 +390,6 @@ export default function StudentDetail() {
       Swal.fire("Error", error.message, "error");
     }
   };
-  // In StudentDetail.jsx - Add these functions
   const validateAcademicYear = (currentYear, newYear) => {
     console.log({ currentYear, newYear });
     const [currentStart, currentEnd] = currentYear.split("-").map(Number);
@@ -383,7 +406,7 @@ export default function StudentDetail() {
 
       if (!fsSnap.exists()) {
         console.error("Fee structure document not found");
-        return { AcademicFee: 0, TutionFee: 0, total: 0 };
+        return { AdmissionFee: 0, TutionFee: 0, total: 0 };
       }
 
       const structures = fsSnap.data().structures || [];
@@ -410,7 +433,7 @@ export default function StudentDetail() {
 
       if (!yearStructure) {
         console.warn("No fee structures available");
-        return { AcademicFee: 0, TutionFee: 0, total: 0 };
+        return { AdmissionFee: 0, TutionFee: 0, total: 0 };
       }
 
       // Rest of the original logic remains the same
@@ -420,7 +443,7 @@ export default function StudentDetail() {
 
       if (!classStructure) {
         console.warn(`No fee structure found for class ${newClass}`);
-        return { AcademicFee: 0, TutionFee: 0, total: 0 };
+        return { AdmissionFee: 0, TutionFee: 0, total: 0 };
       }
 
       const studentType = classStructure.studentType?.find(
@@ -430,21 +453,21 @@ export default function StudentDetail() {
 
       if (!studentType) {
         console.warn(`No fee structure found for student type ${student.type}`);
-        return { AcademicFee: 0, TutionFee: 0, total: 0 };
+        return { AdmissionFee: 0, TutionFee: 0, total: 0 };
       }
 
       const feeStructure = studentType.feeStructure || {};
-      const academicFee = Number(feeStructure.AcademicFee) || 0;
+      const AdmissionFee = Number(feeStructure.AdmissionFee) || 0;
       const tutionFee = Number(feeStructure.TutionFee) || 0;
 
       return {
-        AcademicFee: academicFee,
+        AdmissionFee: AdmissionFee,
         TutionFee: tutionFee,
-        total: academicFee + tutionFee,
+        total: AdmissionFee + tutionFee,
       };
     } catch (error) {
       console.error("Error fetching fee structure:", error);
-      return { AcademicFee: 0, TutionFee: 0, total: 0 };
+      return { AdmissionFee: 0, TutionFee: 0, total: 0 };
     }
   };
 
@@ -472,13 +495,6 @@ export default function StudentDetail() {
         (t) => t.academicYear === currentYear
       );
 
-      console.log(
-        currentFees,
-        transactions,
-        currentYear,
-        currentYearTransactions
-      );
-
       const calculateCurrentYearUnpaid = (feeType) => {
         const feeAmount =
           feeType === "SchoolFee"
@@ -504,12 +520,6 @@ export default function StudentDetail() {
         calculateCurrentYearUnpaid("TransportFee"),
         0
       );
-
-      console.log(
-        currentFees.schoolFees?.total,
-        calculateCurrentYearUnpaid("SchoolFee")
-      );
-      console.log(unpaidHostel, unpaidMess, unpaidSchool, unpaidTransport);
       // Get NEW fees for the NEXT academic year
       const newClass = formData.class;
       const newFees = await getNewClassFees(newClass, newAcademicYear);
@@ -548,82 +558,172 @@ export default function StudentDetail() {
       Swal.fire("Error", error.message, "error");
     }
   };
+  const handleStudentDelete = async () => {
+    const result = await Swal.fire({
+      title: 'Delete this student?',
+      text: "This action cannot be undone.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel'
+    });
 
-  if (!student || !schoolData)
-    return <div className="p-6 text-center">Loading...</div>;
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, 'students', studentId));
+        await Swal.fire('Deleted!', 'Student has been removed.', 'success');
+        navigate('/students');  // Adjust to your list route
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+  };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row gap-6 relative">
-        <StudentProfile
-          student={student}
-          formData={formData}
-          setFormData={setFormData}
-          handleStudentUpdate={handleStudentUpdate}
-        />
-
-        <div className="md:w-2/3">
-          <div className="flex border-b mb-6">
-            {[
-              "Student Details",
-              "Fee Details",
-              "Transactions",
-              "Documents",
-            ].map((tab, idx) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(idx)}
-                className={`px-6 py-3 font-medium ${
-                  activeTab === idx
-                    ? "text-purple-600 border-b-2 border-purple-600"
-                    : "text-gray-500 hover:text-purple-500"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === 0 && (
-            <PersonalInfo
+    <>{
+      loading ?
+        <StudentDetailsLoader /> :
+        <div className="py-6 max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-6 relative">
+            <StudentProfile
+              student={student}
               formData={formData}
               setFormData={setFormData}
-              studentId={student}
-              handleFeeUpdate={handleFeeUpdate}
-              schoolData={schoolData}
-              handleClassChange={handleClassChange}
+              handleStudentUpdate={handleStudentUpdate}
+              handleStudentDelete={handleStudentDelete}
             />
-          )}
 
-          {activeTab === 1 && (
-            <div className="space-y-6">
-              <FeeManagement
-                student={student}
-                transactions={transactions}
-                formData={formData}
-                setFormData={setFormData}
-                handleFeeUpdate={handleFeeUpdate}
-              />
-              <TransactionForm
-                newTransaction={newTransaction}
-                setNewTransaction={setNewTransaction}
-                schoolData={schoolData}
-                formData={formData}
-                setFormData={setFormData}
-                handleTransactionSubmit={handleTransactionSubmit}
-                student={student}
-              />
+            <div className="md:w-2/3">
+              <div className="flex border-b mb-6">
+                {[
+                  "Student Details",
+                  "Fee Details",
+                  "Transactions",
+                  "Documents",
+                ].map((tab, idx) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(idx)}
+                    className={`px-6 py-3 font-medium ${activeTab === idx
+                      ? "text-purple-600 border-b-2 border-purple-600"
+                      : "text-gray-500 hover:text-purple-500"
+                      }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              {activeTab === 0 && (
+                <PersonalInfo
+                  formData={formData}
+                  setFormData={setFormData}
+                  studentId={student}
+                  handleFeeUpdate={handleFeeUpdate}
+                  schoolData={schoolData}
+                  handleClassChange={handleClassChange}
+                />
+              )}
+
+              {activeTab === 1 && (
+                <div className="space-y-6">
+                  <FeeManagement
+                    student={student}
+                    transactions={transactions}
+                    formData={formData}
+                    setFormData={setFormData}
+                    handleFeeUpdate={handleFeeUpdate}
+                  />
+                  <TransactionForm
+                    newTransaction={newTransaction}
+                    setNewTransaction={setNewTransaction}
+                    schoolData={schoolData}
+                    formData={formData}
+                    setFormData={setFormData}
+                    handleTransactionSubmit={handleTransactionSubmit}
+                    student={student}
+                  />
+                </div>
+              )}
+
+              {activeTab === 2 && (
+                <TransactionHistory
+                  student={student}
+                  transactions={transactions}
+                  setTransactions={setTransactions}
+                  onClearTransaction={handleTransactionStatusUpdate}
+                />
+              )}
+              {activeTab === 3 && (
+                <StudentDocumentTab
+                  student={student}
+                  setStudent={setStudent}
+                />
+              )}
             </div>
-          )}
+          </div>
+        </div>
+    }
+    </>);
+}
 
-          {activeTab === 2 && (
-            <TransactionHistory
-              student={student}
-              transactions={transactions}
-              setTransactions={setTransactions}
-              onClearTransaction={handleTransactionStatusUpdate}
-            />
-          )}
+function StudentDetailsLoader() {
+  return (
+    <div className="animate-pulse p-6">
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* Profile Card Skeleton */}
+        <div className="w-full md:w-72 lg:w-80 space-y-4">
+          <div className="bg-gray-200 rounded-full w-32 h-32 mx-auto"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+            <div className="h-8 bg-gray-200 rounded-lg w-full mt-4"></div>
+            <div className="h-8 bg-gray-200 rounded-lg w-full"></div>
+          </div>
+        </div>
+
+        {/* Details Skeleton */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Personal Info Section */}
+          <div className="col-span-2 space-y-4">
+            <div className="h-5 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="h-4 bg-gray-200 rounded w-1/5"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/5"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Academic Info Section */}
+          <div className="space-y-4">
+            <div className="h-5 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Family Info Section */}
+          <div className="space-y-4">
+            <div className="h-5 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import LoadingScreen from "../components/Loader";
 import {
   createUserWithEmailAndPassword,
@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {  
+      if (user) {
         // fetch the user document to get role data
         const userDoc = await getDoc(doc(db, "Users", user.uid));
         if (userDoc.exists()) {

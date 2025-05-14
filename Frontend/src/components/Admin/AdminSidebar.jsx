@@ -1,15 +1,17 @@
 import { motion } from "framer-motion";
 import {
-    FiActivity, FiUsers, FiBook, FiCalendar, FiPieChart,
-    FiHelpCircle, FiBell, FiSettings, FiLogOut, FiMail, FiHome,
+    FiActivity, FiUsers, FiBook, FiSettings, FiLogOut, FiHome,
     FiChevronDown, FiChevronRight
 } from "react-icons/fi";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TbBus } from "react-icons/tb";
 import { MdOutlineInventory2 } from "react-icons/md";
-//hello dost kaisa h
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+
+
 const menuItems = [
     { icon: FiActivity, text: "Dashboard", path: "/" },
     {
@@ -53,15 +55,36 @@ const menuItems = [
             { text: "Stock Allocation", path: "/stockallocate" },
         ]
     },
-    { icon: FiPieChart, text: "Analytics", path: "/analytics" },
-    { icon: FiHelpCircle, text: "Help center", path: "/help-center" },
-    { icon: FiBell, text: "Notice", path: "/notice" },
     { icon: FiSettings, text: "Settings", path: "/settings" },
 ];
 
 const AdminSidebar = () => {
     const { logout } = useAuth();
     const [openSubmenu, setOpenSubmenu] = useState(null);
+    const { userData } = useAuth();
+    const [school, setSchool] = useState([]);
+
+    useEffect(() => {
+        const fetchSchoolClasses = async () => {
+            if (userData?.schoolCode) {
+                const schoolQuery = query(
+                    collection(db, "schools"),
+                    where("Code", "==", userData.schoolCode)
+                );
+                const schoolSnapshot = await getDocs(schoolQuery);
+                if (schoolSnapshot.empty) {
+                    throw new Error("School not found");
+                }
+                const schoolData = schoolSnapshot.docs[0].data();
+                console.log({ schoolData })
+                setSchool({
+                    id: schoolSnapshot.docs[0].id,
+                    ...schoolData,
+                });
+            }
+        };
+        fetchSchoolClasses();
+    }, [userData?.schoolCode]);
 
     const toggleSubmenu = (path) => {
         setOpenSubmenu(openSubmenu === path ? null : path);
@@ -71,7 +94,7 @@ const AdminSidebar = () => {
         <motion.div
             initial={{ x: -100 }}
             animate={{ x: 0 }}
-            className="lg:w-64 w-20 bg-white h-screen overflow-y-auto  p-5 fixed top-0 left-0 transition-all duration-300"
+            className="lg:w-64 w-16 bg-white h-screen overflow-y-auto  p-5 fixed top-0 left-0 transition-all duration-300"
             style={{ "scrollbar-width": "none", "-ms-overflow-style": "none" }}
         >
             <div className="flex items-center mb-10">
@@ -80,7 +103,7 @@ const AdminSidebar = () => {
                     alt="Educo logo"
                     className="mr-3 rounded-lg"
                 />
-                <span className="text-xl font-bold hidden lg:block">Sai Public School</span>
+                <span className="text-xl font-bold hidden lg:block capitalize">{school.schoolName || "Sai Public School"}, {school?.location?.taluka || ""}</span>
             </div>
 
             <nav>

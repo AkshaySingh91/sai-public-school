@@ -50,7 +50,7 @@ function TransactionForm({ newTransaction, setNewTransaction, schoolData, handle
                     <SelectField
                         icon={<FileTextIcon />}
                         label="Fee Type"
-                        // schoolData.feeTypes will only have AcademicFee, TutionFee that only school fees thus we need to add all fee
+                        // schoolData.feeTypes will only have AdmissionFee, TutionFee that only school fees thus we need to add all fee
                         options={["SchoolFee", "MessFee", "HostelFee", "TransportFee"]}
                         value={newTransaction.feeType}
                         onChange={(e) => setNewTransaction({ ...newTransaction, feeType: e.target.value })}

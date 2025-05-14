@@ -53,7 +53,7 @@ const ManageSchools = () => {
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <h3 className="text-xl font-bold">{school.schoolName}</h3>
-                    <p className="text-gray-600">Location: {school.location}</p>
+                    <p className="text-gray-600">Location: {school?.location?.taluka || ""}</p>
                     <p className="text-gray-600">Code: {school.Code}</p>
                   </div>
                   <button

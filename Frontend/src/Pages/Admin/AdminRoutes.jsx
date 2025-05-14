@@ -19,13 +19,14 @@ import BusAllocation from './Student/BusAllocation';
 import StockList from './Student/StockList';
 import StockGroup from './Student/StockGroup';
 import StockAllocate from './Student/StockAllocate';
+import Settings from "./Settings/Settings"
 
 const AdminLayout = () => {
   return (
     <div className="bg-gray-50 min-h-screen overflow-hidden">
       <div className="">
         <AdminSidebar />
-        <div className="p-5 ml-20 lg:ml-64 h-screen overflow-y-auto w-auto">
+        <div className="pr-5 pl-5 ml-20 lg:ml-64 h-screen overflow-y-auto w-auto">
           <Outlet />
         </div>
       </div>
@@ -52,6 +53,7 @@ const AdminIndex = () => {
           path="/student/:studentId/receipt/:receiptId"
           element={<FeeReceiptPage />}
         />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/buslist" element={<BusList />} />
         <Route path='/busdest' element={<BusDestination />} />
         <Route path='/busallocate' element={<BusAllocation />} />

@@ -8,6 +8,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc
 } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -190,6 +191,32 @@ export default function FeeStructure() {
     setLoading(true);
     try {
       const fsRef = doc(db, "feeStructures", userData.schoolCode);
+      const schoolsRef = collection(db, 'schools');
+      const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) throw new Error("School not found");
+      const schoolDoc = querySnapshot.docs[0];
+
+
+      console.log({ structures })
+      const allClasses = [];
+      const sortedStructures = [...structures].sort((a, b) => {
+        // Extract starting year from academic year format "YY-YY"
+        const getStartYear = (year) => {
+          const [start] = year?.split("-") || ["00"];
+          return parseInt(start) || 0;
+        };
+
+        return getStartYear(b.year) - getStartYear(a.year);
+      })[0];
+      sortedStructures.classes.map(c => {
+        allClasses.push(c.name)
+      });
+      // whenever we add new class we will update in school.class
+      await updateDoc(doc(db, 'schools', schoolDoc.id), {
+        class: allClasses
+      });
+      // updating school feestructure
       await setDoc(fsRef, { structures }, { merge: true });
       MySwal.fire({
         title: "Success!",
@@ -197,6 +224,7 @@ export default function FeeStructure() {
         icon: "success",
         confirmButtonColor: "#7e22ce",
       });
+
     } catch (err) {
       MySwal.fire({
         title: "Error!",
@@ -431,7 +459,7 @@ const AddStudentTypeForm = ({
     if (!Object.values(fees).some((v) => v !== "")) return;
 
     const dsFees = {
-      AcademicFee: Number(fees["AcademicFee"]),
+      AdmissionFee: Number(fees["AdmissionFee"]),
       TutionFee: Number(fees["TutionFee"]),
     };
 
@@ -440,14 +468,14 @@ const AddStudentTypeForm = ({
 
     // Add DSS: Half of DS
     const dssFees = {
-      AcademicFee: Math.round(dsFees.AcademicFee / 2),
+      AdmissionFee: Math.round(dsFees.AdmissionFee / 2),
       TutionFee: Math.round(dsFees.TutionFee / 2),
     };
     onAdd(year, className, "DSS", dssFees);
 
-    // Add DSR: AcademicFee same, TutionFee 0
+    // Add DSR: AdmissionFee same, TutionFee 0
     const dsrFees = {
-      AcademicFee: dsFees.AcademicFee,
+      AdmissionFee: dsFees.AdmissionFee,
       TutionFee: 0,
     };
     onAdd(year, className, "DSR", dsrFees);

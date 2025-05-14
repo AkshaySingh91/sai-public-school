@@ -3,12 +3,12 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { Switch } from "@headlessui/react";
 import { Save, Trash2, User, CalendarDays, Banknote } from "lucide-react";
-
 export default function StudentProfile({
   student,
   formData,
   setFormData,
   handleStudentUpdate,
+  handleStudentDelete,
 }) {
   const handleToggleStatus = async (val) => {
     const transactions = student.transactions || [];
@@ -104,21 +104,19 @@ export default function StudentProfile({
               <Switch
                 checked={formData.status !== "inactive"}
                 onChange={handleToggleStatus}
-                className={`${
-                  formData.status !== "inactive"
+                className={`${formData.status !== "inactive"
                     ? "bg-purple-600"
                     : "bg-gray-200"
-                } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                  } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
               >
                 <span
-                  className={`${
-                    formData.status !== "inactive"
+                  className={`${formData.status !== "inactive"
                       ? "translate-x-6"
                       : "translate-x-1"
-                  } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                 />
               </Switch>
-             
+
             </div>
           </DetailItem>
           <DetailItem
@@ -139,7 +137,10 @@ export default function StudentProfile({
           >
             <Save className="w-5 h-5 mr-2" /> Update Details
           </button>
-          <button className="w-full text-red-600 hover:text-red-700 font-medium py-2.5 rounded-lg border border-red-200 hover:border-red-300 flex items-center justify-center">
+          <button
+            onClick={handleStudentDelete}
+            className="w-full text-red-600 hover:text-red-700 font-medium py-2.5 rounded-lg border border-red-200 hover:border-red-300 flex items-center justify-center"
+          >
             <Trash2 className="w-5 h-5 mr-2" /> Delete Student
           </button>
         </div>

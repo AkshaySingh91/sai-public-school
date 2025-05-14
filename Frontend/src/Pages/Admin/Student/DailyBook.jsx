@@ -4,6 +4,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { useAuth } from "../../../contexts/AuthContext";
 import { db } from "../../../config/firebase";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -227,24 +228,18 @@ export default function DailyBook() {
                           {t.remark || "-"}
                         </td>
                         <td className="px-2 py-2 font-medium break-words">
-                          <button
-                            onClick={() =>
-                              navigate(
-                                `/student/${t.studentId}/receipt/${t.receiptId}`
-                              )
-                            }
-                            className="text-purple-600 hover:text-purple-900 text-xs"
-                          >
-                            {t.receiptId}
-                          </button>
+                          {/* if trans is completed than only show link*/}
+                          {t.status === 'completed'
+                            ? <Link to={`/student/${t.studentId}/receipt/${t.receiptId}`}>{t.receiptId}</Link>
+                            : <span className="text-gray-400">{t.status}</span>
+                          }
                         </td>
                         <td className="px-2 py-2">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                              t.status === "completed"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${t.status === "completed"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-yellow-100 text-yellow-800"
+                              }`}
                           >
                             {t.status || "pending"}
                           </span>

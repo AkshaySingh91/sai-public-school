@@ -66,14 +66,15 @@ export default function WeeklyCollectionChart() {
 
         const studSnap = await getDocs(studQ);
         const sums = days.reduce((acc, { key }) => ({ ...acc, [key]: 0 }), {});
-        console.log({ sums })
         studSnap.docs.forEach(d => {
             (d.data().transactions || []).forEach(tx => {
-                const date = tx.timestamp?.slice(0, 10);
-                if (date in sums) sums[date] += Number(tx.amount) || 0;
+                // check if today trans is completed than we consider it as transaction 
+                if (tx.status === "completed") {
+                    const date = tx.timestamp?.slice(0, 10);
+                    if (date in sums) sums[date] += Number(tx.amount) || 0;
+                }
             });
         });
-        console.log({ sums })
 
         const maxAmount = Math.max(...Object.values(sums), 1);
         const barData = days.map(({ key, label }) => ({
@@ -82,13 +83,12 @@ export default function WeeklyCollectionChart() {
             amount: sums[key],
             percent: (sums[key] / maxAmount) * 100
         }));
-        console.log({ barData })
         setBars(barData);
         setLoading(false);
     }
 
     return (
-        <div className="bg-white rounded-2xl p-6 max-w-3xl mx-auto  transition-shadow">
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 max-w-3xl mx-auto  transition-shadow">
             <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
                 <div className="flex items-center gap-3">
                     <h2 className="text-xl font-semibold text-gray-800 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text flex">
@@ -203,9 +203,16 @@ export default function WeeklyCollectionChart() {
             )}
 
             <div className="mt-6 flex justify-between items-center text-sm text-gray-500">
-                <div className="flex items-center gap-2">
-                    <Info size={16} className="text-purple-600" />
-                    <span>Hover bars for exact amounts</span>
+                <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                        <Info size={16} className="text-purple-600" />
+                        <span>Hover bars for exact amounts</span>
+                    </div>
+                    {/* tell them that we dont show cheque pending amount */}
+                    <div className="flex items-center gap-2">
+                        <Info size={16} className="text-purple-600" />
+                        <span>Only completed anount will shown</span>
+                    </div>
                 </div>
                 <span className="font-medium">
                     Total: ₹ {bars.reduce((sum, bar) => sum + bar.amount, 0).toLocaleString()}

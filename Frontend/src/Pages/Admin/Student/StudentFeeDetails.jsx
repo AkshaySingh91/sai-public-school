@@ -1,9 +1,13 @@
-import React, { useCallback, useState } from 'react';
-import { Download, FileText, UserCheck, UserX, Search, ArrowUp, ArrowDown, X } from 'react-feather';
+import React, { useCallback, useState, useEffect } from 'react';
+import { Download, FileText, UserCheck, UserX, Search, ArrowUp, ArrowDown, } from 'react-feather';
+import { ChevronDown } from 'react-feather';
 import * as XLSX from 'xlsx';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../config/firebase';
 import jsPDF from 'jspdf';
-import {autoTable} from 'jspdf-autotable';
+import { autoTable } from 'jspdf-autotable';
 import { PieChart, FeeBar } from './FeeVisualizations';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const StudentFeeDetails = ({
     loading,
@@ -20,28 +24,82 @@ const StudentFeeDetails = ({
     setSearchTerm,
     setSortKey,
     setSortOrder,
-    setCurrentPage
+    setCurrentPage,
+    selectedClass,
+    selectedDiv,
+    setSelectedClass,
+    setSelectedDiv,
 }) => {
+    const { userData } = useAuth();
     const [selectedStudentId, setSelectedStudentId] = useState(null);
+    const [school, setSchool] = useState([]);
+
+    useEffect(() => {
+        const fetchSchoolClasses = async () => {
+            if (userData?.schoolCode) {
+                const schoolQuery = query(
+                    collection(db, "schools"),
+                    where("Code", "==", userData.schoolCode)
+                );
+                const schoolSnapshot = await getDocs(schoolQuery);
+                if (schoolSnapshot.empty) {
+                    throw new Error("School not found");
+                }
+                const schoolData = schoolSnapshot.docs[0].data();
+                console.log({ schoolData })
+                setSchool({
+                    id: schoolSnapshot.docs[0].id,
+                    ...schoolData,
+                });
+            }
+        };
+        fetchSchoolClasses();
+    }, [userData?.schoolCode]);
+
+    const handleClassChange = (e) => {
+        const options = e.target.options;
+        const selected = [];
+        for (let i = 0; i < options.length; i++) {
+            if (options[i].selected) {
+                selected.push(options[i].value);
+            }
+        }
+        setSelectedClass(selected);
+        setCurrentPage(1);
+    };
+    const handleDivChange = (e) => {
+        setSelectedDiv(e.target.value);
+        setCurrentPage(1);
+    };
 
     const handleRowClick = (studentId) => {
         setSelectedStudentId(prev => prev === studentId ? null : studentId);
     };
     const exportExcel = useCallback(() => {
-        const data = filteredAllStudents.map(student => ({
-            'Academic Year': student.academicYear,
-            'Student Type': student.type,
-            'Name': `${student.fname} ${student.lname}`,
-            'Class': student.class,
-            'Division': student.div,
-            'Fee ID': student.feeId,
-            'Last Year Balance': student.lastYearBalance,
-            'Total Fees': student.totalFees,
-            'Discounts': student.totalDiscount,
-            'Net Fees': student.afterDiscount,
-            'Paid Amount': student.paid,
-            'Outstanding': student.outstanding
-        }));
+        const excelStudentData = filteredAllStudents.map(student => {
+
+            return {
+                'Academic Year': student.academicYear,
+                'Fee ID': student.feeId,
+                'Student Type': student.type,
+                'Name': `${student.fname} ${student.lname}`,
+                'Class': student.class,
+                'Division': student.div,
+                // updated fee data this will show all fee informaion in excel
+                'Last Year Pending': (student?.lastYearSchoolBalance || 0) + (student?.lastYearTransportBalance || 0),
+                'Tution Fee': student?.tutionFeeNet || 0,
+                'TutionFee Paid': student?.tutionFeePaid || 0,
+                'Pending TutionFee ': (student?.tutionFeeNet || 0) - (student?.tutionFeePaid || 0),
+                'TotalTransportFee': student?.totalTransportFee || 0,
+                'NetTransportFee': student?.transportFeeNet || 0,
+                'TransportFee paid': student?.transportFeePaid || 0,
+                'Pending TransportFee ': (student?.transportFeeNet) - (student?.transportFeePaid || 0),
+                'Total paid': (student?.tutionFeePaid || 0) + (student?.transportFeePaid || 0),
+                'Outstanding': ((student?.transportFeeNet || 0) + student?.tutionFeeNet || 0) - ((student?.transportFeePaid || 0) + (student?.tutionFeePaid || 0))
+            }
+        });
+
+        const data = excelStudentData;
 
         const worksheet = XLSX.utils.json_to_sheet(data);
         const workbook = XLSX.utils.book_new();
@@ -55,7 +113,7 @@ const StudentFeeDetails = ({
         autoTable(doc, {
             startY: 25,
             head: [
-                ['Name', 'Class', 'Fee ID', 'Last Year', 'Total Fees',
+                ['Name', 'Class', 'Fee ID', 'Last Year ', 'Total Fees',
                     'Discount', 'Net Fees', 'Paid', 'Outstanding']
             ],
             body: filteredAllStudents.map(s => [
@@ -114,11 +172,12 @@ const StudentFeeDetails = ({
                 </div>
 
                 {/* Controls */}
-                <div className="flex flex-col md:flex-row gap-3">
-                    <div className="relative flex-1">
+                <div className="flex flex-col md:flex-row gap-3 items-center justify-center">
+                    {/* Search Input */}
+                    <div className="relative w-full">
                         <input
                             type="text"
-                            placeholder="Search student or Fee id"
+                            placeholder="Search student or Fee id or Div"
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
@@ -129,6 +188,43 @@ const StudentFeeDetails = ({
                         <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" />
                     </div>
 
+                    {/* Class Selector */}
+                    <div className="relative w-auto">
+                        <select
+                            value={selectedClass}
+                            onChange={(e) => {
+                                setSelectedClass(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="px-4 py-2 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 appearance-none"
+                        >
+                            <option value="All">All Classes</option>
+                            {school.class?.map(cls => (
+                                <option key={cls} value={cls}>{cls}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-2.5 top-2.5 text-gray-400 pointer-events-none" />
+                    </div>
+
+                    {/* Division Selector */}
+                    <div className="relative w-auto">
+                        <select
+                            value={selectedDiv}
+                            onChange={(e) => {
+                                setSelectedDiv(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="px-4 py-2 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                            <option value="All">All Divisions</option>
+                            {['A', 'B', 'C', 'D', 'E'].map(div => (
+                                <option key={div} value={div}>{div}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-2.5 top-2.5 text-gray-400 pointer-events-none" />
+                    </div>
+
+                    {/* Sort Controls */}
                     <div className="flex gap-1.5">
                         <select
                             value={sortKey || ''}
@@ -139,7 +235,6 @@ const StudentFeeDetails = ({
                             <option value="outstanding">Outstanding</option>
                             <option value="lastYearBalance">Last Year Balance</option>
                         </select>
-
                         <button
                             onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                             className="px-2.5 py-2 border rounded-lg hover:bg-gray-50 text-gray-600"
@@ -176,7 +271,7 @@ const StudentFeeDetails = ({
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-50">
                         <tr>
-                            {['Student', 'Class', 'Fee ID', 'Last Year', 'Total', 'Discount', 'Net', 'Paid', 'Balance'].map((header, idx) => (
+                            {['Student', 'Class', 'Div', 'Fee ID', 'L .Y Pending', 'Total Fees', 'Discount', 'Net Fees', 'Total Paid', 'Balance'].map((header, idx) => (
                                 <th
                                     key={header}
                                     className={`px-3 py-2.5 text-left font-medium text-gray-700 ${idx === 0 ? 'pl-4' : ''
@@ -204,12 +299,15 @@ const StudentFeeDetails = ({
                                         </div>
                                     </td>
                                     <td className="px-3 py-2.5 text-gray-600">
-                                        {student.class}-{student.div}
+                                        {student.class}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-gray-600">
+                                        {student.div}
                                     </td>
                                     <td className="px-3 py-2.5 font-mono text-purple-600">
                                         {student.feeId}
                                     </td>
-                                    <td className="px-3 py-2.5">{formatCurrency(student?.lastYearSchoolBalance || 0 + student?.lastYearTransportBalance || 0)}</td>
+                                    <td className="px-3 py-2.5">{formatCurrency((student?.lastYearSchoolBalance || 0) + (student?.lastYearTransportBalance || 0))}</td>
                                     <td className="px-3 py-2.5">{formatCurrency(student?.totalFees || 0)}</td>
                                     <td className="px-3 py-2.5 text-red-600">-{formatCurrency(student?.totalDiscount || 0)}</td>
                                     <td className="px-3 py-2.5 font-medium">{formatCurrency(student?.afterDiscount || 0)}</td>
@@ -366,75 +464,3 @@ const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }) => 
 };
 
 export default StudentFeeDetails;
-
-/*
-student.allFees = {
-  "hostelFee": 0,
-  "lastYearBalanceFee": 20,
-  "lastYearDiscount": 16,
-  "lastYearTransportFee": 0,
-  "lastYearTransportFeeDiscount": 2,
-  "messFee": 0,
-  "schoolFees": {
-    "AcademicFee": 3323,
-    "TutionFee": 0,
-    "total": 0
-  },
-  "schoolFeesDiscount": 13,
-  "transportFee": 0,
-  "transportFeeDiscount": 0
-}
- 
-transaction schema
-{
-  "academicYear": "24-25", (this is curr academic year of student if it is 23-24 means he paying prev year)
-  "account": "cash", (fees are going to which acc of school)
-  "amount": 121, 
-  "date": "2025-04-24",
-  "feeType": "AcademicFees",
-  "paymentMode": "CASH",
-  "receiptId": "FEE-XWXCZT-hdCx",
-  "remark": "",
-  "timestamp": "2025-04-24T15:24:34.851Z"
-}
-employee schema: 
-{
-  "active": true,
-  "aadharCardNo": "134412341234123123",
-  "address": "D/103 Rashmi Regency 1 opposite banq",
-  "class": "100",
-  "contact": "9296756919",
-  "department": "Computer",
-  "designation": "Sakha baaap",
-  "div": "Z",
-  "dob": "2008-06-15",
-  "doj": "2025-04-11",
-  "email": "singhakshay6794@gmail.com",
-  "firstName": "Akshay",
-  "gender": "Male",
-  "lastName": "Singh",
-  "maritalStatus": "Single",
-  "middleName": "Rajesh",
-  "schoolCode": "12",
-  "type": "Teaching",
-  "uid": "XGlXSkmJLcqnP263qiI",
-  "webAccess": "no"
-}  
-  {
-  "code": "12",
-  "academicYear": "24-25",
-  "accounts": [{}]
-  "class": ["Nursery", "JRKG", "1st"],
-  "createdAt": "2025-04-14T15:24:46.945Z",
-  "feeTypes": ["AcademicFee", "TuitionFee"],
-  "location": "asdfasd",
-  "logoURL": "",
-  "paymentModes": ["CASH", "GPAY"],
-  "schoolName": "asdfasdf",
-  "studentsType": ["DSS", "DS", "DSR"]
-}
-suppose allfee.hostelFee = 2000, allfee.messFee = 1500, allfee.schoolFees.total = 3000, allfee.transportFee = 1000 than & student.academicYear = "24-25" than this all fees are of this Year also allfee.lastYearBalanceFee = 2000, allfee.lastYearTransportFee = 3000 this are pending fees of "23-24".
-let say i have create transaction of academicYear "24-25" & feeType = schoolFee & amount = 2000. than to calculate total paid fees of this "24-25" we will take sum of all amount of all transaction of academicYear = student.acadmicYear. suppose i paid 1000 & acadmic year is "23-24" & feetype = "schoolFee" & update allFee.lastYearBalanceFee = 1000 than total fee will allFee.lastYearBalanceFee + (sum of all amount of transaction of academicyear !== student.acadmicyear), while paid lastYearBalancefee = (sum of all amount of transaction of academicyear !== student.acadmicyear) same for lastYearTransportFee.
-what if i update student.acadmicYear to "25-26" but his hostel, mess, transport, schoolfee is pending also this  lastYearBalancefee & lastYearTransportFee is also pending but when updating new acadmic year allfee.schoolfee.total will update because class has change & mess, hostel, transport fee should be 0. his prev year "24-25" fees & "23-24" (lastYearBalancefee & lastYearTransportFee) was also pending how to handle that how can we sum all pending (hostelFee, messFee, schoolFees.total) & add it to lastYearBalancefee while , transportFee add into  lastYearTransportFee but fees paid logic is depend to transaction acadmicyear & feetype. 
-tell me what should i do to handle this problem, while eg. think in depth &carefully
-*/ 

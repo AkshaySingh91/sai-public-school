@@ -18,7 +18,6 @@ const OutstandingFee = ({
         classActiveTab === 'active' ? activeRows : inactiveRows,
         [classActiveTab, activeRows, inactiveRows]
     );
-
     // Class-wise Excel export
     const exportClassExcel = useCallback(() => {
         const data = currentRows.map(row => ({
@@ -148,11 +147,11 @@ const OutstandingFee = ({
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                {['Class', 'Total Students', 'Last Year', 'Original', 'Discount', 'Net Fee', 'Paid', 'Outstanding'].map((header, idx) => (
+                                {['Class', 'Total Students', 'L . Y Balance', 'Total Fees', 'Discount', 'Net Fees', 'Total Paid', 'Balance'].map((header, idx) => (
                                     <th
                                         key={header}
                                         className={clsx(
-                                            "px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase",
+                                            "px-4 py-3 text-left text-sm font-semibold text-gray-700",
                                             idx === 0 && "pl-6",
                                             idx === 7 && "pr-6"
                                         )}

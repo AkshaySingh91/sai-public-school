@@ -6,7 +6,7 @@ import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import Swal from 'sweetalert2';
 import { nanoid } from 'nanoid';
-import { User, Users, BookOpen, GraduationCap, Calendar, VenusAndMars, Wallet } from 'lucide-react';
+import { User, Users, BookOpen, GraduationCap, Calendar, Clock, Wallet } from 'lucide-react';
 import { SelectField } from './SelectField';
 import { InputField } from "./InputField"
 
@@ -23,12 +23,15 @@ export default function AddStudent() {
     type: '',
     gender: '',
     dob: '',
-    academicYear: '24-25'
+    academicYear: '24-25',
+    penNo: "",
+    grNo: "",
+    serialNo: "",
+    status: "new"
   });
   const [schoolData, setSchoolData] = useState({ classes: [], studentTypes: [] });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  console.log({ userData })
   // Fetch school data
   useEffect(() => {
     const fetchSchoolData = async () => {
@@ -61,63 +64,111 @@ export default function AddStudent() {
       }
     };
 
-    fetchSchoolData();  
+    fetchSchoolData();
   }, [userData.schoolCode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    const getNewClassFees = async (newClass, targetAcademicYear) => {
+      try {
+        const fsRef = doc(db, "feeStructures", userData.schoolCode);
+        const fsSnap = await getDoc(fsRef);
 
+        if (!fsSnap.exists()) {
+          console.error("Fee structure document not found");
+          return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+        }
+
+        const structures = fsSnap.data().structures || [];
+        let yearStructure = structures.find((s) => s.year === targetAcademicYear);
+
+        // Fallback to latest available structure if target year not found
+        if (!yearStructure && structures.length > 0) {
+          // Sort structures by academic year in descending order
+          const sortedStructures = [...structures].sort((a, b) => {
+            // Extract starting year from academic year format "YY-YY"
+            const getStartYear = (year) => {
+              const [start] = year?.split("-") || ["00"];
+              return parseInt(start) || 0;
+            };
+
+            return getStartYear(b.year) - getStartYear(a.year);
+          });
+
+          yearStructure = sortedStructures[0];
+          console.warn(
+            `Using latest available structure for ${yearStructure.year}`
+          );
+        }
+
+        if (!yearStructure) {
+          console.warn("No fee structures available");
+          return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+        }
+
+        // Rest of the original logic remains the same
+        const classStructure = yearStructure.classes?.find(
+          (c) => c.name?.trim().toLowerCase() === newClass.trim().toLowerCase()
+        );
+
+        if (!classStructure) {
+          console.warn(`No fee structure found for class ${newClass}`);
+          return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+        }
+
+        return classStructure;
+      } catch (error) {
+        console.error("Error fetching fee structure:", error);
+        return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+      }
+    };
     try {
-      // Fetch fee structure document for the school
-      const feeStructureRef = doc(db, 'feeStructures', userData.schoolCode);
-      const feeStructureSnap = await getDoc(feeStructureRef);
-
-      if (!feeStructureSnap.exists()) {
-        throw new Error('Fee structure not found for this school');
-      }
-
-      const feeStructureData = feeStructureSnap.data();
-      const structures = feeStructureData.structures || [];
-
-      // Find matching academic year structure
-      const yearStructure = structures.find(s => s.year === formData.academicYear);
-      if (!yearStructure) {
-        throw new Error(`No fee structure found for academic year ${formData.academicYear}`);
-      }
-      // Find matching class structure
-      const classStructure = yearStructure.classes.find(c => c.name === formData.class);
-      if (!classStructure) {
-        throw new Error(`No fee structure found for class ${formData.class}`);
-      }
-
-      // Find matching student type structure
-      const studentTypeStructure = classStructure.studentType.find(st => st.name === formData.type);
-      if (!studentTypeStructure) {
-        throw new Error(`No fee structure found for student type ${formData.type}`);
-      }
-      console.log({ studentTypeStructure })
       // Calculate base fees
-      const schoolFees = {
-        ...studentTypeStructure.feeStructure,
-        total: Object.values(studentTypeStructure.feeStructure).reduce((a, b) => a + b, 0)
-      };
+      const classStructure = await getNewClassFees(formData.class, formData.academicYear)
 
+
+      const studentType = classStructure.studentType?.find(
+        (st) =>
+          st.name?.trim().toLowerCase() === formData.type?.trim().toLowerCase()
+      );
+      if (!studentType) {
+        console.warn(`No fee structure found for student type ${formData.type}`);
+        return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+      }
+      // very important if student is new than we dont have to assign addmission fee only tution fee required
+      const feeStructure = studentType.feeStructure || {};
+      let AdmissionFee = 0;
+      let tutionFee = 0;
+      if (formData?.status?.toLowerCase() === "new") {
+        AdmissionFee = Number(feeStructure.AdmissionFee) || 0;
+        tutionFee = Number(feeStructure.TutionFee) || 0;
+      } else {
+        tutionFee = Number(feeStructure.TutionFee) || 0;
+      }
+      const schoolFees = {
+        AdmissionFee: AdmissionFee,
+        TutionFee: tutionFee,
+        total: AdmissionFee + tutionFee,
+      };
       // Calculate DSS discount if applicable
-      let schoolFeesDiscount = 0;
-      console.log({ formData })
-      if (formData.type === 'DSS') {
+      let tutionFeesDiscount = 0;
+      // to calculate dis if student is new than we will subtract it from total of DS ie (tution+addminssion) else ig current than only subtract from tution because we dont take addmission fee.
+      if (formData.type === 'DSR' || formData.type === 'DSS') {
         const dsStructure = classStructure.studentType.find(st => st.name === 'DS');
-        console.log({ dsStructure })
         if (!dsStructure) {
           throw new Error('DS fee structure not found for discount calculation');
         }
-
-        const dsTotal = Object.values(dsStructure.feeStructure).reduce((a, b) => a + b, 0);
+        let dsTotal = 0;
+        if (formData?.status?.toLowerCase() === "new") {
+          // addmission + tution
+          dsTotal = Object.values(dsStructure.feeStructure).reduce((a, b) => a + b, 0);
+        } else {
+          // tution
+          dsTotal = dsStructure?.feeStructure?.TutionFee || 0;
+        }
         const dssTotal = schoolFees.total;
-        console.log({ dssTotal })
-        schoolFeesDiscount = Math.max(dsTotal - dssTotal, 0);
-        console.log({ schoolFeesDiscount })
+        tutionFeesDiscount = Math.max(dsTotal - dssTotal, 0);
       }
 
       // Prepare student data with fees
@@ -131,17 +182,16 @@ export default function AddStudent() {
           lastYearTransportFee: 0,
           lastYearTransportFeeDiscount: 0,
           schoolFees,
-          schoolFeesDiscount,
+          tutionFeesDiscount,
           transportFee: 0,
           transportFeeDiscount: 0,
           messFee: 0,
           hostelFee: 0,
         },
         transactions: [],
-        status: 'new',
         createdAt: new Date()
       };
-
+      console.log(studentData)
       // Save to Firestore
       await addDoc(collection(db, 'students'), studentData);
 
@@ -216,6 +266,21 @@ export default function AddStudent() {
                   onChange={e => setFormData({ ...formData, lname: e.target.value })}
                   required
                 />
+                <SelectField
+                  label="Gender"
+                  value={formData.gender}
+                  onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                  options={['Male', 'Female', 'Other']}
+                  required
+                />
+                <InputField
+                  icon={<Calendar className="w-5 h-5" />}
+                  label="Date of Birth"
+                  type="date"
+                  value={formData.dob}
+                  onChange={e => setFormData({ ...formData, dob: e.target.value })}
+                  required
+                />
               </div>
             </div>
 
@@ -272,31 +337,36 @@ export default function AddStudent() {
                   options={['24-25', '25-26', '26-27']}
                   required
                 />
-              </div>
-            </div>
-
-            {/* Personal Details */}
-            <div className="md:col-span-2">
-              <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
-                <VenusAndMars className="w-5 h-5 mr-2 text-purple-600" />
-                Personal Details
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SelectField
-                  label="Gender"
-                  value={formData.gender}
-                  onChange={e => setFormData({ ...formData, gender: e.target.value })}
-                  options={['Male', 'Female', 'Other']}
-                  required
+                <InputField
+                  label="General Regestration No."
+                  value={formData.grNo}
+                  onChange={e => setFormData({ ...formData, grNo: e.target.value })}
                 />
                 <InputField
-                  icon={<Calendar className="w-5 h-5" />}
-                  label="Date of Birth"
-                  type="date"
-                  value={formData.dob}
-                  onChange={e => setFormData({ ...formData, dob: e.target.value })}
+                  label="Personal Education Number"
+                  value={formData.penNo}
+                  onChange={e => setFormData({ ...formData, penNo: e.target.value })}
+                />
+                <InputField
+                  label="Serial Number"
+                  value={formData.serialNo}
+                  onChange={e => setFormData({ ...formData, serialNo: e.target.value })}
+                />
+                <SelectField
+                  icon={<Clock className="w-5 h-5" />}
+                  label="Status"
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  options={["new", "current", "inactive"]}
                   required
                 />
+                {/* <InputField
+                  icon={<Clock />}
+                  label="Status"
+                  placeholder={"new, current, inactive"}
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                /> */}
               </div>
             </div>
           </div>
@@ -319,7 +389,7 @@ export default function AddStudent() {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

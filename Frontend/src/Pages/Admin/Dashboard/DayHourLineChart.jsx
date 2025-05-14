@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../../contexts/AuthContext';
 import { db } from '../../../config/firebase';
-import { Calendar, Clock, ChevronDown } from 'lucide-react';
+import { Calendar, Clock, ChevronDown, Info } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -65,20 +65,24 @@ export default function DayHourLineChart() {
 
       const studentsSnap = await getDocs(studentsQuery);
       const daysData = last7Days.map(day => ({ ...day }));
-
+      console.log({ last7Days })
+      console.log({ daysData })
       studentsSnap.forEach(studentDoc => {
         const student = studentDoc.data();
         (student.transactions || []).forEach(tx => {
-          const txDate = new Date(tx.timestamp);
-          const txDay = txDate.toISOString().split('T')[0];
-          const txHour = txDate.getHours();
+          // check if today trans is completed than we consider it as transaction 
+          if (tx.status === "completed") {
+            const txDate = new Date(tx.timestamp);
+            const txDay = txDate.toISOString().split('T')[0];
+            const txHour = txDate.getHours();
 
-          const dayEntry = daysData.find(d => d.date === txDay);
-          if (!dayEntry) return;
+            const dayEntry = daysData.find(d => d.date === txDay);
+            if (!dayEntry) return;
 
-          const bin = BIN_DEFS.find(b => txHour >= b.start && txHour < b.end);
-          if (bin) {
-            dayEntry[bin.label] += Number(tx.amount) || 0;
+            const bin = BIN_DEFS.find(b => txHour >= b.start && txHour < b.end);
+            if (bin) {
+              dayEntry[bin.label] += Number(tx.amount) || 0;
+            }
           }
         });
       });
@@ -97,6 +101,7 @@ export default function DayHourLineChart() {
 
   const getSelectedDayData = () => {
     const selectedDay = chartData.find(d => d.date === selectedDate);
+    console.log({ chartData })
     if (!selectedDay) return [];
 
     return BIN_DEFS.map(bin => ({
@@ -117,7 +122,7 @@ export default function DayHourLineChart() {
   }
 
   return (
-    <div className="bg-white p-6 rounded-xl ">
+    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 py-8 rounded-xl ">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <Clock className="text-purple-600" size={20} />
@@ -189,6 +194,11 @@ export default function DayHourLineChart() {
               />
             </LineChart>
           </ResponsiveContainer>
+          {/* tell them that we dont show cheque pending amount */}
+          <div className="flex items-center gap-2  text-sm text-gray-500">
+            <Info size={16} className="text-purple-600" />
+            <span>Only completed anount will shown</span>
+          </div>
         </div>
       )}
     </div>

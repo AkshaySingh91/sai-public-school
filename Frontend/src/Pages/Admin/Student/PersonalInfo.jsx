@@ -322,23 +322,23 @@ export default function PersonalInfo({
 
             <InputField
               icon={<Hash />}
-              label="PEN Number"
-              value={formData.penNumber}
-              onChange={(e) => setFormData({ ...formData, penNumber: e.target.value })}
+              label="Personal Education No"
+              value={formData.penNo}
+              onChange={(e) => setFormData({ ...formData, penNo: e.target.value })}
             />
             <InputField
               icon={<Hash />}
               label="Serial ID"
-              value={formData.serialNumber}
-              onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+              value={formData.serialNo}
+              onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
             />
             <InputField
               icon={<Hash />}
-              label="Gr No"
-              value={formData.GrNumber}
-              onChange={(e) => setFormData({ ...formData, GrNumber: e.target.value })}
+              label="General Regestration No"
+              value={formData.grNo}
+              onChange={(e) => setFormData({ ...formData, grNo: e.target.value })}
             />
-              <InputField
+            <InputField
               icon={<CalendarDays />}
               label="Academic Year"
               type="text"
@@ -347,12 +347,6 @@ export default function PersonalInfo({
               onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
             />
 
-            <InputField
-              icon={<Ticket />}
-              label="Coupon Code"
-              value={formData.couponCode}
-              onChange={(e) => setFormData({ ...formData, couponCode: e.target.value })}
-            />
           </div>
 
         </Section>
@@ -385,7 +379,12 @@ export default function PersonalInfo({
                 setFormData({ ...formData, mealService: e.target.value })
               }
             />
-
+            <InputField
+              icon={<Ticket />}
+              label="Coupon Code"
+              value={formData.couponCode}
+              onChange={(e) => setFormData({ ...formData, couponCode: e.target.value })}
+            />
             {/* Custom Row Layout for Bus Stop, Bus Selection, and Discount */}
             <div className="flex flex-wrap gap-4 items-end">
               <div className="flex-1 min-w-[200px]">

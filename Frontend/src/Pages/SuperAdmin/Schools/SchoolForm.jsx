@@ -1,13 +1,17 @@
 // src/Pages/SuperAdmin/Schools/SchoolForm.jsx
 import React, { useState } from "react";
-import { db, storage } from"../../../config/firebase";
+import { db, storage } from "../../../config/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const SchoolForm = ({ onSchoolAdded }) => {
   const [schoolName, setSchoolName] = useState("");
   const [Code, setCode] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState({
+    state: "Maharastra",
+    taluka: "",
+    district: ""
+  });
   const [logoFile, setLogoFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -47,7 +51,11 @@ const SchoolForm = ({ onSchoolAdded }) => {
       });
       setSchoolName("");
       setCode("");
-      setLocation("");
+      setLocation({
+        state: "",
+        taluka: "",
+        district: ""
+      });
       setLogoFile(null);
       onSchoolAdded && onSchoolAdded();
     } catch (err) {
@@ -78,12 +86,29 @@ const SchoolForm = ({ onSchoolAdded }) => {
           className="w-full p-2 border rounded"
           required
         />
+        <h2>School location</h2>
+        <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
         <input
           type="text"
-          placeholder="Location *"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="w-full p-2 border rounded"
+          value={location?.state || ''}
+          onChange={(e) => setLocation({ ...location, state: e.target.value })}
+          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+          required
+        />
+        <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
+        <input
+          type="text"
+          value={location?.district || ''}
+          onChange={(e) => setLocation({ ...location, district: e.target.value })}
+          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+          required
+        />
+        <label className="block text-sm font-medium text-gray-700 mb-1">Taluka</label>
+        <input
+          type="text"
+          value={location?.taluka || ''}
+          onChange={(e) => setLocation({ ...location, taluka: e.target.value })}
+          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
           required
         />
         <div>
@@ -91,6 +116,7 @@ const SchoolForm = ({ onSchoolAdded }) => {
             Upload Logo (optional)
           </label>
           <input
+            disabled={true}
             type="file"
             onChange={(e) => setLogoFile(e.target.files[0])}
             className="w-full p-2 border rounded mt-1"

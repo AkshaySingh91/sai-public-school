@@ -31,13 +31,13 @@ export const PieChart = ({ title, paid, total, color }) => {
         <div className="text-center">
           <div className="text-gray-500">Paid</div>
           <div className={`font-semibold ${isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
-            ₹{paid.toLocaleString()}
+            ₹{paid?.toLocaleString() || 0}
           </div>
         </div>
         <div className="text-center">
           <div className="text-gray-500">Pending</div>
           <div className={`font-semibold ${isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
-            ₹{Math.max(total - paid, 0).toLocaleString()}
+            ₹{Math.max((total || 0) - (paid || 0), 0).toLocaleString()}
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@ export const FeeBar = ({ label, paid, total }) => {
       <div className="flex justify-between text-sm">
         <span className="text-gray-700">{label}</span>
         <span className="font-medium text-gray-600">
-          ₹{paid.toLocaleString()} / ₹{total.toLocaleString()}
+          ₹{paid?.toLocaleString() || 0} / ₹{total?.toLocaleString() || 0}
         </span>
       </div>
       <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden transition-all">

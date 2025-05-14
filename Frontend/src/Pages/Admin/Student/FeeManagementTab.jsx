@@ -8,12 +8,12 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
     // local copy of fees
     const [fees, setFees] = useState({
         // ensure the shape exists immediately
-        schoolFees: { AcademicFee: 0, TutionFee: 0, total: 0 },
+        schoolFees: { AdmissionFee: 0, TutionFee: 0, total: 0 },
         messFee: 0,
         hostelFee: 0,
         transportFee: 0,
         transportFeeDiscount: 0,
-        schoolFeesDiscount: 0,
+        tutionFeesDiscount: 0,
         lastYearBalanceFee: 0,
         lastYearDiscount: 0,
         lastYearTransportFee: 0,
@@ -24,7 +24,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
 
     // compute paid fees
     const paidFees = (transactions || [])
-        .filter((t) => t.academicYear === student.academicYear)
+        .filter((t) => t.academicYear === student.academicYear && t.status == "completed")
         .reduce((sum, t) => sum + Number(t.amount), 0);
 
     // on mount / student changes, seed from student.allFee
@@ -42,7 +42,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
         if (((fees.schoolFees?.total || 0) > 0) && (fees.messFee >= 0) && (fees.hostelFee >= 0) && (fees.transportFee >= 0)) {
             console.log("formData", formData);
             const tution = Number(fees.schoolFees?.TutionFee) || 0;
-            const academic = Number(fees.schoolFees?.AcademicFee) || 0;
+            const academic = Number(fees.schoolFees?.AdmissionFee) || 0;
             const schoolTotal = tution + academic;
             console.log({ fees })
             const mess = Number(fees.messFee) || 0;
@@ -58,7 +58,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
         }
     }, [
         fees.schoolFees?.TutionFee,
-        fees.schoolFees?.AcademicFee,
+        fees.schoolFees?.AdmissionFee,
         fees.messFee,
         fees.hostelFee,
         fees.transportFee,
@@ -86,14 +86,16 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
         const currentYear = student.academicYear;
 
         return transactions.reduce((acc, t) => {
-            if (t.academicYear === currentYear) {
-                acc.currentYearPaid[t.feeType] = (acc.currentYearPaid[t.feeType] || 0) + t.amount;
-            } else {
-                if (t.feeType === 'SchoolFee') {
-                    acc.lastYearPaid.balance += t.amount;
-                }
-                if (t.feeType === 'TransportFee') {
-                    acc.lastYearPaid.transport += t.amount;
+            if (t.status === "completed") {
+                if (t.academicYear === currentYear) {
+                    acc.currentYearPaid[t.feeType] = (acc.currentYearPaid[t.feeType] || 0) + t.amount;
+                } else {
+                    if (t.feeType === 'SchoolFee') {
+                        acc.lastYearPaid.balance += t.amount;
+                    }
+                    if (t.feeType === 'TransportFee') {
+                        acc.lastYearPaid.transport += t.amount;
+                    }
                 }
             }
             return acc;
@@ -105,7 +107,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
     console.log(currentYearPaid, lastYearPaid)
     // Calculate current year totals
     const currentYearTotals = useMemo(() => ({
-        SchoolFee: (fees.schoolFees?.AcademicFee || 0) + (fees.schoolFees?.TutionFee || 0),
+        SchoolFee: (fees.schoolFees?.AdmissionFee || 0) + (fees.schoolFees?.TutionFee || 0),
         TransportFee: fees.transportFee || 0,
         MessFee: fees.messFee || 0,
         HostelFee: fees.hostelFee || 0

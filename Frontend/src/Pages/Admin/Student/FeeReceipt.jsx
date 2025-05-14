@@ -26,155 +26,175 @@ function humanize(str) {
         .trim();
 }
 
-export default function FeeReceipt({ student, school, transaction, transactions }) {
-    const { feeType, amount: txAmount, paymentMode, account, remark = '', academicYear: txYear } = transaction;
-    const { allFee, academicYear, feeId, fname, lname, busDestination, class: cls, div } = student;
-    const { schoolFees, schoolFeesDiscount, transportFee, transportFeeDiscount, messFee, hostelFee } = allFee;
-    // Determine fee category
-    const feeCategory = feeType === 'SchoolFee' ? 'School' :
-        feeType === 'TransportFee' ? 'Transport' :
-            feeType === 'MessFee' ? 'Mess' :
-                feeType === 'HostelFee' ? 'Hostel' : 'Other';
-    // Calculate base values based on category
-    let baseGross = 0, discount = 0, afterDiscount = 0, totalPaid = 0, outstanding = 0;
-    // console.log(transactions, txYear, feeCategory)
+export default function FeeReceipt({ student, school, transaction }) {
+    const {
+        feeType,
+        amount: txAmount,
+        paymentMode,
+        account,
+        remark = '',
+        academicYear: txYear,
+        historicalSnapshot,
+        timestamp
+    } = transaction;
+    console.log(new Date(timestamp).toLocaleString())
+    console.log({ transaction })
+    const { academicYear: currAcademicYear, feeId, fname, lname, class: cls, div } = student;
+    console.log({ student })
+    // Determine fee context
+    const isPrevYear = txYear !== currAcademicYear;
+    const feeCategory = feeType.includes('School') ? 'School' :
+        feeType.includes('Transport') ? 'Transport' :
+            feeType.includes('Mess') ? 'Mess' :
+                feeType.includes('Hostel') ? 'Hostel' : 'Other';
 
-    switch (feeCategory) {
-        case 'School':
-            baseGross = schoolFees.total + schoolFeesDiscount || 0;
-            discount = schoolFeesDiscount || 0;
-            afterDiscount = baseGross - discount;
-            totalPaid = transactions
-                .filter(t => t.academicYear === txYear && t.feeType === 'SchoolFee')
-                .reduce((sum, t) => sum + Number(t.amount), 0);
-            console.log({ totalPaid })
-            outstanding = afterDiscount - totalPaid;
-            break;
+    // Extract from historical snapshot
+    const {
+        initialFee = 0,
+        applicableDiscount = 0,
+        previousPayments = 0,
+        remainingBefore = 0,
+        remainingAfter = 0
+    } = historicalSnapshot || {};
 
-        case 'Transport':
-            baseGross = transportFee || 0;
-            discount = transportFeeDiscount || 0;
-            afterDiscount = baseGross - discount;
-            totalPaid = transactions
-                .filter(t => t.academicYear === txYear && t.feeType === 'TransportFee')
-                .reduce((sum, t) => sum + Number(t.amount), 0);
-            outstanding = afterDiscount - totalPaid;
-            break;
-
-        case 'Mess':
-            baseGross = messFee || 0;
-            totalPaid = transactions
-                .filter(t => t.academicYear === txYear && t.feeType === 'MessFee')
-                .reduce((sum, t) => sum + Number(t.amount), 0);
-            outstanding = baseGross - totalPaid;
-            break;
-
-        case 'Hostel':
-            baseGross = hostelFee || 0;
-            totalPaid = transactions
-                .filter(t => t.academicYear === txYear && t.feeType === 'HostelFee')
-                .reduce((sum, t) => sum + Number(t.amount), 0);
-            outstanding = baseGross - totalPaid;
-            break;
-
-        default:
-            baseGross = txAmount;
-            totalPaid = txAmount;
-            outstanding = 0;
-    }
-    // console.log(baseGross, discount, afterDiscount, totalPaid, outstanding)
-    // Build receipt rows
+    // Build receipt rows based on fee type
     const rows = [];
-    if (['School', 'Transport'].includes(feeCategory)) {
-        rows.push(
-            { label: `${humanize(feeCategory)} Fee`, amt: baseGross },
-            { label: `${humanize(feeCategory)} Fee Discount`, amt: discount },
-            { label: 'After Discount', amt: afterDiscount, total: true }
-        );
-    } else {
-        rows.push({ label: `${humanize(feeCategory)} Fee`, amt: baseGross });
+    const showDiscount = ['School', 'Transport'].includes(feeCategory);
+
+    // Fee Breakdown
+    rows.push({
+        label: `${isPrevYear ? 'Last Year ' : ''}${humanize(feeCategory)} Fee`,
+        amt: initialFee
+    });
+
+    if (showDiscount) {
+        rows.push({
+            label: `${isPrevYear ? 'Last Year ' : ''}${humanize(feeCategory)} Discount`,
+            amt: applicableDiscount
+        });
+
+        rows.push({
+            label: 'Net Fee After Discount',
+            amt: initialFee - applicableDiscount,
+            highlight: true
+        });
     }
 
-    rows.push(
-        { label: 'This Payment', amt: txAmount, mode: paymentMode, account, remark },
-        { label: `Total Paid (${txYear})`, amt: totalPaid, total: true },
-        { label: 'Outstanding Amount', amt: outstanding, total: true }
-    );
+    // Payment History
+    rows.push({
+        label: 'Previous Payments',
+        amt: previousPayments,
+        note: `Before ${new Date(transaction.timestamp).toLocaleDateString()}`
+    });
 
-    // Format amounts
+    // Current Payment
+    rows.push({
+        label: 'This Payment',
+        amt: txAmount,
+        mode: paymentMode,
+        account,
+        remark,
+        highlight: true
+    });
+
+    // Outstanding
+    rows.push({
+        label: 'Remaining Balance',
+        amt: remainingAfter,
+        total: true
+    });
+
+    // Formatting function
     const format = amt => `₹${Math.abs(amt).toFixed(2)}`;
-    const paidWords = toWords(Math.round(totalPaid)) + ' Only';
+    const amountInWords = toWords(Math.round(txAmount)) + ' Only';
+
 
     return (
-        <div className="space-y-20 p-6">
+        <div className="space-y-24">
             {/* School Header */}
-            <div className="text-center">
-                <h1 className="text-3xl font-bold">{school.schoolName}</h1>
-                <p className="text-gray-600 mt-2">{school.address}</p>
-            </div>
 
             {['School Copy', 'Parent Copy'].map((copy, idx) => (
-                <div key={idx} className="bg-white border border-gray-300 rounded-lg shadow-sm ">
-                    {/* Receipt Header */}
-                    <div className="p-4 border-b border-gray-300 grid grid-cols-2">
-                        <div>
-                            <p className="font-bold">Receipt ID: {transaction.receiptId}</p>
-                            <p>Fee ID: {feeId}</p>
-                            <p>Name: {fname} {lname}</p>
-                            <p>Academic Year: {txYear}</p>
-                        </div>
-                        <div className="text-right">
-                            <p>Class: {cls} - {div}</p>
-                            <p>Date: {new Date(transaction.date).toLocaleDateString()}</p>
-                            <p className="italic text-purple-600">{copy}</p>
-                        </div>
+                <div className=''>
+                    <div className="text-center mb-4 mt-4">
+                        <h1 className="text-md font-bold">{school.schoolName}</h1>
+                        <p className="text-xs text-gray-600">{school.address}</p>
                     </div>
+                    <div key={idx} className="receipt-copy bg-white border border-gray-200 rounded-sm mb-4">
+                        {/* Receipt Header */}
+                        <div className="p-2 border-b border-gray-200 grid grid-cols-2 text-xs">
+                            <div>
+                                <p className="font-bold">Receipt ID: {transaction.receiptId}</p>
+                                <p>Fee ID: {feeId}</p>
+                                <p>Name: {fname} {lname}</p>
+                                <p>Academic Year: {txYear}</p>
+                            </div>
+                            <div className="text-right">
+                                <p>Class: {cls} - {div}</p>
+                                <p>Date: {new Date(timestamp).toLocaleDateString()}</p>
+                                <p>Time: {new Date(timestamp).toLocaleTimeString()}</p>
+                                <p className="italic text-purple-600">{copy}</p>
+                            </div>
+                        </div>
 
-                    {/* Fee Details Table */}
-                    <table className="w-full">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                <th className="p-3 text-left">Description</th>
-                                <th className="p-3 text-right">Amount</th>
-                                <th className="p-3 text-left">Payment Mode</th>
-                                <th className="p-3 text-left">Account</th>
-                                <th className="p-3 text-left">Remark</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map((row, i) => (
-                                <tr key={i} className={row.total ? 'bg-gray-50 font-semibold' : 'border-b border-gray-200'}>
-                                    <td className="p-3">{row.label}</td>
-                                    <td className="p-3 text-right">{format(row.amt)}</td>
-                                    <td className="p-3">{row.mode || '-'}</td>
-                                    <td className="p-3">{['School', 'Transport'].includes(feeCategory) ? i === 3 ? account : '-' : i == 1 ? account : '-'}</td>
-                                    <td className="p-3">{row.remark || '-'}</td>
+                        {/* Fee Details Table */}
+                        <table className="w-full text-xs">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="p-1 text-left w-2/5">Description</th>
+                                    <th className="p-1 text-right w-1/5">Amount</th>
+                                    {showDiscount && <th className="p-3 text-left">Discounts</th>}
+                                    <th className="p-3 text-left">Payment Details</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {rows.map((row, i) => (
+                                    <tr key={i} className={`${row.total ? 'bg-gray-50' : ''}`}>
+                                        <td className="p-1">
+                                            {row.label}
+                                            {row.note && <div className="text-xs text-gray-500">{row.note}</div>}
+                                        </td>
+                                        <td className="p-3 text-right">{format(row.amt)}</td>
+                                        {showDiscount && (
+                                            <td className="p-3">
+                                                {i === 1 ? format(row.amt) : '-'}
+                                            </td>
+                                        )}
+                                        <td className="p-3">
+                                            {row.mode && (
+                                                <div>
+                                                    <div>Mode: {row.mode}</div>
+                                                    <div>Account: {row.account || '-'}</div>
+                                                    <div>Note: {row.remark || '-'}</div>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
 
-                    {/* Footer */}
-                    <div className="p-4 bg-gray-100 border-t border-gray-300">
-                        <p className="font-semibold">
-                            Net Amount in Words: {paidWords}
-                        </p>
-                        {school.gstin && (
-                            <p className="mt-2 text-sm">GSTIN: {school.gstin}</p>
-                        )}
-                        <div className="sign flex w-full justify-evenly mt-8 mb-3">
-                            <div className="parent-sign flex flex-col items-center">
-                                <h3 className='mb-10'>Parent Sign
-                                </h3>
-                                <hr className='border border-slate-700 w-32' />
+                        {/* Footer */}
+                        <div className="p-2 bg-gray-50 border-t border-gray-200 text-xs">
+                            <p className="font-semibold">
+                                Net Amount in Words: {amountInWords}
+                            </p>
+                            {school.gstin && (
+                                <p className="mt-2 text-xs">GSTIN: {school.gstin}</p>
+                            )}
+                            <div className="sign flex w-full justify-evenly mt-4">
+                                <div className="parent-sign flex flex-col items-center">
+                                    <h3 className='mb-10'>Parent Sign
+                                    </h3>
+                                    <hr className='border border-slate-700 w-32' />
+                                </div>
+                                <div className="accountant-sign flex flex-col items-center">
+                                    <h3 className='mb-10'>Accountant Sign
+                                    </h3>
+                                    <hr className='border border-slate-700 w-32' />
+
+                                </div>
+
                             </div>
-                            <div className="accountant-sign flex flex-col items-center">
-                                <h3 className='mb-10'>Accountant Sign
-                                </h3>
-                                <hr className='border border-slate-700 w-32' />
-
-                            </div>
-
                         </div>
                     </div>
                 </div>

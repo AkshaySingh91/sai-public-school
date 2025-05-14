@@ -212,7 +212,7 @@ const EventCalendar = () => {
     );
 
     return (
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl shadow-sm border border-gray-100">
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">

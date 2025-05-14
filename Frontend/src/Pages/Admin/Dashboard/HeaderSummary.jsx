@@ -58,7 +58,7 @@ export function HeaderSummary({
 
 function SummaryCard({ icon, title, value, isCurrency = false }) {
     return (
-        <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition h-full flex items-center">
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl shadow-sm hover:shadow-md transition h-full flex items-center">
             <div className="p-2 bg-gray-100 rounded-lg mr-4">{icon}</div>
             <div>
                 <h3 className="text-sm font-medium text-gray-600">{title}</h3>

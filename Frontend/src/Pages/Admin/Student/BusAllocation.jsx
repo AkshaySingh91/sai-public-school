@@ -287,13 +287,13 @@
 //   const hostelFee = student.hostelFee || 0;
 //   const messFee = student.messFee || 0;
 //   const lastYearBalance = student.lastYearBalanceFee || 0;
-//   const schoolFeesDiscount = student.schoolFeesDiscount || 0;
+//   const tutionFeesDiscount = student.tutionFeesDiscount || 0;
 //   const transportFeeDiscount = student.transportFeeDiscount || 0;
 
 //   const totalFee =
 //     schoolFeesTotal + transportFee + hostelFee + messFee + lastYearBalance;
 //   const totalDiscount =
-//     schoolFeesDiscount +
+//     tutionFeesDiscount +
 //     transportFeeDiscount +
 //     (student.lastYearDiscount || 0) +
 //     (student.lastYearTransportFeeDiscount || 0);
