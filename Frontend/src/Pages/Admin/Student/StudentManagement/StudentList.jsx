@@ -16,14 +16,17 @@ import {
   SettingsIcon,
 } from "lucide-react";
 import TableLoader from "../../../../components/TableLoader"
+import { useSchool } from "../../../../contexts/SchoolContext"
 
 const StudentList = () => {
   const { userData } = useAuth();
+  const { school } = useSchool()
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [division, setDivisions] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
@@ -31,8 +34,14 @@ const StudentList = () => {
     div: "all",
     search: "",
   });
-
   const itemsPerPage = 10;
+
+  useEffect(() => {
+    if (school.class) setClasses(school.class || []);
+  }, [school.class]);
+  useEffect(() => {
+    if (school.divisions) setDivisions(school.divisions || []);
+  }, [school.divisions]);
 
   useEffect(() => {
     if (userData) fetchStudents();
@@ -52,11 +61,7 @@ const StudentList = () => {
       }));
 
       setStudents(list);
-      console.log({ list });
       setFilteredStudents(list);
-      // Extract unique classes and divisions
-      const uniqueClasses = [...new Set(list.map((s) => s.class))];
-      setClasses(uniqueClasses);
     } catch (error) {
       console.error("Error fetching students:", error);
     } finally {
@@ -231,7 +236,7 @@ const StudentList = () => {
                 }
               >
                 <option value="all">All Divisions</option>
-                {["A", "B", "C", "D", "E"].map((div) => (
+                {division.map((div) => (
                   <option key={div} value={div}>
                     {div}
                   </option>
