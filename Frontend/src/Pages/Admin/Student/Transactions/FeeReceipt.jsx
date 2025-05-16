@@ -108,20 +108,20 @@ export default function FeeReceipt({ student, school, transaction }) {
     const format = amt => `₹${Math.abs(amt).toFixed(2)}`;
     const amountInWords = toWords(Math.round(txAmount)) + ' Only';
 
-
+    console.log({ rows })
     return (
-        <div className="space-y-24">
+        <div className="space-y-24 overflow-x-hidden">
             {/* School Header */}
 
             {['School Copy', 'Parent Copy'].map((copy, idx) => (
                 <div className=''>
                     <div className="text-center mb-4 mt-4">
-                        <h1 className="text-md font-bold">{school.schoolName}</h1>
-                        <p className="text-xs text-gray-600">{school.address}</p>
+                        <h1 className="text-md font-bold capitalize">{school.schoolName}, {school?.location?.taluka || ""}</h1>
+                        <p className="italic text-purple-600">{copy}</p>
                     </div>
-                    <div key={idx} className="receipt-copy bg-white border border-gray-200 rounded-sm mb-4">
+                    <div key={idx} className="receipt-copy bg-white border border-gray-200 rounded-sm mb-4 ">
                         {/* Receipt Header */}
-                        <div className="p-2 border-b border-gray-200 grid grid-cols-2 text-xs">
+                        <div className="p-2 border-b border-gray-200 grid grid-cols-2 text-xs ">
                             <div>
                                 <p className="font-bold">Receipt ID: {transaction.receiptId}</p>
                                 <p>Fee ID: {feeId}</p>
@@ -132,39 +132,38 @@ export default function FeeReceipt({ student, school, transaction }) {
                                 <p>Class: {cls} - {div}</p>
                                 <p>Date: {new Date(timestamp).toLocaleDateString()}</p>
                                 <p>Time: {new Date(timestamp).toLocaleTimeString()}</p>
-                                <p className="italic text-purple-600">{copy}</p>
                             </div>
                         </div>
 
                         {/* Fee Details Table */}
-                        <table className="w-full text-xs">
+                        <table className="w-full text-xs border-collapse border border-gray-400 ">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="p-1 text-left w-2/5">Description</th>
-                                    <th className="p-1 text-right w-1/5">Amount</th>
-                                    {showDiscount && <th className="p-3 text-left">Discounts</th>}
-                                    <th className="p-3 text-left">Payment Details</th>
+                                    <th className="p-1 text-left border-2 border-gray-300 w-auto whitespace-nowrap ">Description</th>
+                                    <th className="p-1 text-right border-2 border-gray-300 w-auto whitespace-nowrap ">Amount</th>
+                                    {showDiscount && <th className="p-1 border-2 text-left border-gray-300 w-auto whitespace-nowrap ">Discounts</th>}
+                                    <th className="p-3 text-left border-2 border-gray-300 w-auto whitespace-nowrap">Payment Details</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {rows.map((row, i) => (
                                     <tr key={i} className={`${row.total ? 'bg-gray-50' : ''}`}>
-                                        <td className="p-1">
+                                        <td className="p-1 border-2 border-gray-300 w-auto whitespace-nowrap ">
                                             {row.label}
                                             {row.note && <div className="text-xs text-gray-500">{row.note}</div>}
                                         </td>
-                                        <td className="p-3 text-right">{format(row.amt)}</td>
+                                        <td className="p-1 text-right border-2 border-gray-300 ">{format(row.amt)}</td>
                                         {showDiscount && (
-                                            <td className="p-3">
+                                            <td className="p-1 border-gray-300 ">
                                                 {i === 1 ? format(row.amt) : '-'}
                                             </td>
                                         )}
-                                        <td className="p-3">
+                                        <td className=" border-2 border-collapse border-gray-300">
                                             {row.mode && (
-                                                <div>
-                                                    <div>Mode: {row.mode}</div>
-                                                    <div>Account: {row.account || '-'}</div>
-                                                    <div>Note: {row.remark || '-'}</div>
+                                                <div className='text-[13px]'>
+                                                    <div className='border-y-2 border-gray-300 p-2 whitespace-pre-wrap'><b>Mode</b>: {row.mode}</div>
+                                                    <div className='border-y-2 border-gray-300 p-2 whitespace-pre-wrap'><b>Account</b>: {row.account || '-'}</div>
+                                                    <div className='border-y-2 border-gray-300 p-2 whitespace-pre-wrap'><b>Note</b>: {row.remark || '-'}</div>
                                                 </div>
                                             )}
                                         </td>
@@ -174,8 +173,8 @@ export default function FeeReceipt({ student, school, transaction }) {
                         </table>
 
                         {/* Footer */}
-                        <div className="p-2 bg-gray-50 border-t border-gray-200 text-xs">
-                            <p className="font-semibold">
+                        <div className="bg-gray-50 border-t border-gray-200 text-xs">
+                            <p className="font-semibold p-2 border-2 border-gray-300">
                                 Net Amount in Words: {amountInWords}
                             </p>
                             {school.gstin && (

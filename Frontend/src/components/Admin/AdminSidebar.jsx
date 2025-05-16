@@ -5,11 +5,10 @@ import {
 } from "react-icons/fi";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { TbBus } from "react-icons/tb";
 import { MdOutlineInventory2 } from "react-icons/md";
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { useSchool } from "../../contexts/SchoolContext";
 
 
 const menuItems = [
@@ -61,31 +60,7 @@ const menuItems = [
 const AdminSidebar = () => {
     const { logout } = useAuth();
     const [openSubmenu, setOpenSubmenu] = useState(null);
-    const { userData } = useAuth();
-    const [school, setSchool] = useState([]);
-
-    useEffect(() => {
-        const fetchSchoolClasses = async () => {
-            if (userData?.schoolCode) {
-                const schoolQuery = query(
-                    collection(db, "schools"),
-                    where("Code", "==", userData.schoolCode)
-                );
-                const schoolSnapshot = await getDocs(schoolQuery);
-                if (schoolSnapshot.empty) {
-                    throw new Error("School not found");
-                }
-                const schoolData = schoolSnapshot.docs[0].data();
-                console.log({ schoolData })
-                setSchool({
-                    id: schoolSnapshot.docs[0].id,
-                    ...schoolData,
-                });
-            }
-        };
-        fetchSchoolClasses();
-    }, [userData?.schoolCode]);
-
+    const { school } = useSchool();
     const toggleSubmenu = (path) => {
         setOpenSubmenu(openSubmenu === path ? null : path);
     };
@@ -95,7 +70,7 @@ const AdminSidebar = () => {
             initial={{ x: -100 }}
             animate={{ x: 0 }}
             className="lg:w-64 w-16 bg-white h-screen overflow-y-auto  p-5 fixed top-0 left-0 transition-all duration-300"
-            style={{ "scrollbar-width": "none", "-ms-overflow-style": "none" }}
+            style={{ "scrollbarWidth": "none", "msOverflowStyle": "none" }}
         >
             <div className="flex items-center mb-10">
                 <img

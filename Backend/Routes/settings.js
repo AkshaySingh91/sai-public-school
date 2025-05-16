@@ -2,9 +2,44 @@
 import express from 'express';
 import admin from 'firebase-admin';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import multer from "multer"
+import path, { dirname } from "path"
+import { fileURLToPath } from "url";
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const storage = multer.diskStorage({
+    destination(req, file, cb) {
+        const assetsDir = path.join(__dirname, "..", "Assets");
+        // ensure directory exists
+        fs.mkdirSync(assetsDir, { recursive: true });
+        cb(null, assetsDir);
+    },
+    filename(req, file, cb) {
+        // e.g. "PuneTaluka.png"
+        const ext = path.extname(file.originalname).toLowerCase();
+        const taluka = req?.school?.location?.taluka ? req.school.location.taluka.replace(/\s+/g, "_") : "schoolLogo" + Math.floor((Math.random() * 1000));
+        console.log(ext, taluka)
+        cb(null, taluka + "-school-logo" + ext);
+    },
+});
+const upload = multer({
+    storage,
+    limits: {
+        fileSize: 2 * 1024 * 1024, // 2 MB
+    },
+    fileFilter(req, file, cb) {
+        // only images
+        if (!file.mimetype.startsWith("image/")) {
+            return cb(new Error("Only image files are allowed."));
+        }
+        cb(null, true);
+    },
+});
 
 const router = express.Router();
-
 // Configure R2 client
 const r2Client = new S3Client({
     region: "auto",
@@ -15,30 +50,9 @@ const r2Client = new S3Client({
     }
 });
 
-// Middleware to verify accountant role
-const verifyAccountant = async (req, res, next) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
-
-        const token = authHeader.split(' ')[1];
-        const decodedToken = await admin.auth().verifyIdToken(token);
-        const userDoc = await admin.firestore().collection('Users').doc(decodedToken.uid).get();
-
-        if (userDoc.data().role !== 'accountant') {
-            return res.status(403).json({ error: "Forbidden" });
-        }
-
-        req.user = userDoc.data();
-        req.user.uid = decodedToken.uid;
-        next();
-    } catch (error) {
-        res.status(401).json({ error: "Invalid token" });
-    }
-};
 
 // Get user profile
-router.get('/profile', verifyAccountant, async (req, res) => {
+router.get('/profile', async (req, res) => {
     try {
         const userDoc = await admin.firestore().collection('Users').doc(req.user.uid).get();
         res.json(userDoc.data());
@@ -48,7 +62,7 @@ router.get('/profile', verifyAccountant, async (req, res) => {
 });
 
 // Update profile
-router.put('/profile', verifyAccountant, async (req, res) => {
+router.put('/profile', async (req, res) => {
     try {
         const { name, phone } = req.body;
         await admin.firestore().collection('Users').doc(req.user.uid).update({
@@ -62,7 +76,7 @@ router.put('/profile', verifyAccountant, async (req, res) => {
 });
 
 // Change password
-router.post('/change-password', verifyAccountant, async (req, res) => {
+router.post('/change-password', async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
         const user = await admin.auth().getUser(req.user.uid);
@@ -80,7 +94,7 @@ router.post('/change-password', verifyAccountant, async (req, res) => {
 });
 
 // Upload profile image
-router.post('/upload-profile', verifyAccountant, async (req, res) => {
+router.post('/upload-profile', async (req, res) => {
     try {
         if (!req.files || !req.files.image) {
             return res.status(400).json({ error: "No image uploaded" });
@@ -108,7 +122,7 @@ router.post('/upload-profile', verifyAccountant, async (req, res) => {
 });
 
 // Delete profile image
-router.delete('/profile-image', verifyAccountant, async (req, res) => {
+router.delete('/profile-image', async (req, res) => {
     try {
         const userDoc = await admin.firestore().collection('Users').doc(req.user.uid).get();
         const imageUrl = userDoc.data().profileImage;
@@ -132,32 +146,37 @@ router.delete('/profile-image', verifyAccountant, async (req, res) => {
 });
 
 // School routes
-router.get('/school', verifyAccountant, async (req, res) => {
+router.get('/school', async (req, res) => {
     try {
-        const schoolDoc = await admin.firestore().collection('schools')
-            .where('Code', '==', req.user.schoolCode)
-            .get();
-        if (schoolDoc.empty) return res.status(404).json({ error: "School not found" });
-
-        res.json(schoolDoc.docs[0].data());
+        res.json(req.school);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-router.put('/school', verifyAccountant, async (req, res) => {
+router.put('/school', async (req, res) => {
     try {
-        const { schoolName, location } = req.body;
-        console.log(schoolName, location)
-        console.log(req.user)
+        const { schoolName, location, divisions: d, class: c, academicYear } = req.body;
         const schoolDoc = await admin.firestore().collection('schools')
             .where('Code', '==', req.user.schoolCode)
             .get();
-
-        if (schoolDoc.empty) return res.status(404).json({ error: "School not found" });
-
-        await schoolDoc.docs[0].ref.update({ schoolName, location });
+        await schoolDoc.docs[0].ref.update({ schoolName, location, divisions: d, class: c, academicYear });
         res.json({ message: "School updated successfully" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+router.post('/school/logo', upload.single("logo"), async (req, res) => {
+    try {
+        // At this point multer has already written the file (overwriting existing)
+        // If you need to do anything extra, you can:
+        // – Move it somewhere else
+        // – Update your Firestore record with the new filename/URL
+        return res.json({
+            message: "Logo uploaded successfully.",
+            filename: req.file.filename,
+        });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

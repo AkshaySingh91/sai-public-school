@@ -1,9 +1,9 @@
 // FeeReportsContainer.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
-import OutstandingFee from './OutstandingFee';
+import { db } from '../../../../config/firebase';
+import OutstandingFee from '../OutstandingFees/OutstandingFee';
 import StudentFeeDetails from './StudentFeeDetails';
 
 export default function FeeReportsContainer() {

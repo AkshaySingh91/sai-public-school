@@ -7,12 +7,12 @@ import EmployeeDetail from './Employee/EmployeeDetail';
 import FeeStructure from './Schools/FeeStructure';
 import PaymentStructure from './Schools/SchoolPaymentStructure';
 
-import StudentList from './Student/StudentList';
-import AddStudent from './Student/AddStudent';
-import StudentDetail from './Student/StudentDetail';
-import FeeReceiptPage from './Student/FeeReceiptPage';
-import DailyBook from './Student/DailyBook';
-import FeeReportContainer from './Student/FeeReportContainer';
+import StudentList from './Student/StudentManagement/StudentList';
+import AddStudent from './Student/StudentManagement/AddStudent';
+import StudentDetail from './Student/StudentManagement/StudentDetail';
+import FeeReceiptPage from './Student/Transactions/FeeReceiptPage';
+import DailyBook from './Student/DailyBook/DailyBook';
+import FeeReportContainer from './Student/FeeManagement/FeeReportContainer';
 import BusList from './Student/BusList';
 import BusDestination from './Student/BusDestination';
 import BusAllocation from './Student/BusAllocation';
@@ -36,6 +36,7 @@ const AdminLayout = () => {
 
 
 const AdminIndex = () => {
+
   return (
     <Routes>
       <Route element={<AdminLayout />}>

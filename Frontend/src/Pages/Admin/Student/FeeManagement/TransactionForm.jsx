@@ -1,9 +1,8 @@
-import React from 'react'
 import {
     CreditCard, Wallet, PiggyBankIcon, CalendarDays, DollarSign, FileTextIcon
 } from "lucide-react"
-import { InputField } from './InputField'
-import { SelectField } from './SelectField'
+import { InputField } from '../InputField'
+import { SelectField } from '../SelectField'
 
 function TransactionForm({ newTransaction, setNewTransaction, schoolData, handleTransactionSubmit, student }) {
     return (

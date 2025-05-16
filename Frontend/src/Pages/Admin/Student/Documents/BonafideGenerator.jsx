@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import Swal from 'sweetalert2';
 import { Printer, Download, Save, X, Plus } from 'lucide-react';
-import { useAuth } from '../../../contexts/AuthContext';
-import { db } from '../../../config/firebase';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { db } from '../../../../config/firebase';
 import { useParams } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
@@ -137,7 +137,6 @@ export default function BonafideGenerator({ student, setStudent }) {
     };
 
 
-
     return (<>
         <style media="print">{`
     @page {
@@ -245,7 +244,7 @@ export default function BonafideGenerator({ student, setStudent }) {
                                 Tq. {school?.location?.taluka || ""}, Dist- {school?.location?.district || ""}
                             </p>
                             <div className="mt-6 flex justify-between text-[#be185d]">
-                                <span>Mr./Miss <u className="px-2">{form.studentName}</u></span>
+                                <span>{student?.gender == "Male" ? "Mr." : "Miss."} <u className="px-2">{form.studentName}</u></span>
                                 <span>Fee Rs. 20/-</span>
                                 <span>Date: <u className="px-2">{form.issueDate}</u></span>
                             </div>

@@ -18,7 +18,7 @@ const StudentsStockPaymentHistory = ({ student }) => {
                 <th className="px-6 py-4 text-left text-black font-semibold">Fee Type</th>
                 <th className="px-6 py-4 text-left text-black font-semibold">Account</th>
                 <th className="px-6 py-4 text-left text-black font-semibold">Amount</th>
-                <th className="px-6 py-4 text-left text-black font-semibold">Remark</th>    
+                <th className="px-6 py-4 text-left text-black font-semibold">Remark</th>  
                 
               </tr>
             </thead>

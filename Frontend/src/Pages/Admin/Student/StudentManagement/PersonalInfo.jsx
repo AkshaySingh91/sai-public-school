@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   User,
   VenusAndMars,
@@ -12,11 +12,11 @@ import {
   CreditCardIcon,
   Utensils,
   Bus,
-  HeartPulseIcon,
+  HeartPulseIcon
 } from "lucide-react";
-import { InputField } from "./InputField";
-import { SelectField } from "./SelectField";
-import { db } from "../../../config/firebase";
+import { InputField } from "../InputField";
+import { SelectField } from "../SelectField";
+import { db } from "../../../../config/firebase";
 import {
   doc,
   getDoc,
@@ -24,37 +24,18 @@ import {
   getDocs,
   updateDoc,
 } from "firebase/firestore";
-
 export default function PersonalInfo({
   formData,
   setFormData,
   studentId,
-  handleFeeUpdate, schoolData, handleClassChange,
+  handleFeeUpdate, schoolData,
 }) {
-
   // State variables
   const [destinationOptions, setDestinationOptions] = useState([]);
   const [busOptions, setBusOptions] = useState([]);
   const [selectedBus, setSelectedBus] = useState(null);
   const [transportDiscount, setTransportDiscount] = useState(0);
-  console.log('formData', formData);
-  const handleDivChange = async (e) => {
-    const newDiv = e.target.value;
-    setFormData({ ...formData, div: newDiv });
 
-    // Update the division in Firestore
-    if (studentId && studentId.id) {
-      try {
-        const studentRef = doc(db, "students", studentId.id);
-        await updateDoc(studentRef, {
-          div: newDiv, // Update the division field in Firestore
-        });
-        console.log("Division updated successfully in Firestore.");
-      } catch (err) {
-        console.error("Error updating division in Firestore:", err);
-      }
-    }
-  };
 
   // Fetch destinations
   useEffect(() => {
@@ -262,6 +243,51 @@ export default function PersonalInfo({
                 setFormData({ ...formData, gender: e.target.value })
               }
             />
+            <InputField
+              icon={<User />}
+              label="Caste"
+              type="text"
+              value={formData.caste}
+              onChange={(e) =>
+                setFormData({ ...formData, caste: e.target.value })
+              }
+            />
+            <InputField
+              icon={<User />}
+              label="subCaste"
+              type="text"
+              value={formData.subCaste}
+              onChange={(e) =>
+                setFormData({ ...formData, subCaste: e.target.value })
+              }
+            />
+            <InputField
+              icon={<User />}
+              label="Religion"
+              type="text"
+              value={formData.religion}
+              onChange={(e) =>
+                setFormData({ ...formData, religion: e.target.value })
+              }
+            />
+            <InputField
+              icon={<User />}
+              label="Nationality"
+              type="text"
+              value={formData.nationality}
+              onChange={(e) =>
+                setFormData({ ...formData, nationality: e.target.value })
+              }
+            />
+            <InputField
+              icon={<User />}
+              label="category"
+              type="text"
+              value={formData.category}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
+            />
           </div>
         </Section>
 
@@ -310,16 +336,23 @@ export default function PersonalInfo({
               label="Class"
               options={schoolData?.class || []}
               value={formData.class}
-              onChange={(e) => handleClassChange(e.target.value)}
+              disabled={true}
             />
-
-            <InputField
+            <SelectField
               icon={<Hash />}
               label="Division"
-              value={formData.div}
-              onChange={(e) => setFormData({ ...formData, div: e.target.value })}
+              options={schoolData?.divisions || []}
+              value={formData.divisions}
+              onChange={(e) => {
+                const selected = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  divisions: prev.divisions?.includes(selected)
+                    ? prev.divisions // prevent duplicates
+                    : [...(prev.divisions || []), selected],
+                }));
+              }}
             />
-
             <InputField
               icon={<Hash />}
               label="Personal Education No"
@@ -328,9 +361,9 @@ export default function PersonalInfo({
             />
             <InputField
               icon={<Hash />}
-              label="Serial ID"
-              value={formData.serialNo}
-              onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
+              label="Saral ID"
+              value={formData.saralId}
+              onChange={(e) => setFormData({ ...formData, saralId: e.target.value })}
             />
             <InputField
               icon={<Hash />}
@@ -344,7 +377,7 @@ export default function PersonalInfo({
               type="text"
               pattern="\d{2}-\d{2}"
               value={formData.academicYear}
-              onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
+              disabled={true}
             />
 
           </div>

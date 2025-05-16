@@ -1,7 +1,7 @@
 import React from 'react';
 import { History, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { db } from '../../../../config/firebase';
 import Swal from 'sweetalert2';
 import { Link } from 'react-router-dom';
 

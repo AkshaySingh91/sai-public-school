@@ -2,8 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
-import { useAuth } from '../../../contexts/AuthContext';
+import { db } from '../../../../config/firebase';
+import { useAuth } from '../../../../contexts/AuthContext';
 import FeeReceipt from './FeeReceipt';
 
 export default function FeeReceiptPage() {
@@ -106,9 +106,7 @@ export default function FeeReceiptPage() {
         page-break-after: always;  // Force page break after each copy
         padding: 0.5rem !important;  // Reduced padding
     }
-    .receipt-copy:last-child { 
-        page-break-after: auto; 
-    }
+   
             `}</style>
 
 

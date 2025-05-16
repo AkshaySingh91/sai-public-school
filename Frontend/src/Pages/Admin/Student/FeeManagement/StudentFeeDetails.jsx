@@ -3,11 +3,11 @@ import { Download, FileText, UserCheck, UserX, Search, ArrowUp, ArrowDown, } fro
 import { ChevronDown } from 'react-feather';
 import * as XLSX from 'xlsx';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { db } from '../../../../config/firebase';
 import jsPDF from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import { PieChart, FeeBar } from './FeeVisualizations';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../../../contexts/AuthContext';
 
 const StudentFeeDetails = ({
     loading,

@@ -26,6 +26,51 @@ admin.initializeApp({
 
 const db = admin.firestore();
 console.log(process.env.storageBucket)
+
+// 1) Middleware to verify accountant role
+const verifyAccountant = async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+
+        const token = authHeader.split(' ')[1];
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        const userDoc = await admin.firestore().collection('Users').doc(decodedToken.uid).get();
+
+        if (userDoc.data().role !== 'accountant') {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        req.user = userDoc.data();
+        req.user.uid = decodedToken.uid;
+        next();
+    } catch (error) {
+        res.status(401).json({ error: "Invalid token" });
+    }
+};
+
+// 2) Middleware to fetch the school and attach it to req.school
+async function fetchSchool(req, res, next) {
+    try {
+        const snap = await admin
+            .firestore()
+            .collection("schools")
+            .where("Code", "==", req.user.schoolCode)
+            .limit(1)
+            .get();
+
+        if (snap.empty) {
+            return res.status(404).json({ error: "School not found" });
+        }
+
+        req.school = snap.docs[0].data();
+        next();
+    } catch (err) {
+        next(err);
+    }
+}
+
+
 app.post('/superadmin/schools/create-accountant', async (req, res) => {
     const { name, email, password, phone, schoolCode } = req.body;
 
@@ -57,8 +102,8 @@ app.post('/superadmin/schools/create-accountant', async (req, res) => {
     }
 });
 import StudentDocUpload from "./Routes/StudentDocUpload.js"
-app.use("/student", StudentDocUpload)
+app.use("/admin/student", verifyAccountant, fetchSchool, StudentDocUpload)
 import settingsRouter from './Routes/settings.js';
-app.use('/api/settings', settingsRouter);
+app.use('/admin/settings', verifyAccountant, fetchSchool, settingsRouter);
 
 app.listen(5000, () => console.log('Backend listening on port 5000'));

@@ -13,6 +13,7 @@ import DayHourLineChart from './Dashboard/DayHourLineChart';
 import SchoolMetricsCards from './Dashboard/SchoolMetricsCards';
 import StudentDemographics from './Dashboard/StudentDemographics';
 import handWave from "../../assets/handWave.svg"
+import { useSchool } from '../../contexts/SchoolContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 // Color palette
@@ -33,24 +34,12 @@ const AdminDashboard = () => {
         totalEarnings: 0,
     });
     const [loading, setLoading] = useState(true);
-
+    const { school } = useSchool();
     useEffect(() => {
         async function fetchData() {
             if (!userData?.schoolCode) return;
             const code = userData.schoolCode;
-
-            // load the school’s own document to get the real academicYear
-            const schoolQ = query(
-                collection(db, "schools"),
-                where("Code", "==", code)
-            );
-            const schoolSnap = await getDocs(schoolQ);
-            if (schoolSnap.empty) {
-                console.warn("No school found for code", code);
-                return;
-            }
-            const schoolData = schoolSnap.docs[0].data();
-            const currentYear = schoolData.academicYear;
+            const currentYear = school.academicYear;
 
             const newStudentsSnap = await getDocs(
                 query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "new"))

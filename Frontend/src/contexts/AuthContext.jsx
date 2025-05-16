@@ -64,6 +64,7 @@ export function AuthProvider({ children }) {
     return signOut(auth);
   }
 
+  // we will store the user data in the context & based on accountant SchoolCode we will create context for school 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -73,7 +74,6 @@ export function AuthProvider({ children }) {
           const data = userDoc.data();
           setUserData(data);
           setRole(data.role);
-          console.log({ data })
         }
       } else {
         setRole(null);
