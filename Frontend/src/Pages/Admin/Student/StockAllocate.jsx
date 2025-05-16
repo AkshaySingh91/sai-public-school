@@ -3,6 +3,8 @@ import { db } from "../../../config/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import Loader1 from "../../../components/Loader1"; // Custom loader
 import AddPaymentTable from "./AddPaymentTable";
+import { useAuth } from "../../../contexts/AuthContext";
+import StudentsStockPaymentHistory from "./StudentsStockPaymentHistory";
 
 function StockAllocate() {
   const [students, setStudents] = useState([]);
@@ -16,7 +18,8 @@ function StockAllocate() {
   const [expandedStudent, setExpandedStudent] = useState(null);
   const [studentStock, setStudentStock] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
-  const [selectedItems, setSelectedItems] = useState([]); // New state to track selected items
+  const [selectedItems, setSelectedItems] = useState([]);
+  const users = useAuth().userData;
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -26,10 +29,9 @@ function StockAllocate() {
         const studentsList = studentsSnapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
-          schoolCode: doc.data().schoolCode, // Get schoolCode from the student
+          schoolCode: doc.data().schoolCode,
         }));
 
-        // Now we need to find the schoolId based on schoolCode
         const schoolsCollection = collection(db, "schools");
         const updatedStudents = await Promise.all(
           studentsList.map(async (student) => {
@@ -41,13 +43,18 @@ function StockAllocate() {
             const schoolDoc = schoolSnapshot.docs[0];
             return {
               ...student,
-              schoolId: schoolDoc ? schoolDoc.id : null, // Attach schoolId to student
+              schoolId: schoolDoc ? schoolDoc.id : null,
             };
           })
         );
 
-        setStudents(updatedStudents);
-        setFilteredStudents(updatedStudents);
+        const schoolcodefromuser = users?.schoolCode;
+        const filterstudent = updatedStudents.filter(
+          (student) => student.schoolCode === schoolcodefromuser
+        );
+
+        setStudents(filterstudent);
+        setFilteredStudents(filterstudent);
       } catch (error) {
         console.error("Error fetching students:", error);
       }
@@ -63,7 +70,8 @@ function StockAllocate() {
         const formattedClass = expandedStudent.class.replace("Class ", "");
         const q = query(
           stockCollection,
-          where("className", "==", formattedClass)
+          where("className", "==", formattedClass),
+          where("schoolCode", "==", users?.schoolCode)
         );
         try {
           const stockSnapshot = await getDocs(q);
@@ -71,7 +79,7 @@ function StockAllocate() {
           const updatedStockList = stockList.map((stock) => ({
             ...stock,
             quantity: 1,
-            selected: false, // Initialize the selection status
+            selected: false,
           }));
           setStudentStock(updatedStockList);
         } catch (error) {
@@ -82,7 +90,7 @@ function StockAllocate() {
       fetchStock();
     }
   }, [expandedStudent]);
-
+  console.log("student", students);
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     const newFilters = { ...filters, [name]: value };
@@ -104,11 +112,9 @@ function StockAllocate() {
   };
 
   const handleStudentClick = (student) => {
-    if (expandedStudent && expandedStudent.id === student.id) {
-      setExpandedStudent(null);
-    } else {
-      setExpandedStudent(student);
-    }
+    setExpandedStudent((prev) =>
+      prev && prev.id === student.id ? null : student
+    );
   };
 
   const handleCheckboxChange = (index) => {
@@ -119,14 +125,8 @@ function StockAllocate() {
   };
 
   const updateSelectedItems = (updatedStock) => {
-    const selectedItems = updatedStock.filter((stock) => stock.selected);
-    setSelectedItems(selectedItems);
-  };
-
-  const handleQuantityChange = (index, value) => {
-    const updatedStock = [...studentStock];
-    updatedStock[index].quantity = parseInt(value) || 1;
-    setStudentStock(updatedStock);
+    const selected = updatedStock.filter((stock) => stock.selected);
+    setSelectedItems(selected);
   };
 
   const handleDeleteItem = (index) => {
@@ -135,9 +135,11 @@ function StockAllocate() {
   };
 
   const calculateTotalPrice = () => {
-    return studentStock.reduce((total, stock) => {
-      return total + stock.sellingPrice * stock.quantity;
-    }, 0);
+    return studentStock.reduce(
+      (total, stock) =>
+        stock.selected ? total + stock.sellingPrice * stock.quantity : total,
+      0
+    );
   };
 
   const classOptions = [
@@ -178,16 +180,16 @@ function StockAllocate() {
       </h1>
 
       {/* Filters */}
-      <div className="filters mb-6 grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <select
           name="class"
           onChange={handleFilterChange}
           value={filters.class}
-          className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
+          className="px-5 py-3 border-2 border-gray-300 rounded-xl"
         >
           <option value="">Select Class</option>
-          {classOptions.map((classOption, index) => (
-            <option key={index} value={classOption}>
+          {classOptions.map((classOption) => (
+            <option key={classOption} value={classOption}>
               {classOption}
             </option>
           ))}
@@ -197,7 +199,7 @@ function StockAllocate() {
           name="div"
           onChange={handleFilterChange}
           value={filters.div}
-          className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
+          className="px-5 py-3 border-2 border-gray-300 rounded-xl"
         >
           <option value="">Select Division</option>
           <option value="A">A</option>
@@ -208,7 +210,7 @@ function StockAllocate() {
           name="gender"
           onChange={handleFilterChange}
           value={filters.gender}
-          className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
+          className="px-5 py-3 border-2 border-gray-300 rounded-xl"
         >
           <option value="">Select Gender</option>
           <option value="Male">Male</option>
@@ -221,130 +223,114 @@ function StockAllocate() {
           placeholder="Search by name"
           value={filters.search}
           onChange={handleFilterChange}
-          className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
+          className="px-5 py-3 border-2 border-gray-300 rounded-xl"
         />
       </div>
 
-      {/* Students List */}
-      <div className="student-list p-6 bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-xl">
-        <h3 className="text-4xl font-extrabold mb-8 text-gray-800 opacity-90 tracking-wide">
-          Students
-        </h3>
-
-        <table className="min-w-full table-auto border-separate border-spacing-y-4">
-          <thead>
-            <tr className="bg-gradient-to-r from-purple-700 to-indigo-700 text-white">
-              <th className="px-6 py-4 text-left font-semibold text-lg rounded-tl-xl">
-                Name
-              </th>
-              <th className="px-6 py-4 text-left font-semibold text-lg">
-                Class
-              </th>
-              <th className="px-6 py-4 text-left font-semibold text-lg">
-                Division
-              </th>
-              <th className="px-6 py-4 text-left font-semibold text-lg">
-                Gender
-              </th>
-              <th className="px-6 py-4 text-left font-semibold text-lg rounded-tr-xl">
-                Fee ID
-              </th>
+      {/* Student List */}
+      <div className="bg-white shadow-xl rounded-xl overflow-hidden">
+        <table className="min-w-full table-auto">
+          <thead className="bg-gradient-to-r from-purple-700 to-indigo-700 text-white">
+            <tr>
+              <th className="px-6 py-4 text-left">Name</th>
+              <th className="px-6 py-4 text-left">Class</th>
+              <th className="px-6 py-4 text-left">Division</th>
+              <th className="px-6 py-4 text-left">Gender</th>
+              <th className="px-6 py-4 text-left">Fee ID</th>
             </tr>
           </thead>
-
           <tbody>
             {filteredStudents.map((student) => (
               <React.Fragment key={student.id}>
                 <tr
                   onClick={() => handleStudentClick(student)}
-                  className="cursor-pointer hover:bg-indigo-100 transition-all duration-300 text-gray-800 font-medium text-base rounded-lg"
+                  className="cursor-pointer hover:bg-indigo-100"
                 >
                   <td
-                    className={`px-6 py-4 border-b ${getTextColorByStatus(
+                    className={`px-6 py-4 ${getTextColorByStatus(
                       student.taskStatus
-                    )} font-bold text-lg`}
+                    )} font-bold`}
                   >
                     {student.fname} {student.lname}
                   </td>
-                  <td className="px-6 py-4 border-b">{student.class}</td>
-                  <td className="px-6 py-4 border-b">{student.div}</td>
-                  <td className="px-6 py-4 border-b">{student.gender}</td>
-                  <td className="px-6 py-4 border-b">{student.feeId}</td>
+                  <td className="px-6 py-4">{student.class}</td>
+                  <td className="px-6 py-4">{student.div}</td>
+                  <td className="px-6 py-4">{student.gender}</td>
+                  <td className="px-6 py-4">{student.feeId}</td>
                 </tr>
 
                 {expandedStudent && expandedStudent.id === student.id && (
                   <tr>
-                    <td colSpan="5" className="bg-gray-50 p-8 rounded-b-2xl">
+                    <td colSpan="5" className="bg-gray-100 p-6 rounded-b-xl">
                       {loadingStock ? (
-                        <div className="flex justify-center py-6">
-                          <Loader1 />
-                        </div>
-                      ) : studentStock.length === 0 ? (
-                        <div className="text-center py-6 text-gray-400 text-lg font-medium">
-                          No stock available.
-                        </div>
+                        <Loader1 />
                       ) : (
-                        <div className="space-y-8">
-                          <table className="min-w-full table-auto bg-white shadow-lg rounded-xl overflow-hidden">
-                            <thead className="bg-gradient-to-r from-indigo-100 to-purple-100">
-                              <tr>
-                                <th className="px-6 py-4 text-left font-semibold text-lg rounded-tl-xl">
-                                  Item Name
-                                </th>
-                                <th className="px-6 py-4 text-left font-semibold text-lg">
-                                  Selling Price
-                                </th>
-                                <th className="px-6 py-4 text-left font-semibold text-lg">
-                                  Select
-                                </th>
-                                <th className="px-6 py-4 text-left font-semibold text-lg rounded-tr-xl">
-                                  Action
-                                </th>
-                              </tr>
-                            </thead>
+                        <>
+                          {/* ... existing stock table UI ... */}
+                          {studentStock.length === 0 ? (
+                            <div className="text-center text-gray-500 py-6">
+                              No stock available
+                            </div>
+                          ) : (
+                            <>
+                              <table className="w-full table-auto mb-6">
+                                <thead className="bg-indigo-100">
+                                  <tr>
+                                    <th className="px-6 py-3">Item Name</th>
+                                    <th className="px-6 py-3">Price</th>
+                                    <th className="px-6 py-3">Select</th>
+                                    <th className="px-6 py-3">Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {studentStock.map((stock, index) => (
+                                    <tr key={index}>
+                                      <td className="px-6 py-4">
+                                        {stock.itemName}
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        ₹{stock.sellingPrice}
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <input
+                                          type="checkbox"
+                                          checked={stock.selected}
+                                          onChange={() =>
+                                            handleCheckboxChange(index)
+                                          }
+                                        />
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteItem(index)
+                                          }
+                                          className="text-red-500"
+                                        >
+                                          Delete
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
 
-                            <tbody>
-                              {studentStock.map((stock, index) => (
-                                <tr key={index}>
-                                  <td className="px-6 py-4">
-                                    {stock.itemName}
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    {stock.sellingPrice}
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    <input
-                                      type="checkbox"
-                                      className="h-5 w-5 text-indigo-600 focus:ring-indigo-500"
-                                      checked={stock.selected}
-                                      onChange={() =>
-                                        handleCheckboxChange(index)
-                                      }
-                                    />
-                                  </td>
-                                  <td className="px-6 py-4">
-                                    <button
-                                      onClick={() => handleDeleteItem(index)}
-                                      className="text-red-500"
-                                    >
-                                      Delete
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          <div className="text-right font-bold text-xl mt-4">
-                            <p>Total Price: ₹{calculateTotalPrice()}</p>
-                          </div>
-                          {/* Pass the selected items and other necessary data to AddPaymentTable */}
+                              <div className="text-right font-semibold text-lg mb-4">
+                                Total Price: ₹{calculateTotalPrice()}
+                              </div>
+                            </>
+                          )}
+
                           <AddPaymentTable
                             selectedItems={selectedItems}
-                            studentId={expandedStudent.id} // Pass studentId
-                            schoolId={expandedStudent.schoolId} // Pass schoolId
-                            studentClass={expandedStudent.class} // Pass studentClass
+                            studentId={student.id}
+                            schoolId={student.schoolId}
+                            studentClass={student.class}
                           />
-                        </div>
+
+                          {/* ✅ Add this line to show history for selected student */}
+                          <StudentsStockPaymentHistory student={student} />
+                        </>
                       )}
                     </td>
                   </tr>
@@ -359,7 +345,3 @@ function StockAllocate() {
 }
 
 export default StockAllocate;
-
-
-
-

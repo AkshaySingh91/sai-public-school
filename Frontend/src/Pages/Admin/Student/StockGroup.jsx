@@ -9,13 +9,14 @@ import {
   where,
 } from "firebase/firestore";
 import Loader1 from "../../../components/Loader1";
-
+import { useAuth } from "../../../contexts/AuthContext";
 function StockGroup() {
   const [groups, setGroups] = useState([]);
   const [expandedGroup, setExpandedGroup] = useState(null);
   const [items, setItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
-
+  const users = useAuth().userData;
+  console.log({ Object: users });
   // Generate the class groups based on "1st", "2nd", "3rd" classes
   useEffect(() => {
     const generatedGroups = [];
@@ -59,7 +60,8 @@ function StockGroup() {
       // Query the stock based on the class name
       const q = query(
         collection(db, "allStocks"),
-        where("className", "==", className)
+        where("className", "==", className),
+        where("schoolCode", "==", users?.schoolCode)
       );
       const querySnapshot = await getDocs(q);
 
