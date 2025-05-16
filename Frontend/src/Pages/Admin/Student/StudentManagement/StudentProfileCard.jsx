@@ -1,6 +1,5 @@
-
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../../config/firebase";
+import { db } from "../../../../config/firebase";
 import { Switch } from "@headlessui/react";
 import { Save, Trash2, User, CalendarDays, Banknote } from "lucide-react";
 export default function StudentProfile({
@@ -9,6 +8,7 @@ export default function StudentProfile({
   setFormData,
   handleStudentUpdate,
   handleStudentDelete,
+  goToNextAcademicYear
 }) {
   const handleToggleStatus = async (val) => {
     const transactions = student.transactions || [];
@@ -67,7 +67,9 @@ export default function StudentProfile({
       console.error("Error updating student:", err);
     }
 
-    if (handleStudentUpdate) handleStudentUpdate();
+    if (handleStudentUpdate) {
+      handleStudentUpdate()
+    };
   };
 
   return (
@@ -105,14 +107,14 @@ export default function StudentProfile({
                 checked={formData.status !== "inactive"}
                 onChange={handleToggleStatus}
                 className={`${formData.status !== "inactive"
-                    ? "bg-purple-600"
-                    : "bg-gray-200"
+                  ? "bg-purple-600"
+                  : "bg-gray-200"
                   } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
               >
                 <span
                   className={`${formData.status !== "inactive"
-                      ? "translate-x-6"
-                      : "translate-x-1"
+                    ? "translate-x-6"
+                    : "translate-x-1"
                     } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                 />
               </Switch>
@@ -138,6 +140,12 @@ export default function StudentProfile({
             <Save className="w-5 h-5 mr-2" /> Update Details
           </button>
           <button
+            onClick={goToNextAcademicYear}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg flex items-center justify-center"
+          >
+            <Save className="w-5 h-5 mr-2" /> Next Academic Year
+          </button>
+          <button
             onClick={handleStudentDelete}
             className="w-full text-red-600 hover:text-red-700 font-medium py-2.5 rounded-lg border border-red-200 hover:border-red-300 flex items-center justify-center"
           >
@@ -158,7 +166,4 @@ const DetailItem = ({ icon, label, value, children }) => (
     </div>
     {children || <span className="font-medium">{value || "-"}</span>}
   </div>
-);
-
-// StatusBadge component
-
+); 

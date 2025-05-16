@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Swal from 'sweetalert2';
 import { Save, Upload, Trash2, Download, Plus } from 'lucide-react';
-import BonafideGenerator from "./BonafideGenerator"
+import BonafideGenerator from "../Documents/BonafideGenerator"
 
 const StudentDocumentTab = ({ student, setStudent }) => {
     const [newDoc, setNewDoc] = useState({ name: '', file: null });

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../../../config/firebase";
-import { useAuth } from "../../../contexts/AuthContext";
+import { db } from "../../../../config/firebase";
+import { useAuth } from "../../../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { utils, writeFile } from "xlsx";
 import { jsPDF } from "jspdf";
@@ -15,7 +15,7 @@ import {
   ChevronRight,
   SettingsIcon,
 } from "lucide-react";
-import TableLoader from "../../../components/TableLoader"
+import TableLoader from "../../../../components/TableLoader"
 
 const StudentList = () => {
   const { userData } = useAuth();

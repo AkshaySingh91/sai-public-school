@@ -1,8 +1,8 @@
 // src/Pages/Admin/Students/DailyBook.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { useAuth } from "../../../contexts/AuthContext";
-import { db } from "../../../config/firebase";
+import { useAuth } from "../../../../contexts/AuthContext";
+import { db } from "../../../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import * as XLSX from "xlsx";

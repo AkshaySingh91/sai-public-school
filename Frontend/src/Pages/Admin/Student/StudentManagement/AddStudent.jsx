@@ -2,17 +2,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, addDoc, doc, getDoc, getDocs, where } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
-import { useAuth } from '../../../contexts/AuthContext';
+import { db } from '../../../../config/firebase';
+import { useAuth } from '../../../../contexts/AuthContext';
 import Swal from 'sweetalert2';
 import { nanoid } from 'nanoid';
-import { User, Users, BookOpen, GraduationCap, Calendar, Clock, Wallet } from 'lucide-react';
-import { SelectField } from './SelectField';
-import { InputField } from "./InputField"
+import { User, Users, BookOpen, GraduationCap, Calendar, Clock, Wallet, Hash } from 'lucide-react';
+import { SelectField } from '../SelectField';
+import { InputField } from "../InputField"
+import { useSchool } from '../../../../contexts/SchoolContext';
 
 export default function AddStudent() {
   const { userData } = useAuth();
   const navigate = useNavigate();
+  const { school } = useSchool();
   const [formData, setFormData] = useState({
     fname: '',
     mname: '',
@@ -20,52 +22,21 @@ export default function AddStudent() {
     fatherName: '',
     motherName: '',
     class: '',
+    div: '',
     type: '',
     gender: '',
     dob: '',
-    academicYear: '24-25',
+    academicYear: school?.academicYear || "",
     penNo: "",
     grNo: "",
-    serialNo: "",
+    saralId: "",
     status: "new"
   });
-  const [schoolData, setSchoolData] = useState({ classes: [], studentTypes: [] });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Fetch school data
-  useEffect(() => {
-    const fetchSchoolData = async () => {
-      try {
-        // 1. Fix Firestore field name case (likely should be lowercase 'code')
-        const schoolQ = query(
-          collection(db, "schools"),
-          where("Code", "==", userData.schoolCode) // Changed "Code" to "code"
-        );
 
-        const schoolSnap = await getDocs(schoolQ);
-
-        if (schoolSnap.empty) throw new Error("School not found");
-
-        // 2. Get the document properly
-        const schoolDoc = schoolSnap.docs[0]; // Get the document snapshot
-        const schoolData = schoolDoc.data(); // Get the data from the document
-
-        // 3. Use the correct variable name (schoolDoc instead of schoolData)
-        setSchoolData({
-          classes: schoolData.class || [], // Changed schoolDoc.data() to schoolData
-          studentTypes: schoolData.studentsType || [] // Changed schoolDoc.data() to schoolData
-        });
-
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching school data:", err);
-        Swal.fire('Error', 'Failed to load school data', 'error');
-        setLoading(false);
-      }
-    };
-
-    fetchSchoolData();
-  }, [userData.schoolCode]);
+  console.log({ school })
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -318,39 +289,23 @@ export default function AddStudent() {
                   label="Class"
                   value={formData.class}
                   onChange={e => setFormData({ ...formData, class: e.target.value })}
-                  options={schoolData.classes}
+                  options={school.class}
                   required
+                />
+                <SelectField
+                  icon={<Hash className="w-5 h-5" />}
+                  label="Division"
+                  value={formData.div}
+                  onChange={e => setFormData({ ...formData, div: e.target.value })}
+                  options={school.divisions}
                 />
                 <SelectField
                   icon={<Wallet className="w-5 h-5" />}
                   label="Student Type"
                   value={formData.type}
                   onChange={e => setFormData({ ...formData, type: e.target.value })}
-                  options={schoolData.studentTypes}
+                  options={school.studentsType}
                   required
-                />
-                <SelectField
-                  icon={<Calendar className="w-5 h-5" />}
-                  label="Academic Year"
-                  value={formData.academicYear}
-                  onChange={e => setFormData({ ...formData, academicYear: e.target.value })}
-                  options={['24-25', '25-26', '26-27']}
-                  required
-                />
-                <InputField
-                  label="General Regestration No."
-                  value={formData.grNo}
-                  onChange={e => setFormData({ ...formData, grNo: e.target.value })}
-                />
-                <InputField
-                  label="Personal Education Number"
-                  value={formData.penNo}
-                  onChange={e => setFormData({ ...formData, penNo: e.target.value })}
-                />
-                <InputField
-                  label="Serial Number"
-                  value={formData.serialNo}
-                  onChange={e => setFormData({ ...formData, serialNo: e.target.value })}
                 />
                 <SelectField
                   icon={<Clock className="w-5 h-5" />}
@@ -360,13 +315,27 @@ export default function AddStudent() {
                   options={["new", "current", "inactive"]}
                   required
                 />
-                {/* <InputField
-                  icon={<Clock />}
-                  label="Status"
-                  placeholder={"new, current, inactive"}
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                /> */}
+               
+                <InputField
+                  label="Academic Year"
+                  value={formData.academicYear}
+                  disabled={true}
+                />
+                <InputField
+                  label="General Regestration No."
+                  value={formData.grNo}
+                  onChange={e => setFormData({ ...formData, grNo: e.target.value })}
+                />
+                <InputField
+                  label="PEN no."
+                  value={formData.penNo}
+                  onChange={e => setFormData({ ...formData, penNo: e.target.value })}
+                />
+                <InputField
+                  label="saral id"
+                  value={formData.saralId}
+                  onChange={e => setFormData({ ...formData, saralId: e.target.value })}
+                />
               </div>
             </div>
           </div>

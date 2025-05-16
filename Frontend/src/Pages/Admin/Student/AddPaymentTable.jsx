@@ -3,13 +3,13 @@ import {
   doc,
   updateDoc,
   arrayUnion,
-  getDoc,
   collection,
   query,
   where,
   getDocs,
 } from "firebase/firestore";
 import { db } from "../../../config/firebase";
+import { useSchool } from "../../../contexts/SchoolContext";
 
 const AddPaymentTable = ({
   selectedItems,
@@ -17,11 +17,11 @@ const AddPaymentTable = ({
   schoolId,
   studentClass,
 }) => {
+  const { school } = useSchool();
   const today = new Date().toISOString().substr(0, 10);
-
   const [paymentRows, setPaymentRows] = useState([]);
   const [availableItems, setAvailableItems] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+  const [accounts, setAccounts] = useState(school.accounts || []);
 
   useEffect(() => {
     // Fetch available items based on the selectedItems prop
@@ -42,23 +42,7 @@ const AddPaymentTable = ({
       }
     };
 
-    const fetchAccounts = async () => {
-      try {
-        const schoolRef = doc(db, "schools", schoolId);
-        const schoolSnap = await getDoc(schoolRef);
-        if (schoolSnap.exists()) {
-          const schoolData = schoolSnap.data();
-          setAccounts(schoolData.accounts || []);
-        } else {
-          console.error("No such school document exists with ID:", schoolId);
-        }
-      } catch (error) {
-        console.error("Error fetching accounts:", error);
-      }
-    };
-
     fetchStockItems();
-    fetchAccounts();
   }, [studentClass, schoolId]);
 
   useEffect(() => {
@@ -74,6 +58,10 @@ const AddPaymentTable = ({
     }));
     setPaymentRows(rows);
   }, [selectedItems, today, accounts]);
+
+  useEffect(() => {
+    setAccounts(school?.accounts?.length ? school.accounts : []);
+  }, [school.accounts])
 
   const handleRowChange = (index, e) => {
     const { name, value } = e.target;

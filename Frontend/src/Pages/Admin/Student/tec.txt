@@ -183,3 +183,9 @@ i have to create a dashboard where i will show different statistic some of like:
     F. lastYearBalanceFee: it is sum of allfee.lastYearBalanceFee + allFee.lastYearTransportFee for all student
 3. Card showing beautiful pie Charts showing total no of  girsl & Boys in school & there count , we can get it from schoolSchema whose Code = userData.schoolCode using student.Gender & only inc  student whose status = "active"
 give complete & beautiful dashboard with best UI use as many line of code as you wont you can also include other analytic also based on provided data & schema & give complete code
+
+
+
+
+
+

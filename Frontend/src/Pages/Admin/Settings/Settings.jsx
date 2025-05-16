@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { User, School, Upload, Trash2 } from 'lucide-react';
 import { auth } from '../../../config/firebase'
+import Swal from "sweetalert2"
 
 const Settings = () => {
     const { currentUser, updateUser } = useAuth();
@@ -24,12 +25,12 @@ const Settings = () => {
                 const userToken = await user.getIdToken();
 
                 const [profileRes, schoolRes] = await Promise.all([
-                    fetch('http://localhost:5000/api/settings/profile', {
+                    fetch('http://localhost:5000/admin/settings/profile', {
                         headers: {
                             'Authorization': `Bearer ${userToken}`
                         }
                     }),
-                    fetch('http://localhost:5000/api/settings/school', {
+                    fetch('http://localhost:5000/admin/settings/school', {
                         headers: {
                             'Authorization': `Bearer ${userToken}`
                         }
@@ -60,7 +61,7 @@ const Settings = () => {
         e.preventDefault();
         try {
             const userToken = await auth.currentUser.getIdToken();
-            const response = await fetch('http://localhost:5000/api/settings/profile', {
+            const response = await fetch('http://localhost:5000/admin/settings/profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ const Settings = () => {
             const formData = new FormData();
             formData.append('image', file);
 
-            const response = await fetch('/api/settings/upload-profile', {
+            const response = await fetch('http://localhost:5000/admin/settings/upload-profile', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${userToken}`
@@ -218,59 +219,147 @@ const Settings = () => {
 };
 
 const SchoolSettings = ({ school, setSchool }) => {
+    console.log(school)
     const [logoFile, setLogoFile] = useState(null);
+    const [div, setDiv] = useState(school?.divisions?.length ? school.divisions.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
+    const [logoUrl, setLogoUrl] = useState(false);
+    const [classes, setClasses] = useState(school?.class?.length ? school.class.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
+    const [academicYear, setAcademicYear] = useState(school.academicYear);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        try {
-            const userToken = await auth.currentUser.getIdToken();
 
-            // Update school details
-            const response = await fetch('http://localhost:5000/api/settings/school', {
+        const validPattern = /^(\s*[^,\s][^,]*\s*)(,\s*[^,\s][^,]*\s*)*$/;
+        const academicYearPattern = /^\d{2}-\d{2}$/;
+        if (div.trim() !== '' && !validPattern.test(div)) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Invalid input',
+                text: 'Please enter comma-separated values like: A, B, C, etc.'
+            });
+        }
+        if (classes.trim() !== '' && !validPattern.test(classes)) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Invalid input',
+                text: 'Please enter comma-separated values like: Nursery, JRKG, 1st, 2nd, 3rd, etc.'
+            });
+        }
+        if (academicYear.trim() !== '' && !academicYearPattern.test(academicYear)) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Invalid input',
+                text: 'Please enter valid academic year: 24-25,25-26, etc.'
+            });
+        }
+
+        const divisionArr = div
+            .split(',')
+            .filter(s => s.trim())
+            .map(s => s.trim());
+        const classArr = classes
+            .split(',')
+            .filter(s => s.trim())
+            .map(s => s.trim());
+
+        const updatedSchool = { ...school, divisions: divisionArr, class: classArr, academicYear };
+
+        let userToken;
+        try {
+            userToken = await auth.currentUser.getIdToken();
+        } catch (err) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Authentication Error',
+                text: 'Could not get user token. Please log in again.'
+            });
+        }
+
+        // Show a persistent “Saving…” modal
+        Swal.fire({
+            title: 'Saving school details…',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        try {
+            // 1) Update the school details
+            const resDetails = await fetch('http://localhost:5000/admin/settings/school', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${userToken}`
+                    Authorization: `Bearer ${userToken}`
                 },
-                body: JSON.stringify(school)
+                body: JSON.stringify(updatedSchool)
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
+            if (!resDetails.ok) {
+                const errorData = await resDetails.json();
                 throw new Error(errorData.error || 'Failed to update school details');
             }
 
-            const updatedSchool = await response.json();
-            setSchool(updatedSchool);
-
-            // Handle logo upload if needed
+            // 2) If there's a new logo, upload it
             if (logoFile) {
                 const formData = new FormData();
                 formData.append('logo', logoFile);
 
-                const uploadResponse = await fetch('/api/settings/school/logo', {
+                const resLogo = await fetch('http://localhost:5000/admin/settings/school/logo', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${userToken}`
+                        Authorization: `Bearer ${userToken}`
                     },
                     body: formData
                 });
 
-                if (!uploadResponse.ok) {
-                    throw new Error('Failed to upload logo');
+                if (!resLogo.ok) {
+                    const errorData = await resLogo.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to upload logo');
                 }
-
-                const { logoUrl } = await uploadResponse.json();
-                setSchool(prev => ({ ...prev, logoURL: logoUrl }));
             }
 
-            // Show success feedback
-            alert('School details updated successfully!');
+            // If we reach here, everything succeeded
+            Swal.fire({
+                icon: 'success',
+                title: 'Saved!',
+                text: 'School details have been updated successfully.'
+            });
+
         } catch (err) {
-            console.error('Update error:', err);
-            alert(err.message || 'An error occurred during update');
+            // Replace the loading modal with an error modal
+            Swal.fire({
+                icon: 'error',
+                title: 'Save Failed',
+                text: err.message
+            });
         }
     };
 
+    const handleDiv = (e) => {
+        e.preventDefault();
+        if (e.target.value.trim()) {
+            setDiv(e.target.value.trim())
+        }
+    }
+    const handleClasses = (e) => {
+        e.preventDefault();
+        if (e.target.value.trim()) {
+            setClasses(e.target.value.trim())
+        }
+    }
+    const handleLogoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setLogoUrl(reader.result);
+            };
+            reader.readAsDataURL(file);
+            setLogoFile(e.target.files[0])
+        }
+    }
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -279,6 +368,15 @@ const SchoolSettings = ({ school, setSchool }) => {
                     type="text"
                     value={school.schoolName || ''}
                     onChange={(e) => setSchool({ ...school, schoolName: e.target.value })}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                />
+            </div>
+            <div className="school-academic-year">
+                <label className="block text-sm font-medium text-gray-700 mb-1">School Academic Year</label>
+                <input
+                    type="text"
+                    value={academicYear || ''}
+                    onChange={(e) => setAcademicYear(e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
             </div>
@@ -309,11 +407,28 @@ const SchoolSettings = ({ school, setSchool }) => {
                     required
                 />
             </div>
+            <div className="update-div">
+                <label className="block text-sm font-medium text-gray-700 mb-1">All Divisions</label>
+                <input type="text"
+                    value={div}
+                    onChange={handleDiv}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                />
+            </div>
+            <div className="update-div">
+                <label className="block text-sm font-medium text-gray-700 mb-1">All Classes, this should be in order eg; SRKG, 1st, 2nd</label>
+
+                <input type="text"
+                    value={classes}
+                    onChange={handleClasses}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                />
+            </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">School Logo</label>
                 <div className="flex items-center gap-4">
-                    {school.logoURL ? (
-                        <img src={school.logoURL} className="w-20 h-20 object-contain" alt="School Logo" />
+                    {logoUrl ? (
+                        <img src={logoUrl} className="w-20 h-20 object-contain" alt="School Logo" />
                     ) : (
                         <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
                             <School size={32} className="text-gray-400" />
@@ -326,9 +441,9 @@ const SchoolSettings = ({ school, setSchool }) => {
                             <input
                                 type="file"
                                 className="hidden"
-                                onChange={(e) => setLogoFile(e.target.files[0])}
+                                onChange={handleLogoUpload}
                                 accept="image/*"
-                                disabled={true}
+                                disabled={false}
                             />
                         </label>
                     </div>
