@@ -160,8 +160,12 @@ router.put('/school', async (req, res) => {
         const schoolDoc = await admin.firestore().collection('schools')
             .where('Code', '==', req.user.schoolCode)
             .get();
-        await schoolDoc.docs[0].ref.update({ schoolName, location, divisions: d, class: c, academicYear });
         res.json({ message: "School updated successfully" });
+        await schoolDoc.docs[0].ref.update({
+            schoolName, location, divisions: d, class: c, academicYear,
+            // if academic year change than set receipt count to 0
+            ...(academicYear !== schoolDoc.docs[0].data().academicYear ? { receiptCount: 0 } : {})
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
