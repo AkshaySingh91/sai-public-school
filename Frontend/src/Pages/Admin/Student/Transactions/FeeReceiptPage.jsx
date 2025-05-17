@@ -24,7 +24,8 @@ export default function FeeReceiptPage() {
                 setStudent(studentData);
 
                 // Find the specific transaction
-                const tx = (studentData.transactions || []).find(t => t.receiptId === receiptId);
+                const tx = (studentData.transactions || []).find(t => t.receiptId == receiptId);
+                console.log({ tx }, studentData.transactions, receiptId, tx.status)
                 if (!tx) return;
 
                 // Verify transaction has historical snapshot
@@ -75,7 +76,7 @@ export default function FeeReceiptPage() {
     if (!school) return <div className="p-6 text-center">Loading school info...</div>;
     if (!transaction) return <div className="p-6 text-center">Receipt not found</div>;
 
-    const tx = student.transactions.find(t => t.receiptId === receiptId);
+    const tx = student.transactions.find(t => t.receiptId == receiptId);
     if (!tx || tx.status !== 'completed') {
         return <div className="p-6 text-center">Receipt not available</div>;
     }

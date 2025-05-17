@@ -48,6 +48,7 @@ const SchoolForm = ({ onSchoolAdded }) => {
         // Predefined payment modes and fee types.
         PaymentMode: ["Cash", "Online", "GPay", "PhonePay", "Cheque"],
         feeType: ["AdmisionFee", "TutionFee", "BusFee"],
+        receiptCount: 0
       });
       setSchoolName("");
       setCode("");

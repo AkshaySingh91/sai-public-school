@@ -17,12 +17,12 @@ function BusAllocation() {
   const [currentPage, setCurrentPage] = useState(1);
   const studentsPerPage = 10;
   const users = useAuth().userData;
-  console.log("user", users);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         let studentSnapshot;
-        console.log({objects: users});
+        console.log({ objects: users });
         if (users.schoolCode) {
           const q = query(
             collection(db, "students"),
@@ -107,9 +107,8 @@ function BusAllocation() {
     console.log({ filtered });
     if (searchTerm.trim() !== "") {
       filtered = filtered.filter((student) => {
-        const fullName = `${student.fname || ""} ${
-          student.lname || ""
-        }`.toLowerCase();
+        const fullName = `${student.fname || ""} ${student.lname || ""
+          }`.toLowerCase();
         const busStop = (student.busStop || "").toLowerCase();
         const busId = student.transportDetails?.busId || "";
         const numberPlate = (busData[busId] || "").toLowerCase();
@@ -254,7 +253,7 @@ function BusAllocation() {
 
               const destinationName = destinationId
                 ? destinationData.find((dest) => dest.id === destinationId)
-                    ?.name || "-"
+                  ?.name || "-"
                 : "-";
 
               return (

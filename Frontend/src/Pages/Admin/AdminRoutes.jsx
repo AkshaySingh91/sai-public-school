@@ -9,7 +9,7 @@ import PaymentStructure from './Schools/SchoolPaymentStructure';
 
 import StudentList from './Student/StudentManagement/StudentList';
 import AddStudent from './Student/StudentManagement/AddStudent';
-import StudentDetail from './Student/StudentManagement/StudentDetail';
+import { StudentDetail } from './Student/StudentManagement/StudentDetail';
 import FeeReceiptPage from './Student/Transactions/FeeReceiptPage';
 import DailyBook from './Student/DailyBook/DailyBook';
 import FeeReportContainer from './Student/FeeManagement/FeeReportContainer';

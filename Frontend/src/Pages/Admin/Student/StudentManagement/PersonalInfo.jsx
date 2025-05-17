@@ -342,16 +342,8 @@ export default function PersonalInfo({
               icon={<Hash />}
               label="Division"
               options={schoolData?.divisions || []}
-              value={formData.divisions}
-              onChange={(e) => {
-                const selected = e.target.value;
-                setFormData((prev) => ({
-                  ...prev,
-                  divisions: prev.divisions?.includes(selected)
-                    ? prev.divisions // prevent duplicates
-                    : [...(prev.divisions || []), selected],
-                }));
-              }}
+              value={formData.div}
+              onChange={(e) => { setFormData({ ...formData, div: e.target.value }); }}
             />
             <InputField
               icon={<Hash />}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "../../../../config/firebase";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import TableLoader from "../../../../components/TableLoader"
 import { useSchool } from "../../../../contexts/SchoolContext"
+import { getNewClassFees } from "./StudentDetail"
+import Swal from "sweetalert2";
 
 const StudentList = () => {
   const { userData } = useAuth();
@@ -26,23 +28,21 @@ const StudentList = () => {
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [division, setDivisions] = useState([]);
+  const [divisions, setDivisions] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState({
-    class: "all",
-    div: "all",
-    search: "",
-  });
+  const [filters, setFilters] = useState({ class: "all", div: "all", search: "" });
   const itemsPerPage = 10;
 
+  // init class & division
   useEffect(() => {
-    if (school.class) setClasses(school.class || []);
+    if (school.class) setClasses(school.class);
   }, [school.class]);
   useEffect(() => {
-    if (school.divisions) setDivisions(school.divisions || []);
+    if (school.divisions) setDivisions(school.divisions);
   }, [school.divisions]);
 
+  // fetch all students
   useEffect(() => {
     if (userData) fetchStudents();
   }, [userData]);
@@ -69,32 +69,209 @@ const StudentList = () => {
     }
   };
 
+  // filters
   useEffect(() => {
-    let result = students.filter((student) => {
-      const matchesSearch =
-        `${student.fname} ${student.mname} ${student.lname}`
-          .toLowerCase()
-          .includes(filters.search.toLowerCase()) ||
-        student.feeId?.toLowerCase().includes(filters.search.toLowerCase());
-
-      const matchesClass =
-        filters.class === "all" || student.class === filters.class;
-      const matchesDiv = filters.div === "all" || student.div === filters.div;
-
-      return matchesSearch && matchesClass && matchesDiv;
+    const result = students.filter(s => {
+      const name = `${s.fname} ${s.mname} ${s.lname}`.toLowerCase();
+      const matchSearch = name.includes(filters.search.toLowerCase()) ||
+        s.feeId?.toLowerCase().includes(filters.search.toLowerCase());
+      const matchClass = filters.class === 'all' || s.class === filters.class;
+      const matchDiv = filters.div === 'all' || s.div === filters.div;
+      return matchSearch && matchClass && matchDiv;
     });
     setFilteredStudents(result);
     setCurrentPage(1);
   }, [filters, students]);
 
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredStudents.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
+  // pagination
+  const idxEnd = currentPage * itemsPerPage;
+  const idxStart = idxEnd - itemsPerPage;
+  const currentItems = filteredStudents.slice(idxStart, idxEnd);
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+
+  // selection
+  const toggleSelectAll = (e) => {
+    setSelectedStudents(e.target.checked ? currentItems.map(s => s.id) : []);
+  };
+  const toggleSelectStudent = (id) => {
+    setSelectedStudents(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  // batch move to next academic year
+  const handleBatchMove = async () => {
+    try {
+      // classOrder should always have increasing order of class
+      const classOrder = school?.class?.length > 0 ? school.class : [
+        "Nursery",
+        "JRKG",
+        "SRKG",
+        "1st",
+        "2nd",
+        "3rd",
+        "4th",
+        "5th",
+        "6th",
+        "7th",
+        "8th",
+        "9th",
+      ];
+      // get all selected student
+      const selected = students.filter(s => selectedStudents.includes(s.id));
+      // determine next academic year
+      const [curStart, curEnd] = school?.academicYear.split('-').map(n => parseInt(n));
+      const nextYear = `${curStart + 1}-${curEnd + 1}`;
+
+      // filter valid students, remove inactive student & those who is in last class
+      const toMove = selected.filter(s => {
+        const idx = classOrder.indexOf(s.class);
+        return (
+          idx >= 0 && idx < classOrder.length - 1 &&
+          (s?.status || "").toLowerCase() !== 'inactive'
+        );
+      });
+      // Progress tracking
+      let processed = 0;
+      const total = toMove.length;
+      const errors = [];
+
+      // confirm
+      const { isConfirmed } = await Swal.fire({
+        title: `Move ${total} students to ${nextYear}?`,
+        html: `
+        <div class="text-left">
+          <p>New students: ${toMove.filter(s => s.status === 'new').length}</p>
+          <p>Current students: ${toMove.filter(s => s.status === 'current').length}</p>
+          <p class="mt-2 text-sm text-gray-500">This operation cannot be undone.</p>
+        </div>
+      `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Begin Migration',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+      });
+      if (!isConfirmed) return;
+
+      Swal.fire({
+        title: 'Processing Students...',
+        html: `
+        <div class="progress-container">
+          <div class="progress-bar" style="width: 0%"></div>
+          <div class="progress-text">0/${total}</div>
+          <div class="current-student mt-2 text-sm text-gray-600"></div>
+        </div>
+      `,
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      for (const [index, student] of toMove.entries()) {
+        try {
+          const progress = Math.floor((index / total) * 100);
+          Swal.getHtmlContainer().querySelector('.progress-bar').style.width = `${progress}%`;
+          Swal.getHtmlContainer().querySelector('.progress-text').textContent =
+            `${index + 1}/${total}`;
+          Swal.getHtmlContainer().querySelector('.current-student').textContent =
+            `Processing: ${student.fname} ${student.lname} (${student.class} → ${classOrder[classOrder.indexOf(student.class) + 1]})`;
+
+          // replicate goToNextAcademicYear logic
+          const idx = classOrder.indexOf(student.class);
+          const nextClass = classOrder[idx + 1];
+
+          // calculate unpaid
+          const txs = student.transactions || [];
+          const allFee = student.allFee || {};
+          const unpaid = (key) => {
+            const due = key === 'schoolFee' ? allFee.schoolFees?.total || 0 : allFee[key] || 0;
+            const paid = txs.filter(t => {
+              return t.academicYear === student.academicYear && t?.feeType?.toLowerCase() === key.toLowerCase() && t.status === "completed"
+            })
+              .reduce((a, t) => a + t.amount, 0);
+            return Math.max(due - paid, 0);
+          };
+          const lastBal = (allFee.lastYearBalanceFee || 0) + unpaid('hostelFee') + unpaid('messFee') + unpaid('schoolFee');
+          const lastTrans = (allFee.lastYearTransportFee || 0) + unpaid('transportFee');
+
+          const newStatus = student.status === 'new' ? 'current' : student.status;
+          const rawFees = await getNewClassFees(userData.schoolCode, nextClass, nextYear, student);
+          // this is add fee & tut fee of next class of that stu type
+          const admission = newStatus === 'current' ? 0 : rawFees.studentFees.AdmissionFee;
+          const tuition = rawFees.studentFees.TutionFee;
+          // this is add fee & tut fee of next class of DSS stu type use to calc discount
+          const originalAdmissionFee = newStatus === "current" ? 0 : rawFees.originalFees.AdmissionFee;
+          const originalTutuionFee = rawFees.originalFees.TutionFee;
+
+          const tuitionDiscount = (originalAdmissionFee + originalTutuionFee) - (admission + tuition);
+
+          const updatedAllFee = {
+            ...allFee,
+            lastYearDiscount: allFee.tutionFeesDiscount,
+            lastYearBalanceFee: lastBal,
+            lastYearTransportFee: lastTrans,
+            hostelFee: 0,
+            messFee: 0,
+            transportFee: allFee.transportFee,
+            transportFeeDiscount: allFee.transportFeeDiscount,
+            schoolFees: { AdmissionFee: admission, TutionFee: tuition, total: admission + tuition },
+            tutionFeesDiscount: tuitionDiscount,
+          };
+
+          const updated = {
+            ...student,
+            academicYear: nextYear,
+            class: nextClass,
+            status: newStatus,
+            allFee: updatedAllFee,
+          };
+          console.log({ updated })
+          await updateDoc(doc(db, 'students', student.id), updated);
+          processed++;
+          // Add slight delay for UI updates and rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100))
+        } catch (error) {
+          console.error(`Error processing ${student.name}:`, error);
+          errors.push({
+            student: student.name,
+            error: error.message
+          });
+        }
+      }
+      // Final updates
+      await fetchStudents();
+      setSelectedStudents([]);
+      if (errors.length === 0) {
+        await Swal.fire({
+          title: 'Migration Complete!',
+          html: `<p>Successfully moved ${processed} students.</p>`,
+          icon: 'success',
+          timer: 2000
+        });
+      } else {
+        await Swal.fire({
+          title: 'Partial Completion',
+          html: `
+          <p>Moved ${processed} students successfully.</p>
+          <p class="text-red-600">${errors.length} errors occurred.</p>
+          <ul class="text-sm text-left mt-2">
+            ${errors.map(e => `<li>${e.student}: ${e.error}</li>`).join('')}
+          </ul>
+        `,
+          icon: 'warning',
+          confirmButtonText: 'Okay'
+        });
+      }
+    } catch (error) {
+      console.error('Batch move failed:', error);
+      Swal.fire({
+        title: 'Operation Failed',
+        html: `<p class="text-red-600">${error.message}</p>`,
+        icon: 'error'
+      });
+    }
+  };
 
   // Export handlers
   const exportToExcel = () => {
@@ -123,7 +300,6 @@ const StudentList = () => {
     utils.book_append_sheet(workbook, worksheet, "Students");
     writeFile(workbook, "students.xlsx");
   };
-
   const exportToPDF = () => {
     try {
       const doc = new jsPDF();
@@ -189,15 +365,6 @@ const StudentList = () => {
     inactive: "bg-red-100 text-gray-600",
   };
 
-  const toggleSelectAll = (e) => {
-    setSelectedEmployees(e.target.checked ? currentItems.map((s) => s.id) : []);
-  };
-
-  const toggleSelectStudent = (id) => {
-    setSelectedStudents((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
 
   return (<>
     {
@@ -236,7 +403,7 @@ const StudentList = () => {
                 }
               >
                 <option value="all">All Divisions</option>
-                {division.map((div) => (
+                {divisions.map((div) => (
                   <option key={div} value={div}>
                     {div}
                   </option>
@@ -278,6 +445,13 @@ const StudentList = () => {
               >
                 <FileSpreadsheet size={16} className="mr-2" />
                 <span>Export Excel</span>
+              </button>
+              <button
+                onClick={handleBatchMove}
+                disabled={selectedStudents.length === 0}
+                className="px-4 py-2 bg-green-600 text-white rounded-md disabled:opacity-50"
+              >
+                Move Selected to Next Year
               </button>
             </div>
           </div>
@@ -406,9 +580,9 @@ const StudentList = () => {
               <div>
                 <p className="text-sm text-gray-700">
                   Showing{" "}
-                  <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
+                  <span className="font-medium">{idxStart + 1}</span> to{" "}
                   <span className="font-medium">
-                    {Math.min(indexOfLastItem, filteredStudents.length)}
+                    {Math.min(idxEnd, filteredStudents.length)}
                   </span>{" "}
                   of <span className="font-medium">{filteredStudents.length}</span>{" "}
                   students

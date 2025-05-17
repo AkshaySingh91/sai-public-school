@@ -116,8 +116,8 @@ export default function FeeReceipt({ student, school, transaction }) {
             {['School Copy', 'Parent Copy'].map((copy, idx) => (
                 <div className=''>
                     <div className="text-center mb-4 mt-4">
-                        <h1 className="text-md font-bold capitalize">{school.schoolName}, {school?.location?.taluka || ""}</h1>
                         <p className="italic text-purple-600">{copy}</p>
+                        <h1 className="text-md font-bold capitalize">{school.schoolName}, {school?.location?.taluka || ""}</h1>
                     </div>
                     <div key={idx} className="receipt-copy bg-white border border-gray-200 rounded-sm mb-4 ">
                         {/* Receipt Header */}

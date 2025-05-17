@@ -24,7 +24,146 @@ import TransactionForm from "../FeeManagement/TransactionForm.jsx";
 import PersonalInfo from "./PersonalInfo.jsx";
 import StudentDocumentTab from "../Documents/StudentDocumentTab.jsx"
 
-export default function StudentDetail() {
+export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, student) => {
+  try {
+    const fsRef = doc(db, "feeStructures", schoolCode);
+    const fsSnap = await getDoc(fsRef);
+
+    if (!fsSnap.exists()) {
+      console.error("Fee structure document not found");
+      return {
+        originalFees: {
+          AdmissionFee: 0,
+          TutionFee: 0,
+          total: 0,
+        },
+        studentFees: {
+          AdmissionFee: 0,
+          TutionFee: 0,
+          total: 0,
+        }
+      }
+    }
+
+    const structures = fsSnap.data().structures || [];
+    let yearStructure = structures.find((s) => s.year === targetAcademicYear);
+
+    // Fallback to latest available structure if target year not found
+    if (!yearStructure && structures.length > 0) {
+      // Sort structures by academic year in descending order
+      const sortedStructures = [...structures].sort((a, b) => {
+        // Extract starting year from academic year format "YY-YY"
+        const getStartYear = (year) => {
+          const [start] = year?.split("-") || ["00"];
+          return parseInt(start) || 0;
+        };
+
+        return getStartYear(b.year) - getStartYear(a.year);
+      });
+
+      yearStructure = sortedStructures[0];
+      console.warn(
+        `Using latest available structure for ${yearStructure.year}`
+      );
+    }
+
+    if (!yearStructure) {
+      console.warn("No fee structures available");
+      return {
+        originalFees: {
+          AdmissionFee: 0,
+          TutionFee: 0,
+          total: 0,
+        },
+        studentFees: {
+          AdmissionFee: 0,
+          TutionFee: 0,
+          total: 0,
+        }
+      }
+    }
+
+    const classStructure = yearStructure.classes?.find(
+      (c) => c.name?.trim().toLowerCase() === newClass.trim().toLowerCase()
+    );
+
+    if (!classStructure) {
+      console.warn(`No fee structure found for class ${newClass}`);
+      return {
+        originalFees: {
+          AdmissionFee: 0,
+          TutionFee: 0,
+          total: 0,
+        },
+        studentFees: {
+          AdmissionFee: 0,
+          TutionFee: 0,
+          total: 0,
+        }
+      }
+    }
+    const studentType = classStructure.studentType?.find(
+      (st) =>
+        st.name?.trim().toLowerCase() === student.type?.trim().toLowerCase()
+    );
+
+    if (!studentType) {
+      console.warn(`No fee structure found for student type ${student.type}`);
+      return {
+        originalFees: {
+          AdmissionFee: 0,
+          TutionFee: 0,
+          total: 0,
+        },
+        studentFees: {
+          AdmissionFee: 0,
+          TutionFee: 0,
+          total: 0,
+        }
+      }
+    }
+
+    // student fees details (new)
+    const feeStructure = studentType.feeStructure || {};
+    const AdmissionFee = Number(feeStructure.AdmissionFee) || 0;
+    const tutionFee = Number(feeStructure.TutionFee) || 0;
+    // orignal fee details
+    const originalFees = classStructure.studentType?.find(
+      (st) => st.name?.trim().toLowerCase() === "ds"
+    );
+    const originalFeeStructure = originalFees.feeStructure || {};
+    const originalAdmissionFee = Number(originalFeeStructure.AdmissionFee) || 0;
+    const originalTutuionFee = Number(originalFeeStructure.TutionFee) || 0;
+
+    return {
+      originalFees: {
+        AdmissionFee: originalAdmissionFee,
+        TutionFee: originalTutuionFee,
+        total: originalAdmissionFee + originalTutuionFee,
+      },
+      studentFees: {
+        AdmissionFee: AdmissionFee,
+        TutionFee: tutionFee,
+        total: AdmissionFee + tutionFee,
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching fee structure:", error);
+    return {
+      originalFees: {
+        AdmissionFee: 0,
+        TutionFee: 0,
+        total: 0,
+      },
+      studentFees: {
+        AdmissionFee: 0,
+        TutionFee: 0,
+        total: 0,
+      }
+    }
+  }
+};
+export function StudentDetail() {
   const { studentId } = useParams();
   const { userData } = useAuth();
   const [student, setStudent] = useState(null);
@@ -41,7 +180,7 @@ export default function StudentDetail() {
     amount: "",
     remark: "",
   });
-  const { school: schoolData } = useSchool();
+  const { school: schoolData, refresh } = useSchool();
   const navigate = useNavigate();
   // first the student data will fetch using id /student/id using student data we will set form, student previous transaction, school details
   useEffect(() => {
@@ -76,7 +215,6 @@ export default function StudentDetail() {
 
     fetchData();
   }, [studentId, userData.schoolCode]);
-
   // Modify handleStudentUpdate to handle academic year changes
   const handleStudentUpdate = async () => {
     if (formData.academicYear !== student.academicYear) {
@@ -178,6 +316,10 @@ export default function StudentDetail() {
 
     try {
       const isCurrentYear = newTransaction.academicYear === student.academicYear;
+      const [curStart, curEnd] = student.academicYear.split("-").map((s) => parseInt(s, 10));
+      const isPrevAcademicYear = newTransaction.academicYear === `${curStart - 1}-${curEnd - 1}`;
+
+
       const feeType = newTransaction.feeType;
       const paymentAmount = parseFloat(newTransaction.amount);
       const transactionDate = new Date(newTransaction.date);
@@ -188,7 +330,6 @@ export default function StudentDetail() {
       let currentBalance = 0;
 
       // 1. Calculate previous payments, it will usefull to check if transaction is valid or not
-      //  TO DO: what if cheque is pending. we do not have to add that amount but when click on cheque = success we have to avoid   
       let previousPayments = 0;
       previousPayments = transactions
         .filter(tx =>
@@ -197,7 +338,6 @@ export default function StudentDetail() {
           tx.status === 'completed'
         )
         .reduce((sum, tx) => sum + Number(tx.amount), 0);
-      console.log({ currentBalance, previousPayments, paymentAmount })
 
       if (isCurrentYear) {
         // as this is fee from student.allfee is unchangable this adding previousPayments not required  
@@ -221,7 +361,7 @@ export default function StudentDetail() {
             currentBalance = initialFee;
             break;
         }
-      } else {
+      } else if (isPrevAcademicYear) {
         switch (feeType) {
           // last year fees input field change thus to know what is initial we have to add previousPayments
           case 'SchoolFee':
@@ -238,20 +378,14 @@ export default function StudentDetail() {
             initialFee = previousPayments + (student.allFee.lastYearBalanceFee || 0) + (student.allFee.lastYearDiscount || 0);
             currentBalance = initialFee;
         }
+      } else {
+        Swal.fire("Invalid Academic Year", "You can make payment of this or previous year only", "error");
+        return;
       }
-
-      console.log({ initialFee, applicableDiscount }, student.allFee.lastYearBalanceFee, student.allFee.lastYearDiscount)
-      console.log({ initialFee, applicableDiscount }, student.allFee.schoolFees?.total, student.allFee.tutionFeesDiscount)
-
-
-
       // 3. Calculate remaining balances
       const remainingBefore = Math.max(currentBalance - previousPayments, 0);
       const remainingAfter = Math.max(remainingBefore - paymentAmount, 0);
-      console.log(
-        remainingBefore,
-        remainingAfter
-      )
+
       // Validate payment amount
       if (paymentAmount > remainingBefore) {
         Swal.fire("Error", "Payment amount exceeds outstanding balance", "error");
@@ -270,9 +404,15 @@ export default function StudentDetail() {
       };
 
       // 5. Create transaction object
+      // if mode !== cheque , than receiptId will be total reciept in this year + 1 
+      const receiptId = (schoolData.receiptCount || 0) + 1;
+      // return
       const transaction = {
         ...newTransaction,
-        receiptId: `${student.feeId}-${nanoid(4)}`,
+        ...(newTransaction.paymentMode.toLowerCase() !== 'cheque'
+          ? { receiptId }
+          : { tempReceiptId: `${student.feeId}-${nanoid(4)}` }
+        ),
         timestamp: new Date().toISOString(),
         amount: paymentAmount,
         status:
@@ -281,11 +421,10 @@ export default function StudentDetail() {
             : 'completed',
         historicalSnapshot
       };
-
       // 6. Update student's fee balance (only if transaction is completed)
       const updatedFees = { ...student.allFee };
       if (transaction.status === 'completed') {
-        if (!isCurrentYear) {
+        if (isPrevAcademicYear && (feeType === 'SchoolFee' || feeType === 'TransportFee')) {
           switch (feeType) {
             case 'SchoolFee':
               updatedFees.lastYearBalanceFee = Math.max(
@@ -305,17 +444,52 @@ export default function StudentDetail() {
                 0
               );
           }
+        } else if (isPrevAcademicYear) {
+          Swal.fire("Invalid Feetype", `For previous year fee type should be either "SchoolFee" or "TransportFee"`, "error");
+          return;
         }
       }
-
+      // till now every this correct & we need to update in firestore
+      Swal.fire({
+        title: 'Processing...',
+        html: `
+    <div style="
+      border: 3px solid rgba(102, 117, 255, 0.2);
+      border-radius: 50%;
+      border-top: 3px solid #6675ff;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    "></div>
+    <p style="margin-top: 1rem; color: #4a5568; font-weight: 400;">
+      Securely processing your transaction...
+    </p>
+  `,
+        background: 'linear-gradient(135deg, #f0f2ff 0%, #f8f5ff 100%)', // Soft blue/purple
+        color: '#2d3748', // Dark text
+        allowOutsideClick: false,
+        showConfirmButton: false
+      });
       // 7. Update Firestore
       const updatedTransactions = [...transactions, transaction];
       await updateDoc(doc(db, "students", studentId), {
         transactions: updatedTransactions,
         ...(transaction.status === 'completed' && { allFee: updatedFees })
       });
+      // 8. update total recipt if not cheque
+      if (newTransaction.paymentMode.toLowerCase() !== 'cheque') {
+        const schoolsRef = collection(db, 'schools');
+        const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) throw new Error("School not found");
+        const schoolDoc = querySnapshot.docs[0];
+        await updateDoc(doc(db, 'schools', schoolDoc.id), {
+          receiptCount: receiptId
+        });
+      }
 
-      // 8. Update local state
+      // 9. Update local state
       setStudent(prev => ({ ...prev, allFee: updatedFees }));
       setTransactions(updatedTransactions);
       setNewTransaction({
@@ -329,24 +503,32 @@ export default function StudentDetail() {
       });
 
       Swal.fire("Success!", "Transaction recorded with historical context", "success");
+      // re popullate school data 
+      refresh()
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
   };
-  const handleTransactionStatusUpdate = async (receiptId, newStatus) => {
+  // this fx will only call when if transaction is cheque & status will either completed or rejected
+  const handleTransactionStatusUpdate = async (tempReceiptId, newStatus) => {
     try {
-      const transaction = transactions.find((t) => t.receiptId === receiptId);
+      const transaction = transactions.find((t) => t.tempReceiptId === tempReceiptId);
       if (!transaction) throw new Error("Transaction not found");
-
+      let receiptId = (Number.parseInt(schoolData.receiptCount || 0)) + 1;
       const updatedTransactions = transactions.map((t) =>
-        t.receiptId === receiptId ? { ...t, status: newStatus } : t
+        t.tempReceiptId === tempReceiptId ? {
+          // update status
+          ...t, status: newStatus,
+          // add orignal id if completed in transaction 
+          ...(newStatus === "completed" ? { receiptId } : {})
+        } : t
       );
-
       const updatedFees = { ...student.allFee };
+
 
       if (newStatus === "completed") {
         const { amount, feeType, academicYear } = transaction;
-
+        // for last year transaction we have to reduce the amount from allFee , but for this year we just need to update status
         if (academicYear !== student.academicYear) {
           switch (feeType) {
             case "SchoolFee":
@@ -364,167 +546,34 @@ export default function StudentDetail() {
           }
         }
       }
-
       await updateDoc(doc(db, "students", studentId), {
         transactions: updatedTransactions,
         allFee: updatedFees,
       });
+      // return
+      if (newStatus === "completed") {
+        // we have to assign receiptId & update total receiptId
+        const schoolsRef = collection(db, 'schools');
+        const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) throw new Error("School not found");
+        const schoolDoc = querySnapshot.docs[0];
+        await updateDoc(doc(db, 'schools', schoolDoc.id), {
+          receiptCount: receiptId
+        });
+      }
 
       setStudent((prev) => ({ ...prev, allFee: updatedFees }));
       setTransactions(updatedTransactions);
       Swal.fire("Success!", "Transaction status updated", "success");
+
+      // re popullate school data 
+      refresh()
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
   };
-  const validateAcademicYear = (currentYear, newYear) => {
-    console.log({ currentYear, newYear });
-    const [currentStart, currentEnd] = currentYear.split("-").map(Number);
-    console.log({ currentStart, currentEnd });
-    const [newStart, newEnd] = newYear.split("-").map(Number);
-    console.log({ newStart, newEnd });
-    return newStart === currentStart + 1 && newEnd === currentEnd + 1;
-  };
 
-  const getNewClassFees = async (newClass, targetAcademicYear) => {
-    try {
-      const fsRef = doc(db, "feeStructures", userData.schoolCode);
-      const fsSnap = await getDoc(fsRef);
-
-      if (!fsSnap.exists()) {
-        console.error("Fee structure document not found");
-        return {
-          originalFees: {
-            AdmissionFee: 0,
-            TutionFee: 0,
-            total: 0,
-          },
-          studentFees: {
-            AdmissionFee: 0,
-            TutionFee: 0,
-            total: 0,
-          }
-        }
-      }
-
-      const structures = fsSnap.data().structures || [];
-      let yearStructure = structures.find((s) => s.year === targetAcademicYear);
-
-      // Fallback to latest available structure if target year not found
-      if (!yearStructure && structures.length > 0) {
-        // Sort structures by academic year in descending order
-        const sortedStructures = [...structures].sort((a, b) => {
-          // Extract starting year from academic year format "YY-YY"
-          const getStartYear = (year) => {
-            const [start] = year?.split("-") || ["00"];
-            return parseInt(start) || 0;
-          };
-
-          return getStartYear(b.year) - getStartYear(a.year);
-        });
-
-        yearStructure = sortedStructures[0];
-        console.warn(
-          `Using latest available structure for ${yearStructure.year}`
-        );
-      }
-
-      if (!yearStructure) {
-        console.warn("No fee structures available");
-        return {
-          originalFees: {
-            AdmissionFee: 0,
-            TutionFee: 0,
-            total: 0,
-          },
-          studentFees: {
-            AdmissionFee: 0,
-            TutionFee: 0,
-            total: 0,
-          }
-        }
-      }
-
-      const classStructure = yearStructure.classes?.find(
-        (c) => c.name?.trim().toLowerCase() === newClass.trim().toLowerCase()
-      );
-
-      if (!classStructure) {
-        console.warn(`No fee structure found for class ${newClass}`);
-        return {
-          originalFees: {
-            AdmissionFee: 0,
-            TutionFee: 0,
-            total: 0,
-          },
-          studentFees: {
-            AdmissionFee: 0,
-            TutionFee: 0,
-            total: 0,
-          }
-        }
-      }
-      const studentType = classStructure.studentType?.find(
-        (st) =>
-          st.name?.trim().toLowerCase() === student.type?.trim().toLowerCase()
-      );
-
-      if (!studentType) {
-        console.warn(`No fee structure found for student type ${student.type}`);
-        return {
-          originalFees: {
-            AdmissionFee: 0,
-            TutionFee: 0,
-            total: 0,
-          },
-          studentFees: {
-            AdmissionFee: 0,
-            TutionFee: 0,
-            total: 0,
-          }
-        }
-      }
-
-      // student fees details (new)
-      const feeStructure = studentType.feeStructure || {};
-      const AdmissionFee = Number(feeStructure.AdmissionFee) || 0;
-      const tutionFee = Number(feeStructure.TutionFee) || 0;
-      // orignal fee details
-      const originalFees = classStructure.studentType?.find(
-        (st) => st.name?.trim().toLowerCase() === "ds"
-      );
-      const originalFeeStructure = originalFees.feeStructure || {};
-      const originalAdmissionFee = Number(originalFeeStructure.AdmissionFee) || 0;
-      const originalTutuionFee = Number(originalFeeStructure.TutionFee) || 0;
-
-      return {
-        originalFees: {
-          AdmissionFee: originalAdmissionFee,
-          TutionFee: originalTutuionFee,
-          total: originalAdmissionFee + originalTutuionFee,
-        },
-        studentFees: {
-          AdmissionFee: AdmissionFee,
-          TutionFee: tutionFee,
-          total: AdmissionFee + tutionFee,
-        }
-      };
-    } catch (error) {
-      console.error("Error fetching fee structure:", error);
-      return {
-        originalFees: {
-          AdmissionFee: 0,
-          TutionFee: 0,
-          total: 0,
-        },
-        studentFees: {
-          AdmissionFee: 0,
-          TutionFee: 0,
-          total: 0,
-        }
-      }
-    }
-  };
 
   const goToNextAcademicYear = async () => {
 
@@ -551,7 +600,6 @@ export default function StudentDetail() {
         "7th",
         "8th",
       ];
-      console.log({ classOrder })
       try {
         // 1) Build the next academic‐year string
         const [curStart, curEnd] = student.academicYear
@@ -566,7 +614,6 @@ export default function StudentDetail() {
           idx >= 0 && idx < classOrder.length - 1
             ? classOrder[idx + 1]?.trim()
             : curClass; // fallback to same if not found
-        console.log({ nextClass })
         // if next class doesn't exist than don't update academicYear & fees details
         if (nextClass.toLowerCase() === curClass.toLowerCase()) {
           return Swal.fire({
@@ -580,40 +627,23 @@ export default function StudentDetail() {
         const currentFees = student.allFee || {};
 
         // 3) Compute unpaid for current year from transactions
-        const unpaidOf = (feeKey) => {
-          // calculate total fees 
-          const totalDue =
-            feeKey === "SchoolFee"
-              ? currentFees.schoolFees?.total || 0
-              : currentFees[feeKey] || 0;
-          console.log({ totalDue })
-          // calculate total paid in this academic year
-          const paid = transactions
-            .filter((t) => t.academicYear === student.academicYear && t.feeType === feeKey && t.status === "completed")
-            .reduce((sum, t) => sum + t.amount, 0);
-          return Math.max(totalDue - paid, 0);
+        const unpaidOf = (key) => {
+          const due = key === 'schoolFee' ? currentFees.schoolFees?.total || 0 : currentFees[key] || 0;
+          const paid = transactions.filter(t => {
+            return t.academicYear === student.academicYear && t?.feeType?.toLowerCase() === key.toLowerCase() && t.status === "completed"
+          })
+            .reduce((a, t) => a + t.amount, 0);
+          return Math.max(due - paid, 0);
         };
 
-        const unpaidHostel = unpaidOf("hostelFee");
-        const unpaidMess = unpaidOf("messFee");
-        const unpaidSchool = unpaidOf("SchoolFee");
-        const unpaidTransport = unpaidOf("transportFee");
-
-
-        // 4) Roll those into last‐year balances
-        const newLastYearBalance =
-          (currentFees.lastYearBalanceFee || 0) +
-          unpaidHostel +
-          unpaidMess +
-          unpaidSchool;
-        const newLastYearTransport =
-          (currentFees.lastYearTransportFee || 0) + unpaidTransport;
-
+        // 4) Roll those into last‐year balances 
+        const newLastYearBalance = (currentFees.lastYearBalanceFee || 0) + unpaidOf('hostelFee') + unpaidOf('messFee') + unpaidOf('schoolFee');
+        const newLastYearTransport = (currentFees.lastYearTransportFee || 0) + unpaidOf('transportFee');
         // 5) If status was "new", flip to "current"
         const newStatus = student.status === "new" ? "current" : student.status;
 
         // 6) Fetch next‐year fees from your structure util
-        const rawFees = await getNewClassFees(nextClass, nextAcademicYear);
+        const rawFees = await getNewClassFees(userData.schoolCode, nextClass, nextAcademicYear, student);
         // If the student is now "current", admission fee is zero:
         const admissionFee = newStatus === "current" ? 0 : rawFees.studentFees.AdmissionFee;
         const tuitionFee = rawFees.studentFees.TutionFee;
@@ -763,7 +793,7 @@ export default function StudentDetail() {
                   student={student}
                   transactions={transactions}
                   setTransactions={setTransactions}
-                  onClearTransaction={handleTransactionStatusUpdate}
+                  handleTransactionStatusUpdate={handleTransactionStatusUpdate}
                 />
               )}
               {activeTab === 3 && (

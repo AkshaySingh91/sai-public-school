@@ -5,8 +5,8 @@ import { db } from '../../../../config/firebase';
 import Swal from 'sweetalert2';
 import { Link } from 'react-router-dom';
 
-export default function TransactionHistory({ student, transactions, onClearTransaction }) {
-    const deleteTransaction = async (tx) => {
+export default function TransactionHistory({ student, transactions, setTransactions, handleTransactionStatusUpdate }) {
+    const deleteTransaction = async (tx, isCompleted) => {
         const result = await Swal.fire({
             title: 'Delete transaction?',
             text: `This will remove ${tx.feeType} payment of ₹${tx.amount}.`,
@@ -20,12 +20,14 @@ export default function TransactionHistory({ student, transactions, onClearTrans
 
         try {
             const ref = doc(db, 'students', student.id);
-            const snap = await getDoc(ref);
-            const data = snap.data();
-            const newTrans = (data.transactions || []).filter(
-                (t) => t.receiptId !== tx.receiptId
+            console.log({ transactions })
+            const newTrans = (transactions || []).filter(
+                (t) => (isCompleted ? t.receiptId : t.tempReceiptId) !== (isCompleted ? tx.receiptId : tx.tempReceiptId)
             );
+            console.log({ newTrans })
+            // return
             await updateDoc(ref, { transactions: newTrans });
+            setTransactions(newTrans)
             Swal.fire('Deleted!', 'Transaction removed and fees rolled back.', 'success');
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
@@ -79,14 +81,14 @@ export default function TransactionHistory({ student, transactions, onClearTrans
                                         {t.paymentMode.toLowerCase() === 'cheque' && t.status === 'pending' && (
                                             <div className="flex gap-1">
                                                 <button
-                                                    onClick={() => onClearTransaction(t.receiptId, 'completed')}
+                                                    onClick={() => handleTransactionStatusUpdate(t.tempReceiptId, 'completed')}
                                                     className="text-green-600 hover:text-green-800"
                                                     title="Mark as cleared"
                                                 >
                                                     <CheckCircle size={18} />
                                                 </button>
                                                 <button
-                                                    onClick={() => onClearTransaction(t.receiptId, 'cancle')}
+                                                    onClick={() => handleTransactionStatusUpdate(t.tempReceiptId, 'cancle')}
                                                     className="text-gray-500 hover:text-gray-700"
                                                     title="Keep as pending"
                                                 >
@@ -95,7 +97,14 @@ export default function TransactionHistory({ student, transactions, onClearTrans
                                             </div>
                                         )}
                                         <button
-                                            onClick={() => deleteTransaction(t)}
+                                            onClick={() => {
+                                                if (t.status === "completed") {
+                                                    deleteTransaction(t, true)
+                                                } else {
+                                                    // reject / pending in both cases tempReciptId will there
+                                                    deleteTransaction(t, false)
+                                                }
+                                            }}
                                             className="text-red-500 hover:text-red-700"
                                         >
                                             <Trash2 size={16} />
