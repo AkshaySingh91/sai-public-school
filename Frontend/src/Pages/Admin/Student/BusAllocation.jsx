@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../config/firebase"; // adjust path if needed
 import { useAuth } from "../../../contexts/AuthContext";
+import { useSchool } from "../../../contexts/SchoolContext";
 
 function BusAllocation() {
   const [students, setStudents] = useState([]);
@@ -18,6 +19,8 @@ function BusAllocation() {
   const studentsPerPage = 10;
   const users = useAuth().userData;
   console.log("user", users);
+  const {school} = useSchool();
+  console.log({objects: school});
   useEffect(() => {
     const fetchData = async () => {
       try {

@@ -3,6 +3,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { User, School, Upload, Trash2 } from 'lucide-react';
 import { auth } from '../../../config/firebase'
 import Swal from "sweetalert2"
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../config/firebase';
 
 const Settings = () => {
     const { currentUser, updateUser } = useAuth();
@@ -219,13 +221,67 @@ const Settings = () => {
 };
 
 const SchoolSettings = ({ school, setSchool }) => {
-    console.log(school)
+    const { userData } = useAuth();
     const [logoFile, setLogoFile] = useState(null);
     const [div, setDiv] = useState(school?.divisions?.length ? school.divisions.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
     const [logoUrl, setLogoUrl] = useState(false);
     const [classes, setClasses] = useState(school?.class?.length ? school.class.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
     const [academicYear, setAcademicYear] = useState(school.academicYear);
 
+    const checkIfClassFeeStructurePresent = async (newClass) => {
+        try {
+            const fsRef = doc(db, "feeStructures", userData.schoolCode);
+            const fsSnap = await getDoc(fsRef);
+            if (!fsSnap.exists()) {
+                console.error("Fee structure document not found");
+                return false
+            }
+
+            const structures = fsSnap.data().structures || [];
+            let yearStructure = false;
+
+            // Fallback to latest available structure if target year not found
+            if (!yearStructure && structures.length > 0) {
+                // Sort structures by academic year in descending order
+                const sortedStructures = [...structures].sort((a, b) => {
+                    // Extract starting year from academic year format "YY-YY"
+                    const getStartYear = (year) => {
+                        const [start] = year?.split("-") || ["00"];
+                        return parseInt(start) || 0;
+                    };
+
+                    return getStartYear(b.year) - getStartYear(a.year);
+                });
+
+                yearStructure = sortedStructures[0];
+                console.warn(
+                    `Using latest available structure for ${yearStructure.year}`
+                );
+            }
+
+            if (!yearStructure) {
+                console.warn("No fee structures available");
+                return false;
+            }
+
+            const classStructure = yearStructure.classes?.find(
+                (c) => c.name?.trim().toLowerCase() === newClass.trim().toLowerCase()
+            );
+
+            if (!classStructure) {
+                console.warn(`No fee structure found for class ${newClass}`);
+                return false
+            }
+            return true;
+        } catch (error) {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: error.message
+            })
+            return false;
+        }
+    }
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -262,6 +318,17 @@ const SchoolSettings = ({ school, setSchool }) => {
             .filter(s => s.trim())
             .map(s => s.trim());
 
+        const results = await Promise.all(
+            classArr.map(c => checkIfClassFeeStructurePresent(c))
+        );
+        const isClassPresentInFeeStructure = results.every(result => result === true);
+        if (!isClassPresentInFeeStructure) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Class not present in fee structure. Please add class in fee structure first.'
+            });
+        }
         const updatedSchool = { ...school, divisions: divisionArr, class: classArr, academicYear };
 
         let userToken;
@@ -274,8 +341,6 @@ const SchoolSettings = ({ school, setSchool }) => {
                 text: 'Could not get user token. Please log in again.'
             });
         }
-
-        // Show a persistent “Saving…” modal
         Swal.fire({
             title: 'Saving school details…',
             allowOutsideClick: false,
@@ -284,7 +349,6 @@ const SchoolSettings = ({ school, setSchool }) => {
                 Swal.showLoading();
             }
         });
-
         try {
             // 1) Update the school details
             const resDetails = await fetch('http://localhost:5000/admin/settings/school', {

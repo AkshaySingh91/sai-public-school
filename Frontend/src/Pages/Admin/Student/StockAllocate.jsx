@@ -273,45 +273,67 @@ function StockAllocate() {
                             </div>
                           ) : (
                             <>
-                              <table className="w-full table-auto mb-6">
-                                <thead className="bg-indigo-100">
+                              <table className="w-full table-auto mb-8 border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+                                <thead className="bg-indigo-100 text-indigo-700 text-sm font-semibold">
                                   <tr>
-                                    <th className="px-6 py-3">Item Name</th>
-                                    <th className="px-6 py-3">Price</th>
-                                    <th className="px-6 py-3">Select</th>
-                                    <th className="px-6 py-3">Action</th>
+                                    <th className="px-6 py-3 text-left border-b border-gray-300">
+                                      Item Name
+                                    </th>
+                                    <th className="px-6 py-3 text-left border-b border-gray-300">
+                                      Price
+                                    </th>
+                                    <th className="px-6 py-3 text-center border-b border-gray-300">
+                                      Select
+                                    </th>
+                                    <th className="px-6 py-3 text-center border-b border-gray-300">
+                                      Action
+                                    </th>
                                   </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="text-gray-700 text-sm">
                                   {studentStock.map((stock, index) => (
-                                    <tr key={index}>
-                                      <td className="px-6 py-4">
+                                    <tr
+                                      key={index}
+                                      className="hover:bg-gray-50 transition duration-150 ease-in-out"
+                                    >
+                                      <td className="px-6 py-4 border-b border-gray-100">
                                         {stock.itemName}
                                       </td>
-                                      <td className="px-6 py-4">
+                                      <td className="px-6 py-4 border-b border-gray-100">
                                         ₹{stock.sellingPrice}
                                       </td>
-                                      <td className="px-6 py-4">
+                                      <td className="px-6 py-4 border-b border-gray-100 text-center">
                                         <input
                                           type="checkbox"
                                           checked={stock.selected}
                                           onChange={() =>
                                             handleCheckboxChange(index)
                                           }
+                                          className="w-4 h-4 text-indigo-600"
                                         />
                                       </td>
-                                      <td className="px-6 py-4">
+                                      <td className="px-6 py-4 border-b border-gray-100 text-center">
                                         <button
                                           onClick={() =>
                                             handleDeleteItem(index)
                                           }
-                                          className="text-red-500"
+                                          className="text-red-600 hover:text-red-800 hover:underline font-medium"
                                         >
                                           Delete
                                         </button>
                                       </td>
                                     </tr>
                                   ))}
+                                  {studentStock.length === 0 && (
+                                    <tr>
+                                      <td
+                                        colSpan="4"
+                                        className="text-center py-6 text-gray-400 font-medium"
+                                      >
+                                        No items available.
+                                      </td>
+                                    </tr>
+                                  )}
                                 </tbody>
                               </table>
 

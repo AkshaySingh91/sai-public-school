@@ -250,7 +250,7 @@ export default function StudentDetail() {
       const remainingAfter = Math.max(remainingBefore - paymentAmount, 0);
       console.log(
         remainingBefore,
-        remainingAfter
+        remainingAfter                                                                  
       )
       // Validate payment amount
       if (paymentAmount > remainingBefore) {
@@ -445,7 +445,6 @@ export default function StudentDetail() {
         }
       }
 
-      // Rest of the original logic remains the same
       const classStructure = yearStructure.classes?.find(
         (c) => c.name?.trim().toLowerCase() === newClass.trim().toLowerCase()
       );
@@ -527,212 +526,145 @@ export default function StudentDetail() {
     }
   };
 
-  const handleClassChange = async (newClass) => {
-    console.log({ newClass });
-    setFormData((prev) => ({
-      ...prev,
-      class: newClass,
-    }));
-  };
-
-  // const handleAcademicYearUpdate = async (newAcademicYear) => {
-  //   if (!validateAcademicYear(student.academicYear, newAcademicYear)) {
-  //     Swal.fire("Error", "Invalid academic year progression", "error");
-  //     return;
-  //   }
-
-  //   try {
-  //     // Calculate unpaid fees
-  //     const currentFees = student.allFee || {};
-  //     const transactions = student.transactions || [];
-
-  //     const currentYear = student.academicYear;
-  //     const currentYearTransactions = transactions.filter(
-  //       (t) => t.academicYear === currentYear
-  //     );
-
-  //     const calculateCurrentYearUnpaid = (feeType) => {
-  //       const feeAmount =
-  //         feeType === "SchoolFee"
-  //           ? currentFees.schoolFees?.total || 0
-  //           : currentFees[feeType] || 0;
-
-  //       const paid = currentYearTransactions
-  //         .filter((t) => t.feeType === feeType)
-  //         .reduce((sum, t) => sum + t.amount, 0);
-
-  //       return feeAmount - paid;
-  //     };
-
-  //     // Calculate previous year balances (already stored in lastYearBalanceFee)
-  //     const previousYearBalance = currentFees.lastYearBalanceFee || 0;
-  //     const previousTransportBalance = currentFees.lastYearTransportFee || 0;
-
-  //     // Calculate current year unpaid amounts
-  //     const unpaidHostel = Math.max(calculateCurrentYearUnpaid("HostelFee"), 0);
-  //     const unpaidMess = Math.max(calculateCurrentYearUnpaid("MessFee"), 0);
-  //     const unpaidSchool = Math.max(calculateCurrentYearUnpaid("SchoolFee"), 0);
-  //     const unpaidTransport = Math.max(
-  //       calculateCurrentYearUnpaid("TransportFee"),
-  //       0
-  //     );
-  //     // Get NEW fees for the NEXT academic year
-  //     const newClass = formData.class;
-  //     const newFees = await getNewClassFees(newClass, newAcademicYear);
-
-  //     const updatedFees = {
-  //       ...currentFees,
-  //       // Roll over previous balances + current year unpaid
-  //       lastYearBalanceFee:
-  //         previousYearBalance + unpaidHostel + unpaidMess + unpaidSchool,
-  //       lastYearTransportFee: previousTransportBalance + unpaidTransport,
-  //       // Reset current year fees
-  //       hostelFee: 0,
-  //       messFee: 0,
-  //       transportFee: 0,
-  //       schoolFees: newFees,
-  //     };
-
-  //     // Update student data
-  //     const updatedData = {
-  //       ...student,
-  //       academicYear: newAcademicYear,
-  //       class: newClass,
-  //       allFee: updatedFees,
-  //     };
-
-  //     await updateDoc(doc(db, "students", studentId), updatedData);
-  //     setStudent(updatedData);
-  //     setFormData(updatedData);
-  //     Swal.fire(
-  //       "Success!",
-  //       "Academic year updated with fee rollover",
-  //       "success"
-  //     );
-  //   } catch (error) {
-  //     Swal.fire("Error", error.message, "error");
-  //   }
-  // };
-
   const goToNextAcademicYear = async () => {
-    const classOrder = schoolData?.class?.length > 0 ? schoolData.class : [
-      "Nursery",
-      "JRKG",
-      "SRKG",
-      "1st",
-      "2nd",
-      "3rd",
-      "4th",
-      "5th",
-      "6th",
-      "7th",
-      "8th",
-      "9th",
-      "10th",
-      "11th",
-      "12th",
-    ];
 
-    try {
-      // 1) Build the next academic‐year string
-      const [curStart, curEnd] = student.academicYear
-        .split("-")
-        .map((s) => parseInt(s, 10));
-      const nextAcademicYear = `${curStart + 1}-${curEnd + 1}`;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Student Fee will rollerover lastYearBalance = pending (mess + hostel + tution) & lastYearTransport = pending(transport) , next class tution fee will assign",
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, Move To Next Class!'
+    })
+    if (result.isConfirmed) {
+      const classOrder = schoolData?.class?.length > 0 ? schoolData.class : [
+        "Nursery",
+        "JRKG",
+        "SRKG",
+        "1st",
+        "2nd",
+        "3rd",
+        "4th",
+        "5th",
+        "6th",
+        "7th",
+        "8th",
+      ];
+      console.log({ classOrder })
+      try {
+        // 1) Build the next academic‐year string
+        const [curStart, curEnd] = student.academicYear
+          .split("-")
+          .map((s) => parseInt(s, 10));
+        const nextAcademicYear = `${curStart + 1}-${curEnd + 1}`;
 
-      // 2) Figure out the next class in the sequence
-      const curClass = student.class;
-      const idx = classOrder.findIndex((c) => c?.trim() === curClass?.trim());
-      const nextClass =
-        idx >= 0 && idx < classOrder.length - 1
-          ? classOrder[idx + 1]?.trim()
-          : curClass; // fallback to same if not found
+        // 2) Figure out the next class in the sequence
+        const curClass = student.class;
+        const idx = classOrder.findIndex((c) => c?.trim() === curClass?.trim());
+        const nextClass =
+          idx >= 0 && idx < classOrder.length - 1
+            ? classOrder[idx + 1]?.trim()
+            : curClass; // fallback to same if not found
+        console.log({ nextClass })
+        // if next class doesn't exist than don't update academicYear & fees details
+        if (nextClass.toLowerCase() === curClass.toLowerCase()) {
+          return Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: `class after ${nextClass} not present in fee structure. Please add class in fee structure first.`
+          });
+        }
 
-      const transactions = student.transactions || [];
-      const currentFees = student.allFee || {};
+        const transactions = student.transactions || [];
+        const currentFees = student.allFee || {};
 
-      // 3) Compute unpaid for current year from transactions
+        // 3) Compute unpaid for current year from transactions
+        const unpaidOf = (feeKey) => {
+          // calculate total fees 
+          const totalDue =
+            feeKey === "SchoolFee"
+              ? currentFees.schoolFees?.total || 0
+              : currentFees[feeKey] || 0;
+          console.log({ totalDue })
+          // calculate total paid in this academic year
+          const paid = transactions
+            .filter((t) => t.academicYear === student.academicYear && t.feeType === feeKey && t.status === "completed")
+            .reduce((sum, t) => sum + t.amount, 0);
+          return Math.max(totalDue - paid, 0);
+        };
 
-      const unpaidOf = (feeKey) => {
-        // calculate total fees 
-        const totalDue =
-          feeKey === "SchoolFee"
-            ? currentFees.schoolFees?.total || 0
-            : currentFees[feeKey] || 0;
-        // calculate total paid in this academic year
-        const paid = transactions
-          .filter((t) => t.academicYear === student.academicYear && t.feeType === feeKey && t.status === "completed")
-          .reduce((sum, t) => sum + t.amount, 0);
-        return Math.max(totalDue - paid, 0);
-      };
+        const unpaidHostel = unpaidOf("hostelFee");
+        const unpaidMess = unpaidOf("messFee");
+        const unpaidSchool = unpaidOf("SchoolFee");
+        const unpaidTransport = unpaidOf("transportFee");
 
-      const unpaidHostel = unpaidOf("HostelFee");
-      const unpaidMess = unpaidOf("MessFee");
-      const unpaidSchool = unpaidOf("SchoolFee");
-      const unpaidTransport = unpaidOf("TransportFee");
 
-      // 4) Roll those into last‐year balances
-      const newLastYearBalance =
-        (currentFees.lastYearBalanceFee || 0) +
-        unpaidHostel +
-        unpaidMess +
-        unpaidSchool;
-      const newLastYearTransport =
-        (currentFees.lastYearTransportFee || 0) + unpaidTransport;
+        // 4) Roll those into last‐year balances
+        const newLastYearBalance =
+          (currentFees.lastYearBalanceFee || 0) +
+          unpaidHostel +
+          unpaidMess +
+          unpaidSchool;
+        const newLastYearTransport =
+          (currentFees.lastYearTransportFee || 0) + unpaidTransport;
 
-      // 5) If status was "new", flip to "current"
-      const newStatus = student.status === "new" ? "current" : student.status;
+        // 5) If status was "new", flip to "current"
+        const newStatus = student.status === "new" ? "current" : student.status;
 
-      // 6) Fetch next‐year fees from your structure util
-      const rawFees = await getNewClassFees(nextClass, nextAcademicYear);
-      // If the student is now "current", admission fee is zero:
-      const admissionFee = newStatus === "current" ? 0 : rawFees.studentFees.AdmissionFee;
-      const tuitionFee = rawFees.studentFees.TutionFee;
-      // tuition discount will calculate from DS student
-      const originalAdmissionFee = newStatus === "current" ? 0 : rawFees.originalFees.AdmissionFee;
-      const originalTutuionFee = rawFees.originalFees.TutionFee;
+        // 6) Fetch next‐year fees from your structure util
+        const rawFees = await getNewClassFees(nextClass, nextAcademicYear);
+        // If the student is now "current", admission fee is zero:
+        const admissionFee = newStatus === "current" ? 0 : rawFees.studentFees.AdmissionFee;
+        const tuitionFee = rawFees.studentFees.TutionFee;
+        // tuition discount will calculate from DS student
+        const originalAdmissionFee = newStatus === "current" ? 0 : rawFees.originalFees.AdmissionFee;
+        const originalTutuionFee = rawFees.originalFees.TutionFee;
 
-      const tuitionDiscount = (originalAdmissionFee + originalTutuionFee) - (admissionFee + tuitionFee);
+        const newTuitionFeeDiscount = (originalAdmissionFee + originalTutuionFee) - (admissionFee + tuitionFee);
 
-      // leave transport and its discount untouched:
-      const transportFee = currentFees.transportFee || 0;
-      const transportDiscount = currentFees.transportFeeDiscount || 0;
+        // leave transport and its discount untouched:
+        const transportFee = currentFees.transportFee || 0;
+        const transportDiscount = currentFees.transportFeeDiscount || 0;
 
-      // 7) Build the updated fee object
-      const updatedAllFee = {
-        ...currentFees,
-        lastYearBalanceFee: newLastYearBalance,
-        lastYearTransportFee: newLastYearTransport,
-        // reset current‐year paid amounts
-        hostelFee: 0,
-        messFee: 0,
-        transportFee,
-        transportFeeDiscount: transportDiscount,
-        // set the new schoolFees and discounts
-        schoolFees: {
-          AdmissionFee: admissionFee,
-          TutionFee: tuitionFee,
-          total: admissionFee + tuitionFee,
-        },
-        tutionFeesDiscount: tuitionDiscount,
-      };
+        // 7) Build the updated fee object
+        const updatedAllFee = {
+          ...currentFees,
+          lastYearBalanceFee: newLastYearBalance,
+          lastYearTransportFee: newLastYearTransport,
+          lastYearTransportFeeDiscount: transportDiscount,
+          lastYearDiscount: currentFees.tutionFeesDiscount || 0,
+          // reset current‐year paid amounts
+          hostelFee: 0,
+          messFee: 0,
+          transportFee,
+          transportFeeDiscount: transportDiscount,
+          // set the new schoolFees and discounts
+          schoolFees: {
+            AdmissionFee: admissionFee,
+            TutionFee: tuitionFee,
+            total: admissionFee + tuitionFee,
+          },
+          tutionFeesDiscount: newTuitionFeeDiscount,
+        };
 
-      // 8) Persist to Firestore
-      const updatedStudent = {
-        ...student,
-        academicYear: nextAcademicYear,
-        class: nextClass,
-        status: newStatus,
-        allFee: updatedAllFee,
-      };
-      await updateDoc(doc(db, "students", studentId), updatedStudent);
+        // 8) Persist to Firestore
+        const updatedStudent = {
+          ...student,
+          academicYear: nextAcademicYear,
+          class: nextClass,
+          status: newStatus,
+          allFee: updatedAllFee,
+        };
+        await updateDoc(doc(db, "students", studentId), updatedStudent);
 
-      // 9) Update local state & notify
-      setStudent(updatedStudent);
-      setFormData((f) => ({ ...f, ...updatedStudent }));
-      Swal.fire("Success!", "Moved to next academic year.", "success");
-    } catch (error) {
-      Swal.fire("Error", error.message, "error");
+        // 9) Update local state & notify
+        setStudent(updatedStudent);
+        setFormData((f) => ({ ...f, ...updatedStudent }));
+        Swal.fire("Success!", "Moved to next academic year.", "success");
+      } catch (error) {
+        Swal.fire("Error", error.message, "error");
+      }
     }
   };
 
