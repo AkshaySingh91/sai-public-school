@@ -140,9 +140,9 @@ const StudentList = () => {
       const { isConfirmed } = await Swal.fire({
         title: `Move ${total} students to ${nextYear}?`,
         html: `
-        <div class="text-left">
-          <p>New students: ${toMove.filter(s => s.status === 'new').length}</p>
-          <p>Current students: ${toMove.filter(s => s.status === 'current').length}</p>
+        <div class="text-center">
+          <p class="text-xl">New students: ${toMove.filter(s => s.status === 'new').length}</p>
+          <p class="text-xl">Current students: ${toMove.filter(s => s.status === 'current').length}</p>
           <p class="mt-2 text-sm text-gray-500">This operation cannot be undone.</p>
         </div>
       `,
@@ -275,31 +275,44 @@ const StudentList = () => {
 
   // Export handlers
   const exportToExcel = () => {
-    // Map and transform the student data
-    const formattedData = filteredStudents.map((student) => ({
-      "ID": student.id,
-      "Year": student.academicYear,
-      "Fee ID": student.feeId,
-      "FirstName": student.fname,
-      "MiddleName": student.mname,
-      "SurName": student.lname,
-      "Gender": student.gender,
-      "Class": student.class,
-      "Div": student.div,
-      "Contact": student?.fatherMobile || student.motherMobile,
-      "Type": student.type,
-      "Status": student.status,
-      "Enrollment": new Date(
-        student.createdAt.seconds * 1000 +
-        Math.round(student.createdAt.nanoseconds / 1000000)
-      ).toLocaleDateString("en-GB"),
-    }));
+    const formattedData = filteredStudents.map((student, index) => {
+      const fullName = `${student.fname || ''} ${student.mname || ''} ${student.lname || ''}`.trim();
 
-    const worksheet = utils.json_to_sheet(formattedData);
+      return {
+        "S.No": index + 1,
+        "Name": fullName,
+        "Class": student.class || "",
+        "Div": student.div || "",
+        "Name": `${(student.fname || '')} ${(student.mname || "")} ${(student.lname || "")}`,
+        "Sex": student.gender || "",
+        "DOB": student.dob || "",
+        "Address": student.address || "",
+        "Mob Father": student.fatherMobile || "",
+        "Mob Mother": student.motherMobile || "",
+        "Email": student.email || "",
+        "Caste": student.category || student.caste || "",
+        "Subcaste": student.subcaste || "",
+        "Nationality": student.nationality || "",
+        "S Category": student.scategory || student.category || "",
+        "Religion": student.religion || "",
+        "Aadhar": student.aadhar || "",
+        "Saral ID": student.saralId || student.saral || "",
+        "Mobile": student.mobile || "",
+        "Bus Transport": student.busStop ? "Y" : "N",
+        "Bus Destination": student.busStop || "",
+        "Bus No": student.busNoPlate || ""
+      };
+    });
+
+    // Create worksheet and workbook
+    const worksheet = utils.json_to_sheet(formattedData, { skipHeader: false });
     const workbook = utils.book_new();
     utils.book_append_sheet(workbook, worksheet, "Students");
+
+    // Write to file
     writeFile(workbook, "students.xlsx");
   };
+
   const exportToPDF = () => {
     try {
       const doc = new jsPDF();
@@ -359,6 +372,7 @@ const StudentList = () => {
       console.error("PDF generation error:", error);
     }
   };
+
   const statusStyles = {
     current: "bg-green-100 text-green-800",
     new: "bg-blue-100 text-blue-800",
@@ -378,7 +392,7 @@ const StudentList = () => {
         </div> :
         <div className="w-full bg-white rounded-lg shadow-sm border border-gray-100">
           {/* Filters and Actions */}
-          <div className="p-4 border-b flex flex-wrap items-center justify-between gap-3 bg-indigo-50">
+          <div className="p-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <select
                 className="px-4 py-2 text-sm border rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -459,8 +473,8 @@ const StudentList = () => {
 
           {/* Student Table */}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-indigo-50">
+            <table className="min-w-full divide-y divide-gray-400">
+              <thead className="bg-gradient-to-br from-indigo-50 to-violet-50 ">
                 <tr>
                   <th className="px-4 py-3 w-12">
                     <input
@@ -494,7 +508,7 @@ const StudentList = () => {
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl shadow-sm">
                 {currentItems.map((student) => (
                   <tr key={student.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
@@ -560,7 +574,7 @@ const StudentList = () => {
           </div>
 
           {/* Pagination */}
-          <div className="px-4 py-3 border-t flex items-center justify-between bg-indigo-50">
+          <div className="px-4 py-3 border-t border-gray-400 flex items-center justify-between bg-indigo-50">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}

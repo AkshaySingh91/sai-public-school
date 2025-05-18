@@ -30,26 +30,36 @@ const SkeletonLoader = () => (
 
 export default function DailyBook() {
   const { userData } = useAuth();
-  const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [tempFrom, setTempFrom] = useState(() => {
+    const initialFrom = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return initialFrom.toISOString().split('T')[0];
+  });
+  const [tempTo, setTempTo] = useState(() => {
+    const initialTo = new Date();
+    return initialTo.toISOString().split('T')[0];
+  });
+  const [fromDate, setFromDate] = useState(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const [toDate, setToDate] = useState(new Date());
   const perPage = 8;
 
   useEffect(() => {
     const fetchDaily = async () => {
       setLoading(true);
-      const since = Date.now() - 24 * 60 * 60 * 1000;
       const studentsQ = query(
         collection(db, "students"),
         where("schoolCode", "==", userData.schoolCode)
       );
       const snap = await getDocs(studentsQ);
       const allTx = [];
+
       snap.forEach((doc) => {
         const data = doc.data();
         (data.transactions || []).forEach((t) => {
-          if (new Date(t.timestamp).getTime() >= since) {
+          const txDate = new Date(t.timestamp);
+          if (txDate >= fromDate && txDate <= toDate) {
             allTx.push({
               studentId: doc.id,
               studentName: `${data.fname} ${data.lname}`,
@@ -58,12 +68,13 @@ export default function DailyBook() {
           }
         });
       });
+
       allTx.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setTransactions(allTx);
       setLoading(false);
     };
     fetchDaily();
-  }, [userData.schoolCode]);
+  }, [userData.schoolCode, fromDate, toDate]);
 
   const pageCount = Math.ceil(transactions.length / perPage);
   const pageData = useMemo(() => {
@@ -174,6 +185,39 @@ export default function DailyBook() {
             <SkeletonLoader />
           ) : (
             <>
+              <div className="flex flex-wrap items-center gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">From:</label>
+                  <input
+                    type="date"
+                    value={tempFrom}
+                    onChange={(e) => setTempFrom(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">To:</label>
+                  <input
+                    type="date"
+                    value={tempTo}
+                    onChange={(e) => setTempTo(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    const from = new Date(tempFrom);
+                    from.setHours(0, 0, 0, 0);
+                    const to = new Date(tempTo);
+                    to.setHours(23, 59, 59, 999);
+                    setFromDate(from);
+                    setToDate(to);
+                  }}
+                  className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-500 rounded-lg hover:from-purple-600 hover:to-violet-600 transition-all"
+                >
+                  Show
+                </button>
+              </div>
               <div className="overflow-x-auto rounded-xl border border-gray-100">
                 <table className="w-full table-fixed">
                   <thead className="bg-gradient-to-r from-purple-500 to-violet-500 text-white text-xs">

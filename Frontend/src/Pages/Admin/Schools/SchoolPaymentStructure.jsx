@@ -64,7 +64,26 @@ const PaymentStructure = () => {
             console.error("Error adding payment mode:", error);
         }
     };
+    const handleDeleteMode = async (mode) => {
+        if (!mode || !paymentModes.includes(mode.toUpperCase().trim())) return;
 
+        try {
+            const schoolsRef = collection(db, 'schools');
+            const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) throw new Error("School not found");
+            const schoolDoc = querySnapshot.docs[0];
+            const updatedModes = paymentModes.filter(p => p.toUpperCase().trim() !== mode.toUpperCase().trim());
+            console.log({ updatedModes })
+            await updateDoc(doc(db, 'schools', schoolDoc.id), {
+                paymentModes: updatedModes
+            });
+            setPaymentModes(updatedModes);
+        } catch (error) {
+            console.error("Error adding payment mode:", error);
+        }
+    }
     const handleSaveAccount = async () => {
         try {
             const { AccountNo, BankName, IFSC, Branch } = accountDetails;

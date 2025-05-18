@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   doc,
+  getDoc,
   updateDoc,
   arrayUnion,
   collection,
@@ -11,6 +12,7 @@ import {
 import { db } from "../../../config/firebase";
 import { useSchool } from "../../../contexts/SchoolContext";
 
+import { v4 as uuidv4 } from "uuid";
 const AddPaymentTable = ({
   selectedItems,
   studentId,
@@ -24,6 +26,7 @@ const AddPaymentTable = ({
   const [accounts, setAccounts] = useState(school.accounts || []);
 
   useEffect(() => {
+    console.log("selectedItems", selectedItems);
     // Fetch available items based on the selectedItems prop
     const fetchStockItems = async () => {
       try {
@@ -61,7 +64,7 @@ const AddPaymentTable = ({
 
   useEffect(() => {
     setAccounts(school?.accounts?.length ? school.accounts : []);
-  }, [school.accounts])
+  }, [school.accounts]);
 
   const handleRowChange = (index, e) => {
     const { name, value } = e.target;
@@ -82,36 +85,41 @@ const AddPaymentTable = ({
     });
   };
 
+  
+
   const handleSubmitPayments = async () => {
-    const filteredPayments = paymentRows.filter(
-      (row) => row.itemName && row.account && row.amount
-    );
+  if (paymentRows.length === 0) {
+    alert("Please fill at least one valid payment entry.");
+    return;
+  }
 
-    if (filteredPayments.length === 0) {
-      alert("Please fill at least one valid payment entry.");
-      return;
-    }
+  try {
+    const studentRef = doc(db, "students", studentId);
 
-    try {
-      const studentRef = doc(db, "students", studentId);
-      await updateDoc(studentRef, {
-        StockPaymentDetail: arrayUnion(
-          ...filteredPayments.map((row) => ({
-            ...row,
-            amount: Number(row.amount),
-          }))
-        ),
-      });
+    const receiptId = uuidv4(); // Single ID for the whole group
 
-      alert("Payments added successfully!");
+    const newTransaction = {
+      date: today,
+      account: "Cash",
+      receiptId,
+      items: paymentRows.map(row => ({
+        itemName: row.itemName,
+        quantity: row.quantity,
+        amount: Number(row.amount),
+      }))
+    };
 
-      // Reset to an empty state after submission
-      setPaymentRows([]);
-    } catch (error) {
-      console.error("Error adding payments: ", error);
-      alert("Failed to add payments");
-    }
-  };
+    await updateDoc(studentRef, {
+      StockPaymentDetail: arrayUnion(newTransaction),
+    });
+
+    alert("Payments added successfully!");
+    setPaymentRows([]);
+  } catch (error) {
+    console.error("Error adding payments: ", error);
+    alert("Failed to add payments");
+  }
+};
 
   return (
     <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
@@ -122,26 +130,17 @@ const AddPaymentTable = ({
         <table className="w-full table-auto border border-gray-300 rounded-lg shadow-sm">
           <thead className="bg-gray-200 text-gray-700">
             <tr>
-              <th className="border-b px-4 py-3">Date</th>
+              {/* <th className="border-b px-4 py-3">Date</th> */}
               <th className="border-b px-4 py-3">Item Name</th>
               <th className="border-b px-4 py-3">Quantity</th>
-              <th className="border-b px-4 py-3">Account</th>
+              {/* <th className="border-b px-4 py-3">Account</th> */}
               <th className="border-b px-4 py-3">Amount</th>
-              <th className="border-b px-4 py-3">Remark</th>
+              {/* <th className="border-b px-4 py-3">Remark</th> */}
             </tr>
           </thead>
           <tbody>
             {paymentRows.map((row, idx) => (
               <tr key={idx}>
-                <td className="border-b px-4 py-3">
-                  <input
-                    type="date"
-                    name="date"
-                    value={row.date}
-                    onChange={(e) => handleRowChange(idx, e)}
-                    className="border px-3 py-2 w-full rounded-md focus:ring-2 focus:ring-blue-500"
-                  />
-                </td>
                 <td className="border-b px-4 py-3">
                   <input
                     type="text"
@@ -162,40 +161,12 @@ const AddPaymentTable = ({
                 </td>
 
                 <td className="border-b px-4 py-3">
-                  <select
-                    name="account"
-                    value={row.account}
-                    onChange={(e) => handleRowChange(idx, e)}
-                    className="border px-3 py-2 w-full rounded-md focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Account</option>{" "}
-                    {/* First option */}
-                    {accounts.length > 0 &&
-                      accounts.map((acc, idx2) => (
-                        <option key={idx2} value={acc.AccountNo}>
-                          {acc.AccountNo} {acc.BankName && `(${acc.BankName})`}
-                        </option>
-                      ))}
-                  </select>
-                </td>
-
-                <td className="border-b px-4 py-3">
                   <input
                     type="number"
                     name="amount"
                     value={row.amount}
                     readOnly
                     className="border px-3 py-2 w-full bg-gray-100 rounded-md"
-                  />
-                </td>
-                <td className="border-b px-4 py-3">
-                  <input
-                    type="text"
-                    name="remark"
-                    value={row.remark}
-                    onChange={(e) => handleRowChange(idx, e)}
-                    placeholder="Remark"
-                    className="border px-3 py-2 w-full rounded-md focus:ring-2 focus:ring-blue-500"
                   />
                 </td>
               </tr>

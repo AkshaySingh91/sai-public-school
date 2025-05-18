@@ -3,72 +3,62 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../../contexts/AuthContext';
 import { db } from '../../../config/firebase';
 import { Users, GraduationCap, Hash, Layers } from 'lucide-react';
+import { useSchool } from '../../../contexts/SchoolContext';
 
 export default function StudentDemographics() {
     const { userData } = useAuth();
-    const [school, setSchool] = useState(null);
+    const { school } = useSchool();
+    // const [school, setSchool] = useState(null);
     const [studentTypes, setStudentTypes] = useState([]);
     const [classStrength, setClassStrength] = useState([]);
     const [loading, setLoading] = useState(true);
+    const divisions = school.divisions ? school.divisions : ['A', 'D', 'E', 'SEMI'];
 
     useEffect(() => {
         const fetchData = async () => {
             if (!userData?.schoolCode) return;
 
             try {
-                // Fetch school document
-                const schoolQuery = query(
-                    collection(db, 'schools'),
-                    where('Code', '==', userData.schoolCode)
-                );
-                const schoolSnap = await getDocs(schoolQuery);
+                // Fetch student type counts
+                const types = school.studentsType || [];
+                const typeCounts = await Promise.all(types.map(async (type) => {
+                    const q = query(
+                        collection(db, 'students'),
+                        where('schoolCode', '==', userData.schoolCode),
+                        where('type', '==', type)
+                    );
+                    const snap = await getDocs(q);
+                    return { type, count: snap.size };
+                }));
+                setStudentTypes(typeCounts);
 
-                if (!schoolSnap.empty) {
-                    const schoolData = schoolSnap.docs[0].data();
-                    setSchool(schoolData);
-
-                    // Fetch student type counts
-                    const types = schoolData.studentsType || [];
-                    const typeCounts = await Promise.all(types.map(async (type) => {
+                // Fetch class division counts
+                const classes = school.class || [];
+                const strengthData = await Promise.all(classes.map(async (cls) => {
+                    const divisionCounts = await Promise.all(divisions.map(async (div) => {
                         const q = query(
                             collection(db, 'students'),
                             where('schoolCode', '==', userData.schoolCode),
-                            where('type', '==', type)
+                            where('class', '==', cls),
+                            where('div', '==', div)
                         );
                         const snap = await getDocs(q);
-                        return { type, count: snap.size };
+                        return snap.size > 0 ? snap.size : '-';
                     }));
-                    setStudentTypes(typeCounts);
 
-                    // Fetch class division counts
-                    const classes = schoolData.class || [];
-                    const strengthData = await Promise.all(classes.map(async (cls) => {
-                        const divisions = ['A', 'B', 'C', 'D', 'E'];
-                        const divisionCounts = await Promise.all(divisions.map(async (div) => {
-                            const q = query(
-                                collection(db, 'students'),
-                                where('schoolCode', '==', userData.schoolCode),
-                                where('class', '==', cls),
-                                where('div', '==', div)
-                            );
-                            const snap = await getDocs(q);
-                            return snap.size > 0 ? snap.size : '-';
-                        }));
+                    const total = divisionCounts.reduce((sum, val) =>
+                        typeof val === 'number' ? sum + val : sum, 0);
 
-                        const total = divisionCounts.reduce((sum, val) =>
-                            typeof val === 'number' ? sum + val : sum, 0);
-
-                        return { class: cls, divisions: divisionCounts, total };
-                    }));
-                    setClassStrength(strengthData);
-                }
+                    return { class: cls, divisions: divisionCounts, total };
+                }));
+                console.log({ strengthData })
+                setClassStrength(strengthData);
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
                 setLoading(false);
             }
         };
-
         fetchData();
     }, [userData]);
 
@@ -143,7 +133,7 @@ export default function StudentDemographics() {
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Class</th>
-                                {['A', 'B', 'C', 'D', 'E'].map((div) => (
+                                {divisions.map((div) => (
                                     <th key={div} className="px-4 py-3 text-center text-sm font-medium text-gray-700">
                                         {div}
                                     </th>

@@ -14,6 +14,10 @@ const SchoolSettings = ({ school, setSchool }) => {
     const [classes, setClasses] = useState(school?.class?.length ? school.class.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
     const [academicYear, setAcademicYear] = useState(school.academicYear);
 
+    const [schoolReceiptHeader, setSchoolReceiptHeader] = useState(school.schoolReceiptHeader || "")
+    const [transportReceiptHeader, setTransportReceiptHeader] = useState(school.transportReceiptHeader || "")
+    const [stockReceiptHeader, setStockReceiptHeader] = useState(school.stockReceiptHeader || "")
+
     const checkIfClassFeeStructurePresent = async (newClass) => {
         try {
             const fsRef = doc(db, "feeStructures", userData.schoolCode);
@@ -115,7 +119,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                 text: 'Class not present in fee structure. Please add class in fee structure first.'
             });
         }
-        const updatedSchool = { ...school, divisions: divisionArr, class: classArr, academicYear };
+        const updatedSchool = { ...school, divisions: divisionArr, class: classArr, academicYear, schoolReceiptHeader, transportReceiptHeader, stockReceiptHeader };
 
         let userToken;
         try {
@@ -332,6 +336,59 @@ const SchoolSettings = ({ school, setSchool }) => {
                             disabled
                             value={school?.Code || 0}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                        />
+                    </div>
+                </div>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Additional Information</h2>
+                <div className="space-y-5">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Display Header for <span className='font-bold'>School Receipt</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={schoolReceiptHeader}
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== "") {
+                                    setSchoolReceiptHeader(e.target.value)
+                                }
+                            }}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            placeholder="school receipt header "
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Display Header for <span className='font-bold'>Transport Receipt</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={transportReceiptHeader}
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== "") {
+                                    setTransportReceiptHeader(e.target.value)
+                                }
+                            }}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            placeholder="transport receipt header"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Display Header for <span className='font-bold'>Stock Receipt</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={stockReceiptHeader}
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== "") {
+                                    setStockReceiptHeader(e.target.value)
+                                }
+                            }}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            placeholder="stock receipt header"
                         />
                     </div>
                 </div>

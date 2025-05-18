@@ -117,7 +117,12 @@ export default function FeeReceipt({ student, school, transaction }) {
                 <div className=''>
                     <div className="text-center mb-4 mt-4">
                         <p className="italic text-purple-600">{copy}</p>
-                        <h1 className="text-md font-bold capitalize">{school.schoolName}, {school?.location?.taluka || ""}</h1>
+                        <h1 className="text-md font-bold capitalize">
+                            {
+                                // if tx type is school show school header , else transport header
+                                transaction.feeType === "TransportFee" ? (school.transportReceiptHeader ? school.transportReceiptHeader : `${school.schoolName} , ${school?.location?.taluka || ""}`) : (school.schoolReceiptHeader ? school.schoolReceiptHeader : `${school.schoolName} , ${school?.location?.taluka || ""}`)
+                            }
+                        </h1>
                     </div>
                     <div key={idx} className="receipt-copy bg-white border border-gray-200 rounded-sm mb-4 ">
                         {/* Receipt Header */}
@@ -173,14 +178,16 @@ export default function FeeReceipt({ student, school, transaction }) {
                         </table>
 
                         {/* Footer */}
-                        <div className="bg-gray-50 border-t border-gray-200 text-xs">
+                        < div className="bg-gray-50 border-t border-gray-200 text-xs" >
                             <p className="font-semibold p-2 border-2 border-gray-300">
                                 Net Amount in Words: {amountInWords}
                             </p>
-                            {school.gstin && (
-                                <p className="mt-2 text-xs">GSTIN: {school.gstin}</p>
-                            )}
-                            <div className="sign flex w-full justify-evenly mt-4">
+                            {
+                                school.gstin && (
+                                    <p className="mt-2 text-xs">GSTIN: {school.gstin}</p>
+                                )
+                            }
+                            < div className="sign flex w-full justify-evenly mt-4" >
                                 <div className="parent-sign flex flex-col items-center">
                                     <h3 className='mb-10'>Parent Sign
                                     </h3>
@@ -194,10 +201,11 @@ export default function FeeReceipt({ student, school, transaction }) {
                                 </div>
 
                             </div>
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
+                        </div >
+                    </div >
+                </div >
+            ))
+            }
+        </div >
     );
 }

@@ -4,27 +4,41 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useSchool } from '../../../contexts/SchoolContext';
 
 export default function StudentEmployeeAnalytics() {
     const { userData } = useAuth();
+    const { school } = useSchool();
     const [loading, setLoading] = useState(true);
     const [animateChart, setAnimateChart] = useState(false);
     const [studentCounts, setStudentCounts] = useState({ male: 0, female: 0, other: 0 });
     const [employeeCounts, setEmployeeCounts] = useState({ teaching: 0, other: 0 });
-
+    const [selectedClass, setSelectedClass] = useState('');
     // Fetch data on mount
     useEffect(() => {
         if (!userData?.schoolCode) return;
         const fetchData = async () => {
             const code = userData.schoolCode;
+            // Modified student queries with class filter
+            const studentQueries = [
+                query(
+                    collection(db, "students"),
+                    where("schoolCode", "==", code),
+                    where("status", "==", "new"),
+                    ...(selectedClass ? [where("class", "==", selectedClass)] : [])
+                ),
+                query(
+                    collection(db, "students"),
+                    where("schoolCode", "==", code),
+                    where("status", "==", "current"),
+                    ...(selectedClass ? [where("class", "==", selectedClass)] : [])
+                )
+            ];
 
-            const newStudentsSnap = await getDocs(
-                query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "new"))
-            );
-
-            const currentStudentsSnap = await getDocs(
-                query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "current"))
-            );
+            const [newStudentsSnap, currentStudentsSnap] = await Promise.all([
+                getDocs(studentQueries[0]),
+                getDocs(studentQueries[1])
+            ]);
             // Combine results
             const studentsSnap = [
                 ...newStudentsSnap.docs,
@@ -60,7 +74,7 @@ export default function StudentEmployeeAnalytics() {
         };
 
         fetchData();
-    }, [userData]);
+    }, [userData, selectedClass]);
 
     if (loading) {
         return <div className="text-center py-8">
@@ -73,12 +87,12 @@ export default function StudentEmployeeAnalytics() {
     const circumference = 2 * Math.PI * radius;
 
     const makeSegments = (counts) => {
-        const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+        const total = Object.values(counts).reduce((a, b) => a + b, 0) || 0;
         const segments = [];
         let offset = 0;
         Object.entries(counts).forEach(([key, val], idx) => {
-            const pct = (val / total) * 100;
-            const dash = (pct / 100) * circumference;
+            const pct = total ? (val / total) * 100 : 0;
+            const dash = pct ? (pct / 100) * circumference : 0;
             segments.push({
                 key,
                 value: val,
@@ -115,7 +129,7 @@ export default function StudentEmployeeAnalytics() {
                 <div className="relative w-32 h-32 mx-auto">
                     <svg viewBox="0 0 100 100" className="-rotate-90 w-full h-full">
                         {data?.segments && data.segments.length &&
-                            data.segments.filter((seg) => seg.value).map((seg, i) => (
+                            data.segments.filter((seg) => seg.value !== 0).map((seg, i) => (
                                 <circle
                                     key={seg.key}
                                     cx="50"
@@ -166,11 +180,29 @@ export default function StudentEmployeeAnalytics() {
         </div>
     );
 
-    console.log(studentData, studentColors)
     return (
         <div className="grid grid-rows-1 md:grid-rows-2 gap-6 max-w-4xl mx-auto p-4">
             {/* Students Breakdown */}
-            {renderDonut(studentData, studentColors, "Student Gender Distribution")}
+            <div className="bg-gradient-to-br from-indigo-50 to-violet-50 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
+                    <h2 className="text-md font-bold text-gray-800">Student Gender Distribution</h2>
+                    <select
+                        value={selectedClass}
+                        onChange={(e) => setSelectedClass(e.target.value)}
+                        className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                        <option value="">All Classes</option>
+                        {(school.class?.length ? school.class : [
+                            "Nursery", "JRKG", "SRKG", "1st", "2nd", "3rd", "4th",
+                            "5th", "6th", "7th", "8th", "9th"
+                        ]).map((cls) => (
+                            <option key={cls} value={cls}>{cls}</option>
+                        ))}
+                    </select>
+
+                </div>
+                {renderDonut(studentData, studentColors)}
+            </div>
 
             {/* Employees Breakdown */}
             {renderDonut(employeeData, employeeColors, "Employee Role Distribution")}
