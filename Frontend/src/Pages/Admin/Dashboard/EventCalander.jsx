@@ -26,6 +26,7 @@ const EventCalendar = () => {
     );
 
     const nextEvent = events
+    
         .filter(e => isAfter(parseISO(e.date), selectedDate))
         .sort((a, b) => parseISO(a.date) - parseISO(b.date))[0];
 

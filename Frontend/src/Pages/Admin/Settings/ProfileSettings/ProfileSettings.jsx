@@ -1,10 +1,15 @@
-// ProfileSettings.js
 import React, { useState } from 'react';
 import { Upload, Trash2, Loader, User } from 'lucide-react';
-import Swal from "sweetalert2"
+import Swal from "sweetalert2";
+import { reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
+import { auth } from '../../../../config/firebase'; // Ensure auth is imported correctly
 
 const ProfileSettings = ({ profile, setProfile, handleProfileUpdate, onImageUpload, loading }) => {
     const [localLoading, setLocalLoading] = useState(false);
+    const [changePassword, setChangePassword] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [passwordVerified, setPasswordVerified] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -46,6 +51,57 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate, onImageUplo
                 icon: 'error',
                 title: 'Upload Failed',
                 text: err.message || 'Failed to upload image'
+            });
+        } finally {
+            setLocalLoading(false);
+        }
+    };
+
+    const handlePasswordVerify = async () => {
+        try {
+            setLocalLoading(true);
+            const user = auth.currentUser;
+            const credential = EmailAuthProvider.credential(user.email, currentPassword);
+            await reauthenticateWithCredential(user, credential);
+            setPasswordVerified(true);
+            Swal.fire({
+                icon: 'success',
+                title: 'Password Verified!',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Verification Failed',
+                text: err.message || 'Current password is incorrect'
+            });
+        } finally {
+            setLocalLoading(false);
+        }
+    };
+
+    const handleChangePassword = async () => {
+        try {
+            setLocalLoading(true);
+            const user = auth.currentUser;
+            await updatePassword(user, newPassword);
+            Swal.fire({
+                icon: 'success',
+                title: 'Password Updated!',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            // Reset fields
+            setChangePassword(false);
+            setCurrentPassword('');
+            setNewPassword('');
+            setPasswordVerified(false);
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Update Failed',
+                text: err.message || 'Failed to update password'
             });
         } finally {
             setLocalLoading(false);
@@ -122,6 +178,61 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate, onImageUplo
                             <Loader size={20} className="animate-spin mr-2" />
                         ) : 'Save Changes'}
                     </button>
+
+                    {/* Change Password Section */}
+                    <div className="mt-6">
+                        <button
+                            type="button"
+                            onClick={() => setChangePassword(!changePassword)}
+                            className="text-blue-600 hover:underline"
+                        >
+                            {changePassword ? "Cancel Password Change" : "Change Password"}
+                        </button>
+
+                        {changePassword && (
+                            <div className="mt-4 space-y-3">
+                                {!passwordVerified && (
+                                    <>
+                                        <FormField
+                                            label="Current Password"
+                                            value={currentPassword}
+                                            type="password"
+                                            onChange={e => setCurrentPassword(e.target.value)}
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handlePasswordVerify}
+                                            className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+                                            disabled={localLoading}
+                                        >
+                                            {localLoading ? <Loader size={16} className="animate-spin inline" /> : "Verify Password"}
+                                        </button>
+                                    </>
+                                )}
+
+                                {passwordVerified && (
+                                    <>
+                                        <FormField
+                                            label="New Password"
+                                            value={newPassword}
+                                            type="password"
+                                            onChange={e => setNewPassword(e.target.value)}
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleChangePassword}
+                                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                                            disabled={localLoading}
+                                        >
+                                            {localLoading ? <Loader size={16} className="animate-spin inline" /> : "Update Password"}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </form>
             </div>
         </div>
@@ -144,3 +255,4 @@ const FormField = ({ label, value, onChange, type = 'text', required, disabled }
 );
 
 export default ProfileSettings;
+

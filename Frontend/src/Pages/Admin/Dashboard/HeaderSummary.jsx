@@ -12,6 +12,7 @@ export function HeaderSummary({
         teachers: 0,
         employees: 0,
         earnings: 0,
+        
     });
     useEffect(() => {
         const duration = 2000;
