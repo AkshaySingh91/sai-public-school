@@ -9,9 +9,9 @@ import { autoTable } from 'jspdf-autotable'
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaFileExcel, FaTimes } from "react-icons/fa";
 import { MdOutlinePictureAsPdf, MdOutlineFileUpload } from "react-icons/md";
-import { FiSearch } from "react-icons/fi";
 import TableLoader from "../../../components/TableLoader";
 import Swal from "sweetalert2"
+import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 
 function StockList() {
   const { userData } = useAuth();
@@ -360,116 +360,149 @@ function StockList() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {loading ?
-        <TableLoader /> :
+    <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
+      {loading ? (
+        <TableLoader />
+      ) : (
         <>
-
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               <div className="flex gap-3 flex-wrap">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setShowModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                  className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaPlus /> Add Stock
+                  <FaPlus className="w-4 h-4" />
+                  Add Stock
                 </motion.button>
 
                 <motion.button
                   whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setShowExcelModal(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                  className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                 >
-                  <MdOutlineFileUpload className="text-lg" /> Bulk Upload
+                  <MdOutlineFileUpload className="w-5 h-5" />
+                  Bulk Upload
                 </motion.button>
               </div>
 
               <div className="ml-auto flex gap-3">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={exportToExcel}
-                  className="flex items-center gap-2 px-4 py-2 border border-[#2563eb] text-[#2563eb] hover:bg-[#2563eb] hover:text-white rounded-lg transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl hover:from-purple-600 hover:to-violet-700 transition-all shadow-md hover:shadow-lg"
                 >
-                  <FaFileExcel /> Excel
+                  <FaFileExcel className="w-4 h-4" />
+                  Excel
                 </motion.button>
 
                 <motion.button
                   whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
                   onClick={exportToPDF}
-                  className="flex items-center gap-2 px-4 py-2 border border-[#7c3aed] text-[#7c3aed] hover:bg-[#7c3aed] hover:text-white rounded-lg transition-all"
-                >
-                  <MdOutlinePictureAsPdf /> PDF
+                  >
+                  <MdOutlinePictureAsPdf className="w-4 h-4" />
+                  PDF
                 </motion.button>
               </div>
             </div>
 
             {/* Search */}
-            <div className="bg-white p-2 rounded-xl shadow-sm relative">
-              <input
-                type="text"
-                placeholder="Search items..."
-                className="w-full p-4 py-2 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="bg-white p-1.5 rounded-xl shadow-sm border border-purple-100">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search items..."
+                  className="w-full p-4 py-2.5 border-2 border-purple-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Search className="absolute right-4 top-1/4 text-xl text-purple-400" />
+              </div>
             </div>
 
             {/* Table Section */}
-            <div className="overflow-x-auto rounded-lg shadow-sm">
-              <table className="min-w-full divide-y divide-gray-400 text-black bg-gradient-to-br from-indigo-50 to-violet-50 w-full">
-                <thead className="text-black bg-gradient-to-br from-indigo-50 to-violet-50 w-auto whitespace-nowrap">
+            <div className="overflow-x-auto rounded-xl border border-purple-100 shadow-lg overflow-y-hidden">
+              <table className="min-w-full divide-y divide-purple-100 overflow-y-hidden">
+                <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-sm">
                   <tr>
-                    <th className="p-4 text-left">Item Name</th>
-                    <th className="p-4 text-center">Quantity</th>
-                    <th className="p-4 text-center">Class</th>
-                    <th className="p-4 text-center">Category</th>
-                    <th className="p-4 text-center">Purchase Price</th>
-                    <th className="p-4 text-center">Selling Price</th>
+                    {["Item Name", "Quantity", "Class", "Category", "Purchase Price", "Selling Price"].map(
+                      (header, index) => (
+                        <th
+                          key={index}
+                          className="px-4 py-3 text-left font-semibold tracking-wide whitespace-nowrap border-r border-purple-500/30 last:border-r-0"
+                        >
+                          {header}
+                        </th>
+                      )
+                    )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl shadow-sm">
-                  {currentStocks.map((stock) => (
+                <tbody className="divide-y divide-purple-100 bg-white">
+                  {currentStocks.map((stock, index) => (
                     <motion.tr
                       key={stock.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="hover:bg-blue-50"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
                     >
-                      <td className="p-4 font-medium">{stock.itemName}</td>
-                      <td className="p-4 text-center">{stock.quantity}</td>
-                      <td className="p-4 text-center">{stock.className || "N/A"}</td>
-                      <td className="p-4 text-center">{stock.category}</td>
-                      <td className="p-4 text-center">₹{stock.purchasePrice}</td>
-                      <td className="p-4 text-center">₹{stock.sellingPrice}</td>
+                      <td className="px-4 py-3 font-medium text-violet-900">{stock.itemName}</td>
+                      <td className="px-4 py-3 text-center text-purple-800 font-semibold">
+                        {stock.quantity}
+                      </td>
+                      <td className="px-4 py-3 text-center text-gray-600">
+                        {stock.className || "N/A"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100/80 text-amber-800">
+                          {stock.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center font-medium text-purple-700">
+                        ₹{stock.purchasePrice}
+                      </td>
+                      <td className="px-4 py-3 text-center font-medium text-emerald-700">
+                        ₹{stock.sellingPrice}
+                      </td>
                     </motion.tr>
                   ))}
                 </tbody>
               </table>
+            </div>
 
-              {/* Pagination */}
-              <div className="flex justify-between items-center p-4 border-t">
-                <span className="text-gray-600">
-                  Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredStocks.length)} of {filteredStocks.length} items
+            {/* Pagination */}
+            <div className="flex flex-col sm:flex-row items-center justify-between px-4">
+              <div className="text-sm text-violet-800/90 mb-2 sm:mb-0">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredStocks.length)} of{" "}
+                {filteredStocks.length} items
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-5 h-5 mr-1" />
+                  Previous
+                </button>
+                <span className="px-4 py-2 text-sm text-violet-800/90">
+                  Page {currentPage} of {totalPages}
                 </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 border rounded-lg disabled:opacity-50"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-4 py-2">Page {currentPage} of {totalPages}</span>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 border rounded-lg disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight className="w-5 h-5 ml-1" />
+                </button>
               </div>
             </div>
           </div>
@@ -488,14 +521,16 @@ function StockList() {
                   initial={{ scale: 0.95 }}
                   animate={{ scale: 1 }}
                   exit={{ scale: 0.95 }}
-                  className="bg-white rounded-2xl p-8 max-w-md w-full space-y-6 shadow-xl"
+                  className="bg-white rounded-2xl p-8 max-w-md w-full space-y-6 shadow-2xl border border-purple-100"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-blue-600">Add New Stock</h2>
+                  <div className="flex justify-between items-center pb-4 border-b border-purple-100">
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                      Add New Stock
+                    </h2>
                     <button
                       onClick={() => setShowModal(false)}
-                      className="text-gray-500 hover:text-gray-700"
+                      className="text-purple-500 hover:text-purple-700 transition-colors"
                     >
                       <FaTimes className="text-xl" />
                     </button>
@@ -505,7 +540,7 @@ function StockList() {
                     <input
                       type="text"
                       placeholder="Item Name"
-                      className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                      className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
                       value={newStock.itemName}
                       onChange={(e) => setNewStock({ ...newStock, itemName: e.target.value })}
                     />
@@ -514,12 +549,12 @@ function StockList() {
                       <input
                         type="number"
                         placeholder="Quantity"
-                        className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
                         value={newStock.quantity}
                         onChange={(e) => setNewStock({ ...newStock, quantity: e.target.value })}
                       />
                       <select
-                        className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 appearance-none"
                         value={newStock.category}
                         onChange={(e) => setNewStock({ ...newStock, category: e.target.value })}
                       >
@@ -533,14 +568,14 @@ function StockList() {
                       <input
                         type="number"
                         placeholder="Purchase Price"
-                        className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
                         value={newStock.purchasePrice}
                         onChange={(e) => setNewStock({ ...newStock, purchasePrice: e.target.value })}
                       />
                       <input
                         type="number"
                         placeholder="Selling Price"
-                        className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
                         value={newStock.sellingPrice}
                         onChange={(e) => setNewStock({ ...newStock, sellingPrice: e.target.value })}
                       />
@@ -548,42 +583,48 @@ function StockList() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <select
-                        className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 appearance-none"
                         value={newStock.fromClass}
                         onChange={(e) => setNewStock({ ...newStock, fromClass: e.target.value })}
                       >
                         <option value="">From Class</option>
                         {classNames.map((cls, idx) => (
-                          <option key={idx} value={cls}>{cls}</option>
+                          <option key={idx} value={cls}>
+                            {cls}
+                          </option>
                         ))}
                       </select>
 
                       <select
-                        className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 appearance-none"
                         value={newStock.toClass}
                         onChange={(e) => setNewStock({ ...newStock, toClass: e.target.value })}
                       >
                         <option value="">To Class</option>
                         {classNames.map((cls, idx) => (
-                          <option key={idx} value={cls}>{cls}</option>
+                          <option key={idx} value={cls}>
+                            {cls}
+                          </option>
                         ))}
                       </select>
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3">
-                    <button
+                  <div className="flex justify-end gap-3 pt-4 border-t border-purple-100">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
                       onClick={() => setShowModal(false)}
-                      className="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                      className="px-6 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-colors"
                     >
                       Cancel
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
                       onClick={addStock}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="px-6 py-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 shadow-md transition-all"
                     >
                       Add Stock
-                    </button>
+                    </motion.button>
                   </div>
                 </motion.div>
               </motion.div>
@@ -597,62 +638,86 @@ function StockList() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 h-screen w-screen z-10"
+                className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
                 onClick={() => setShowExcelModal(false)}
               >
                 <motion.div
                   initial={{ scale: 0.95 }}
                   animate={{ scale: 1 }}
                   exit={{ scale: 0.95 }}
-                  className="bg-white rounded-2xl p-4 max-w-2xl w-full space-y-6 shadow-xl z-50"
+                  className="bg-white rounded-2xl p-6 max-w-2xl w-full space-y-4 shadow-2xl border border-purple-100"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-gray-800 text-center flex-grow">Excel Template Format</h2>
-                    <button onClick={() => setShowExcelModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <div className="flex justify-between items-center pb-4 border-b border-purple-100">
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                      Bulk Upload Template
+                    </h2>
+                    <button
+                      onClick={() => setShowExcelModal(false)}
+                      className="text-purple-500 hover:text-purple-700 transition-colors"
+                    >
                       <FaTimes className="text-xl" />
                     </button>
                   </div>
-                  <div className="mb-6">
-                    <h3 className="text-md font-medium mb-3 text-center  gap-2">
-                      Column name should be in same format <span className="text-gray-600">(* means required)</span>
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="border-collapse border border-gray-200">
-                        <thead className="bg-gray-50 w-auto whitespace-nowrap">
+
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600 text-center">
+                      Column names should follow this format <span className="text-purple-600">(*required)</span>
+                    </p>
+
+                    <div className="overflow-x-auto rounded-xl border border-purple-100">
+                      <table className="min-w-full divide-y divide-purple-100 text-sm">
+                        <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
                           <tr>
-                            <th className="border border-gray-200 px-4 py-2">ItemName</th>
-                            <th className="border border-gray-200 px-4 py-2">Quantity</th>
-                            <th className="border border-gray-200 px-4 py-2">PurchasePrice</th>
-                            <th className="border border-gray-200 px-4 py-2">SellingPrice</th>
-                            <th className="border border-gray-200 px-4 py-2">Category</th>
-                            <th className="border border-gray-200 px-4 py-2">ClassName</th>
+                            {["ItemName", "Quantity", "PurchasePrice", "SellingPrice", "Category", "ClassName"].map(
+                              (header, index) => (
+                                <th
+                                  key={index}
+                                  className="px-4 py-2.5 text-left font-medium border-r border-purple-500/30 last:border-r-0"
+                                >
+                                  {header}
+                                </th>
+                              )
+                            )}
                           </tr>
                         </thead>
-                        <tbody className="text-sm">
+                        <tbody className="bg-white divide-y divide-purple-100">
                           <tr>
-                            <td className="border border-gray-200 px-4 py-2">School Bag</td>
-                            <td className="border border-gray-200 px-4 py-2">50</td>
-                            <td className="border border-gray-200 px-4 py-2">300</td>
-                            <td className="border border-gray-200 px-4 py-2">400</td>
-                            <td className="border border-gray-200 px-4 py-2">All</td>
-                            <td className="border border-gray-200 px-4 py-2">1st</td>
+                            <td className="px-4 py-2.5 font-medium text-violet-900">School Bag</td>
+                            <td className="px-4 py-2.5 text-center text-purple-800">50</td>
+                            <td className="px-4 py-2.5 text-center text-purple-800">300</td>
+                            <td className="px-4 py-2.5 text-center text-emerald-800">400</td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-xs">
+                                All
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-center text-purple-800">1st</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
+
+                    <motion.label
+                      whileHover={{ scale: 1.02 }}
+                      className="block w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl text-center cursor-pointer hover:from-purple-700 hover:to-violet-700 shadow-md transition-all"
+                    >
+                      {uploading ? 'Uploading...' : 'Choose Excel File'}
+                      <input
+                        type="file"
+                        accept=".xls,.xlsx"
+                        onChange={handleExcelUpload}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                    </motion.label>
                   </div>
-                  <label className="block w-full px-4 py-2 bg-[#2563eb] text-white rounded-lg text-center cursor-pointer hover:bg-[#1d4ed8] transition-colors">
-                    {uploading ? 'Uploading...' : 'Choose Excel File'}
-                    <input type="file" accept=".xls,.xlsx" onChange={handleExcelUpload} className="hidden" disabled={uploading} />
-                  </label>
                 </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
         </>
-      }
-
+      )}
     </div>
   );
 }

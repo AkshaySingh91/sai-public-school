@@ -3,6 +3,11 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../config/firebase"; // adjust path if needed
 import { useAuth } from "../../../contexts/AuthContext";
 import { useSchool } from "../../../contexts/SchoolContext";
+import { motion } from "framer-motion"
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import TableLoader from ".././../../components/TableLoader"
 
 function BusAllocation() {
   const [students, setStudents] = useState([]);
@@ -15,17 +20,16 @@ function BusAllocation() {
   const [selectedDestination, setSelectedDestination] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [studentsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const studentsPerPage = 10;
   const users = useAuth().userData;
-  console.log("user", users);
   const { school } = useSchool();
-  console.log({ objects: school });
+  const itemsPerPage = 12;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         let studentSnapshot;
-        console.log({ objects: users });
         if (users.schoolCode) {
           const q = query(
             collection(db, "students"),
@@ -34,13 +38,10 @@ function BusAllocation() {
           studentSnapshot = await getDocs(q);
           console.log({ studentSnapshot });
         }
-
-        console.log({ studentSnapshot });
         const studentList = studentSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-        console.log(studentList);
 
         const activeStudents = studentList.filter(
           (student) => student.status === "new" || student.status === "current"
@@ -66,7 +67,6 @@ function BusAllocation() {
           id: doc.id,
           ...doc.data(),
         }));
-        console.log(destList);
 
         setStudents(activeStudents);
         setFilteredStudents(activeStudents);
@@ -77,12 +77,10 @@ function BusAllocation() {
         console.error("Error fetching data:", error);
       }
     };
-
     fetchData();
   }, []);
 
   useEffect(() => {
-    console.log("studnets", students);
     let filtered = students;
 
     if (selectedYear !== "All") {
@@ -137,184 +135,197 @@ function BusAllocation() {
     searchTerm,
     busData,
   ]);
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(filteredStudents.map(student => ({
+      "Academic Year": student.academicYear,
+      "Name": `${student.fname} ${student.lname}`,
+      "Class": student.class,
+      "Division": student.div,
+      "Fee ID": student.feeId,
+      "Bus Stop": destinationData.find(dest => dest.id === student.transportDetails?.destinationId)?.name || "-",
+      "Bus Number": busData[student.transportDetails?.busId] || "-",
+      "Total Fee": student.allFee?.transportFee || 0,
+      "Discount": student.allFee?.transportFeeDiscount || 0,
+      "Outstanding": calculateOutstandingFee(student)
+    })));
 
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bus Allocations");
+    XLSX.writeFile(workbook, "bus_allocations.xlsx");
+  };
+
+  const exportToPDF = async () => {
+    const input = document.getElementById("bus-allocation-table");
+    const canvas = await html2canvas(input);
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("landscape");
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save("bus_allocations.pdf");
+  };
   const indexOfLastStudent = currentPage * studentsPerPage;
   const indexOfFirstStudent = indexOfLastStudent - studentsPerPage;
-  console.log("filteredStudents", filteredStudents);
   const currentStudents = filteredStudents.slice(
     indexOfFirstStudent,
     indexOfLastStudent
   );
-  console.log("currentStudents", currentStudents);
   const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
 
-  return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6 text-center text-[#9810FA]">
-        Bus Allocation - Students List
-      </h1>
+  return (<>
+    {currentStudents.length ?
+      <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="flex flex-col">
-          <label className="text-sm font-semibold mb-1 text-gray-700">
-            Academic Year
-          </label>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
-          >
-            <option value="All">All</option>
-            {academicYears.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-white p-6 rounded-2xl shadow-xl border border-purple-100">
+            {[
+              {
+                label: "Academic Year",
+                value: selectedYear,
+                options: ["All", ...academicYears],
+                onChange: (e) => setSelectedYear(e.target.value)
+              },
+              {
+                label: "Bus Number",
+                value: selectedBus,
+                options: ["All", ...Object.values(busData)],
+                onChange: (e) => setSelectedBus(e.target.value)
+              },
+              {
+                label: "Destination",
+                value: selectedDestination,
+                options: ["All", ...destinationData.map(dest => dest.name)],
+                onChange: (e) => setSelectedDestination(e.target.value)
+              },
+              {
+                label: "Search",
+                isInput: true,
+                value: searchTerm,
+                onChange: (e) => setSearchTerm(e.target.value)
+              }
+            ].map((filter, idx) => (
+              <div key={idx} className="flex flex-col space-y-1">
+                <label className="text-sm font-medium text-gray-800">
+                  {filter.label}
+                </label>
+                {filter.isInput ? (
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={filter.value}
+                    onChange={filter.onChange}
+                    className="w-full px-4 py-2.5 border-2 border-purple-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
+                  />
+                ) : (
+                  <select
+                    value={filter.value}
+                    onChange={filter.onChange}
+                    className="w-full px-4 py-2.5 border-2 border-purple-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 appearance-none"
+                  >
+                    {filter.options.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             ))}
-          </select>
-        </div>
+          </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-semibold mb-1 text-gray-700">
-            Bus Number
-          </label>
-          <select
-            value={selectedBus}
-            onChange={(e) => setSelectedBus(e.target.value)}
-            className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
-          >
-            <option value="All">All</option>
-            {Object.values(busData).map((numberPlate) => (
-              <option key={numberPlate} value={numberPlate}>
-                {numberPlate}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-semibold mb-1 text-gray-700">
-            Destination
-          </label>
-          <select
-            value={selectedDestination}
-            onChange={(e) => setSelectedDestination(e.target.value)}
-            className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
-          >
-            <option value="All">All</option>
-            {destinationData.map((dest) => (
-              <option key={dest.id} value={dest.name}>
-                {dest.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-semibold mb-1 text-gray-700">
-            Search
-          </label>
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-5 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#9810fa] transition duration-300"
-          />
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto shadow-lg rounded-lg border border-gray-200">
-        <table className="min-w-full bg-white text-sm">
-          <thead className="bg-[#9810FA] text-white">
-            <tr>
-              <th className="px-4 py-3 text-left">Academic Year</th>
-              <th className="px-4 py-3 text-left">Name</th>
-              <th className="px-4 py-3 text-left">Class</th>
-              <th className="px-4 py-3 text-left">Div</th>
-              <th className="px-4 py-3 text-left">Fee ID</th>
-              <th className="px-4 py-3 text-left">Bus Stop</th>
-              <th className="px-4 py-3 text-left">Bus</th>
-              <th className="px-4 py-3 text-left">After Discount Fee</th>
-              <th className="px-4 py-3 text-left">Discount Fee</th>
-              <th className="px-4 py-3 text-left">Paid Fee</th>
-              <th className="px-4 py-3 text-left">Outstanding Fee</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentStudents.map((student) => {
-              const fullName = `${student.fname || ""} ${student.lname || ""}`;
-              const busId = student.transportDetails?.busId || "-";
-              const destinationId =
-                student.transportDetails?.destinationId || null;
-              const busFee = student.allFee?.transportFee || 0;
-              const discountFee = student.allFee?.transportFeeDiscount || 0;
-              const outstandingFee = calculateOutstandingFee(student);
-              const numberPlate = busData[busId] || "-";
-              const paidFee = 0;
-
-              const destinationName = destinationId
-                ? destinationData.find((dest) => dest.id === destinationId)
-                  ?.name || "-"
-                : "-";
-
-              return (
-                <tr key={student.id} className="border-t hover:bg-gray-100">
-                  <td className="px-4 py-3 font-bold text-[#9810fa]">
-                    {student.academicYear || "-"}
-                  </td>
-                  <td className="px-4 py-3 font-semibold">{fullName}</td>
-                  <td className="px-4 py-3 font-semibold">{student.class}</td>
-                  <td className="px-4 py-3 font-semibold">
-                    {student.div || "-"}
-                  </td>
-                  <td className="px-4 py-3 font-semibold">{student.feeId}</td>
-                  <td className="px-4 py-3 font-semibold">{destinationName}</td>
-                  <td className="px-4 py-3 font-semibold">{numberPlate}</td>
-                  <td className="px-4 py-3 font-bold text-green-600">
-                    {busFee}
-                  </td>
-                  <td className="px-4 py-3 font-bold text-red-500">
-                    -{discountFee}
-                  </td>
-                  <td className="px-4 py-3 font-bold text-green-700">
-                    {paidFee}
-                  </td>
-                  <td className="px-4 py-3 font-bold text-red-500">
-                    {outstandingFee}
-                  </td>
+          {/* Table */}
+          <div className="overflow-x-auto rounded-2xl shadow-xl border border-purple-100">
+            <table className="min-w-full divide-y divide-purple-100">
+              <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
+                <tr>
+                  {["Academic Year", "Name", "Class", "Div", "Fee ID", "Bus Stop", "Bus",
+                    "After Discount", "Discount", "Paid", "Outstanding"].map((header, i) => (
+                      <th
+                        key={i}
+                        className="px-4 py-3 text-left text-sm font-semibold tracking-wide border-r border-purple-500/30 last:border-r-0"
+                      >
+                        {header}
+                      </th>
+                    ))}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-purple-100">
+                {currentStudents.map((student) => {
+                  const fullName = `${student.fname || ""} ${student.lname || ""}`;
+                  const busId = student.transportDetails?.busId || "-";
+                  const destinationId = student.transportDetails?.destinationId || null;
+                  const busFee = student.allFee?.transportFee || 0;
+                  const discountFee = student.allFee?.transportFeeDiscount || 0;
+                  const outstandingFee = calculateOutstandingFee(student);
+                  const paidFee = 0;
+                  const numberPlate = busData[busId] || "-";
+                  const destinationName = destinationId
+                    ? destinationData.find((dest) => dest.id === destinationId)?.name || "-"
+                    : "-";
 
-      {/* Pagination */}
-      <div className="flex justify-end mt-6 gap-4 items-center">
-        <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 disabled:opacity-50"
-        >
-          Prev
-        </button>
-        <span className="text-gray-700">
-          {currentPage} / {totalPages}
-        </span>
-        <button
-          onClick={() =>
-            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-          }
-          disabled={currentPage === totalPages}
-          className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 disabled:opacity-50"
-        >
-          Next
-        </button>
+                  return (
+                    <motion.tr
+                      key={student.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="hover:bg-purple-50/80 transition-colors duration-300"
+                    >
+                      <td className="px-4 py-3 font-medium text-violet-900">
+                        {student.academicYear || "-"}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-800">{fullName}</td>
+                      <td className="px-4 py-3 text-gray-700">{student.class}</td>
+                      <td className="px-4 py-3 text-gray-700">{student.div || "-"}</td>
+                      <td className="px-4 py-3 font-mono text-purple-800">{student.feeId}</td>
+                      <td className="px-4 py-3 text-gray-700">{destinationName}</td>
+                      <td className="px-4 py-3 font-semibold text-violet-900">{numberPlate}</td>
+                      <td className="px-4 py-3 font-bold text-emerald-600">₹{busFee}</td>
+                      <td className="px-4 py-3 font-bold text-red-600">-₹{discountFee}</td>
+                      <td className="px-4 py-3 font-bold text-green-700">₹{paidFee}</td>
+                      <td className="px-4 py-3 font-bold text-red-600">₹{outstandingFee}</td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="mt-6 flex items-center justify-between px-4">
+            <div className="text-sm text-violet-800/90">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+              {Math.min(currentPage * itemsPerPage, currentStudents.length)} of{" "}
+              {currentStudents.length} entries
+            </div>
+            <div className="flex gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </motion.button>
+              <span className="px-4 py-2 text-sm font-medium text-violet-800">
+                Page {currentPage} of {totalPages}
+              </span>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </motion.button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+      : <TableLoader />
+    }
+  </>);
 }
 
 function calculateOutstandingFee(student) {

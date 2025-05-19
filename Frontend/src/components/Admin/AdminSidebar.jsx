@@ -52,6 +52,7 @@ const menuItems = [
             { text: "Stock Master", path: "/stocklist" },
             { text: "Stock Group", path: "/stockgroup" },
             { text: "Stock Allocation", path: "/stockallocate" },
+            { text: "Stock Daily Book", path: "/stock/daily-book" },
         ]
     },
     { icon: FiSettings, text: "Settings", path: "/settings" },

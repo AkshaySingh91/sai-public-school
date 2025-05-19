@@ -113,36 +113,50 @@ function StockGroup() {
   );
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-          <Package className="text-blue-600 w-8 h-8" />
-          Stock Groups
-        </h1>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl shadow-sm">
+            <Package className="w-6 h-6 text-purple-600" />
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-violet-700 bg-clip-text text-transparent">
+            Stock Groups
+          </h1>
+        </div>
 
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl border border-purple-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
           <table className="w-full">
-            <thead className="bg-blue-600 text-white">
-              <tr>
-                <th className="px-6 py-4 text-left text-lg font-semibold">Stock Groups</th>
-              </tr>
+            <thead className="bg-gradient-to-r from-purple-600 to-violet-700">
+              <motion.tr
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <th className="px-6 py-4 text-left text-lg font-semibold text-white">
+                  Stock Groups
+                </th>
+              </motion.tr>
             </thead>
             <tbody>
               {groups.map((group, index) => (
                 <React.Fragment key={index}>
-                  <motion.tr
-                    className="cursor-pointer hover:bg-blue-50 transition-colors"
+                  <motion.tr 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="cursor-pointer hover:bg-purple-50/80 transition-colors duration-300"
                     onClick={() => handleGroupClick(group)}
-                  >
-                    <td className="px-6 py-4 border-b border-gray-100">
+                    whileHover={{ scale: 1.005 }}
+                  >  
+                    <td className="px-6 py-4 border-b border-purple-100">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-700">
+                        <span className="font-medium text-violet-900">
                           {group.groupName}
                         </span>
                         {expandedGroup === group.groupName ? (
-                          <ChevronUp className="text-blue-600 w-5 h-5" />
+                          <ChevronUp className="text-purple-600 w-5 h-5 transition-transform duration-300" />
                         ) : (
-                          <ChevronDown className="text-blue-600 w-5 h-5" />
+                          <ChevronDown className="text-purple-600 w-5 h-5 transition-transform duration-300" />
                         )}
                       </div>
                     </td>
@@ -154,11 +168,12 @@ function StockGroup() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
                       >
-                        <td className="p-6 bg-gray-50">
+                        <td className="p-6 bg-gradient-to-b from-purple-50/50 to-violet-50/50">
                           {loadingItems ? (
                             <div className="flex justify-center p-8">
-                              <Loader1 />
+                              <Loader1 className="animate-spin text-purple-600" />
                             </div>
                           ) : items.length === 0 ? (
                             <div className="text-center p-6 text-gray-400 font-medium">
@@ -166,61 +181,57 @@ function StockGroup() {
                             </div>
                           ) : (
                             <div className="space-y-6">
-                              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                              <div className="overflow-x-auto rounded-xl border border-purple-100 shadow-sm">
                                 <table className="min-w-full">
-                                  <thead className="bg-gray-100">
+                                  <thead className="bg-gradient-to-r from-purple-100 to-violet-100">
                                     <tr>
-                                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
-                                        Item Name
-                                      </th>
-                                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                                        Quantity
-                                      </th>
-                                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                                        Unit Price
-                                      </th>
-                                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                                        Total Value
-                                      </th>
-                                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                                        Actions
-                                      </th>
+                                      {["Item Name", "Quantity", "Unit Price", "Total Value", "Actions"].map((header, i) => (
+                                        <th
+                                          key={i}
+                                          className="px-4 py-3 text-left text-sm font-semibold text-violet-900 border-r border-purple-200 last:border-r-0"
+                                        >
+                                          {header}
+                                        </th>
+                                      ))}
                                     </tr>
                                   </thead>
-                                  <tbody className="bg-white divide-y divide-gray-200">
+                                  <tbody className="divide-y divide-purple-100">
                                     {items.map((item) => (
-                                      <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 text-gray-700 font-medium">
+                                      <motion.tr
+                                        key={item.id}
+                                        className="hover:bg-purple-50/50 transition-colors duration-300"
+                                      >
+                                        <td className="px-4 py-3 font-medium text-violet-900">
                                           {item.itemName}
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-4 py-3 text-center text-purple-800">
                                           {item.quantity}
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-4 py-3 text-center text-gray-600">
                                           ₹{item.sellingPrice}
                                         </td>
-                                        <td className="px-4 py-3 text-center font-semibold text-blue-600">
+                                        <td className="px-4 py-3 text-center font-semibold bg-gradient-to-r from-purple-600 to-violet-700 bg-clip-text text-transparent">
                                           ₹{item.quantity * item.sellingPrice}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                           <button
                                             onClick={() => handleDeleteItem(item.id)}
-                                            className="text-red-600 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
+                                            className="p-2 rounded-full hover:bg-red-50/80 transition-all duration-300 hover:shadow-md"
                                           >
-                                            <Trash2 className="w-5 h-5" />
+                                            <Trash2 className="w-5 h-5 text-red-600 hover:text-red-700" />
                                           </button>
                                         </td>
-                                      </tr>
+                                      </motion.tr>
                                     ))}
                                   </tbody>
                                 </table>
                               </div>
 
-                              <div className="bg-blue-50 p-4 rounded-lg flex justify-between items-center">
-                                <span className="font-semibold text-gray-700">
+                              <div className="bg-gradient-to-r from-purple-100 to-violet-100 p-4 rounded-xl flex justify-between items-center shadow-inner">
+                                <span className="font-semibold text-violet-900">
                                   Total Inventory Value:
                                 </span>
-                                <span className="text-2xl font-bold text-blue-600">
+                                <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-700 bg-clip-text text-transparent">
                                   ₹{totalAmount.toLocaleString()}
                                 </span>
                               </div>

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Wallet, Save } from 'lucide-react';
 import { PieChart, FeeBar } from './FeeVisualizations';
 import { SchoolFeeInputs, OtherFeeInputs } from './FeeInputs';
+import { motion } from "framer-motion"
 
 export default function FeeManagement({ student, transactions, handleFeeUpdate, formData, setFormData }) {
     // local copy of fees
@@ -104,7 +105,6 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
             lastYearPaid: { balance: 0, transport: 0 }
         });
     }, [transactions, student.academicYear]);
-    console.log(currentYearPaid, lastYearPaid)
     // Calculate current year totals
     const currentYearTotals = useMemo(() => ({
         SchoolFee: (fees.schoolFees?.AdmissionFee || 0) + (fees.schoolFees?.TutionFee || 0),
@@ -118,28 +118,28 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
         <div className="space-y-8">
             {/* Fee Input Section */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <h3 className="text-xl font-semibold mb-6 flex items-center text-purple-600">
-                    <Wallet className="w-6 h-6 mr-2" />
-                    Fee Management
-                </h3>
-
+                <div className="flex items-center mb-6">
+                    <Wallet className="w-6 h-6 text-purple-600 mr-2" />
+                    <h3 className="text-2xl font-semibold text-purple-600">Fee Management</h3>
+                </div>
                 <SchoolFeeInputs fees={fees} onChange={onChange} />
                 <OtherFeeInputs fees={fees} onChange={onChange} />
 
+                {/* Update Button */}
                 {dirty && (
                     <div className="text-right mb-6">
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
                             onClick={onSave}
-                            className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-medium px-6 py-2 rounded-xl shadow-md transition-all"
                         >
                             <Save className="w-5 h-5" /> Update Fees
-                        </button>
+                        </motion.button>
                     </div>
                 )}
-
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t border-purple-100">
                     <h4 className="text-lg font-semibold mb-4 text-purple-600">Fee Summary</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <Summary label="Total Fees" value={summaryTotal} />
                         <Summary label="Paid Fees" value={paidFees} />
                         <Summary label="Outstanding" value={summaryTotal - paidFees} />
@@ -148,11 +148,17 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
             </div>
 
             {/* Visualizations Section */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div className="grid grid-row-1 lg:grid-row-2 gap-8">
-                    <div className="space-y-6">
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="bg-white rounded-2xl shadow-sm p-6 border border-purple-100"
+            >
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Previous Year Balances */}
+                    <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-purple-600">Previous Year Balances</h3>
-                        <div className="flex justify-evenly box-border gap-3">
+                        <div className="flex flex-col sm:flex-row justify-evenly gap-4">
                             <PieChart
                                 title="Last Year School Balance"
                                 paid={lastYearPaid.balance}
@@ -168,36 +174,22 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
                         </div>
                     </div>
 
-                    <div className="space-y-6">
+                    {/* Current Year Progress */}
+                    <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-purple-600">Current Year Progress</h3>
-                        <FeeBar
-                            label="School Fees"
-                            paid={currentYearPaid.SchoolFee}
-                            total={currentYearTotals.SchoolFee}
-                        />
-                        <FeeBar
-                            label="Transport Fees"
-                            paid={currentYearPaid.TransportFee}
-                            total={currentYearTotals.TransportFee}
-                        />
+                        <FeeBar label="School Fees" paid={currentYearPaid.SchoolFee} total={currentYearTotals.SchoolFee} />
+                        <FeeBar label="Transport Fees" paid={currentYearPaid.TransportFee} total={currentYearTotals.TransportFee} />
                         {currentYearTotals.MessFee > 0 && (
-                            <FeeBar
-                                label="Mess Fees"
-                                paid={currentYearPaid.MessFee}
-                                total={currentYearTotals.MessFee}
-                            />
+                            <FeeBar label="Mess Fees" paid={currentYearPaid.MessFee} total={currentYearTotals.MessFee} />
                         )}
                         {currentYearTotals.HostelFee > 0 && (
-                            <FeeBar
-                                label="Hostel Fees"
-                                paid={currentYearPaid.HostelFee}
-                                total={currentYearTotals.HostelFee}
-                            />
+                            <FeeBar label="Hostel Fees" paid={currentYearPaid.HostelFee} total={currentYearTotals.HostelFee} />
                         )}
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
+
     );
 };
 

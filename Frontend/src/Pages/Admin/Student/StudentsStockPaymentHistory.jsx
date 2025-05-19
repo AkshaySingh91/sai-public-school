@@ -1,65 +1,127 @@
-import { useEffect } from "react";
-import { Trash2Icon } from "lucide-react"
+import { motion } from "framer-motion"
 import { Link } from "react-router-dom";
+import { Trash2Icon } from "lucide-react";
+import { useEffect } from "react"
 
-const StudentsStockPaymentHistory = ({ student, transactions, setTransactions, deleteStockTransaction }) => {
+export default function StudentsStockPaymentHistory({
+  student,
+  transactions,
+  setTransactions,
+  deleteStockTransaction,
+  // Pagination props (should be managed in parent)
+  currentPage = 1,
+  pageSize = 5,
+  totalItems = 0,
+  onPageChange = () => { }
+}) {
   useEffect(() => {
-    if (student && student.StockPaymentDetail && student.StockPaymentDetail.length) {
+    if (student?.StockPaymentDetail?.length) {
       setTransactions(student.StockPaymentDetail)
     }
   }, [student])
+
   if (!student) return null;
+
   return (
-    <>
-      {/* Main UI - hidden on print */}
-      <div className="rounded-xl shadow-md mt-10 bg-white w-auto">
-        {transactions.length > 0 ? (
-          <table className="w-auto  text-sm">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-3 py-2">Date</th>
-                <th className="px-3 py-2">Item</th>
-                <th className="px-3 py-2">Amount</th>
-                <th className="px-3 py-2">Quantity</th>
-                <th className="px-3 py-2">Account</th>
-                <th className="px-3 py-2">Receipt</th>
-                <th className="px-3 py-2">Action</th>
-              </tr>
+    <div className="rounded-2xl shadow-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-violet-50 overflow-y-hidden">
+      {transactions.length > 0 ? (
+        <div className="overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
+              <motion.tr
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                {["Date", "Items", "Amount", "Qty", "Account", "Receipt", "Actions"].map((header, idx) => (
+                  <th
+                    key={idx}
+                    className="px-4 py-3 text-left text-sm font-semibold border-r border-purple-500/30 last:border-r-0 w-auto whitespace-nowrap"
+                  >
+                    {header}
+                  </th>
+                ))}
+              </motion.tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-purple-100">
               {transactions.map((tx, index) => (
-                <tr key={index}>
-                  <td className="px-4 py-3">{new Date(tx.date).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
+                <motion.tr
+                  key={index}
+                  className="hover:bg-purple-50/80 transition-colors duration-300"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <td className="px-4 py-3 text-gray-700 font-medium">
+                    {new Date(tx.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-violet-900 font-medium max-w-[200px] truncate">
                     {tx.items.map(item => item.itemName).join(', ')}
                   </td>
-                  <td className="px-4 py-3">
-                    {tx.items.reduce((sum, item) => sum + item.total, 0) || 0}
+                  <td className="px-4 py-3 text-purple-800 font-semibold">
+                    ₹{tx.items.reduce((sum, item) => sum + item.total, 0) || 0}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center text-purple-700">
                     {tx.items.reduce((sum, item) => sum + item.quantity, 0) || 0}
                   </td>
-                  <td className="px-4 py-3">{tx.account || ""}</td>
-                  <td className="px-4 py-3 text-blue-600 hover:text-blue-800 font-medium">
-                    <Link to={`/stockallocate/${student.id}/receipt/${tx.receiptId}`}>{tx.receiptId}</Link>
+                  <td className="px-4 py-3 text-gray-600">{tx.account || "-"}</td>
+                  <td className="px-4 py-3">
+                    <Link
+                      to={`/stockallocate/${student.id}/receipt/${tx.receiptId}`}
+                      className="text-violet-600 hover:text-violet-800 underline decoration-2 underline-offset-2"
+                    >
+                      {tx.receiptId}
+                    </Link>
                   </td>
-                  <td className="px-4 py-3 cursor-pointer">
+                  <td className="px-4 py-3">
                     <button
-                      className="cursor-pointer"
-                      onClick={() => deleteStockTransaction(tx.receiptId)}>
-                      <Trash2Icon size={32} className="text-red-400" />
+                      onClick={() => deleteStockTransaction(tx.receiptId)}
+                      className="p-1.5 rounded-lg hover:bg-red-50/80 transition-colors duration-300"
+                    >
+                      <Trash2Icon className="w-5 h-5 text-red-600 hover:text-red-700" />
                     </button>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
-        ) : (
-          <p className="text-center w-full p-6 text-xl font-semibold rounded-lg">No stock payments found.</p>
-        )}
-      </div >
-    </>
+        </div>
+      ) : (
+        <div className="p-8 text-center">
+          <div className="inline-block px-6 py-4 rounded-xl bg-gradient-to-br from-purple-100 to-violet-100">
+            <span className="text-gray-500 font-medium text-lg">
+              No stock payments found
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {transactions.length > 0 && (
+        <div className="p-4 border-t border-purple-100 flex items-center justify-between">
+          <div className="text-sm text-violet-800/90">
+            Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} entries
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="px-4 py-2 text-sm font-medium text-violet-800">
+              Page {currentPage}
+            </span>
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage * pageSize >= totalItems}
+              className="px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
-
-export default StudentsStockPaymentHistory;

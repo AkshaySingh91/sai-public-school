@@ -10,6 +10,8 @@ import Swal from "sweetalert2"
 import { useNavigate } from 'react-router-dom';
 import NotFound from "../../../components/NotFound"
 import { User } from "lucide-react";
+import { motion } from "framer-motion";
+import { ShoppingCart, ReceiptText, History, IndianRupee, CheckCircle } from "lucide-react";
 
 const StudentStockAllocation = () => {
     const { studentId } = useParams();
@@ -23,7 +25,16 @@ const StudentStockAllocation = () => {
     const [selectedAccount, setSelectedAccount] = useState("CASH");
     const [transactions, setTransactions] = useState([]);
     const navigate = useNavigate();
+    // for tnx history tab
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 5; // Set your preferred page size
+    const totalItems = student?.StockPaymentDetail?.length || 0;
 
+    // Slice transactions based on pagination
+    const paginatedTransactions = transactions.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+    );
     const fetchStudent = async () => {
         try {
             const docRef = doc(db, "students", studentId);
@@ -213,7 +224,6 @@ const StudentStockAllocation = () => {
             </div>
         </div>
     );
-
     const DetailItem = ({ label, value, badge }) => (
         <div className="bg-gray-50 p-3 rounded-lg">
             <div className="text-xs text-gray-500 mb-1">{label}</div>
@@ -226,7 +236,17 @@ const StudentStockAllocation = () => {
             )}
         </div>
     );
-
+    // animation 
+    const tabVariants = {
+        active: {
+            color: "#6b21a8",
+            scale: 1.02
+        },
+        inactive: {
+            color: "#6b21a8b8",
+            scale: 1
+        }
+    };
     if (loading) {
         return <>
             <div className="flex space-x-6 p-8">
@@ -253,172 +273,223 @@ const StudentStockAllocation = () => {
     </div>;
 
     return (
-        <div className="p-6 flex flex-col lg:flex-row gap-8">
-            {/* Left fixed Profile Card */}
+        <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen flex flex-col lg:flex-row gap-8">
+            {/* Left Profile Card */}
             <aside className="lg:w-1/3 w-full">
                 <div className="sticky top-6">
-                    <ProfileCard />
+                    <ProfileCard /> {/* Ensure ProfileCard uses similar purple theme */}
                 </div>
             </aside>
 
-            {/* Right content area */}
-            <main className="lg:w-2/3 w-full flex flex-col space-y-6 overflow-auto">
-                {/* Tabs */}
-                <div className="flex border-b border-gray-200">
-                    <TabButton
-                        active={activeTab === 'create'}
+            {/* Right Content Area */}
+            <main className="lg:w-2/3 w-full flex flex-col space-y-6 overflow-hidden ">
+                {/* Animated Tabs */}
+                <div className="flex border-b-2 border-purple-200 relative">
+                    <motion.div
+                        className="absolute bottom-0 left-0 h-1 bg-purple-600"
+                        initial={false}
+                        animate={{
+                            x: activeTab === 'create' ? 0 : '100%',
+                            width: '50%'
+                        }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    />
+                    <button
                         onClick={() => setActiveTab('create')}
-                        className="flex-1 text-center"
+                        className="flex-1 text-center py-4"
                     >
-                        Create Transaction
-                    </TabButton>
-                    <TabButton
-                        active={activeTab === 'history'}
+                        <motion.div
+                            className="flex items-center justify-center gap-2"
+                            variants={tabVariants}
+                            animate={activeTab === 'create' ? 'active' : 'inactive'}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <ReceiptText className="w-5 h-5" />
+                            Create Transaction
+                        </motion.div>
+                    </button>
+                    <button
                         onClick={() => setActiveTab('history')}
-                        className="flex-1 text-center"
+                        className="flex-1 text-center py-4"
                     >
-                        Transaction History
-                    </TabButton>
+                        <motion.div
+                            className="flex items-center justify-center gap-2"
+                            variants={tabVariants}
+                            animate={activeTab === 'history' ? 'active' : 'inactive'}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <History className="w-5 h-5" />
+                            Transaction History
+                        </motion.div>
+                    </button>
                 </div>
 
                 {/* Content */}
                 {activeTab === 'create' ? (
-                    <div className="space-y-6">
-                        {
-                            selectedItems.length ?
-                                (<div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-                                    <table className="min-w-full">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Select</th>
-                                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Item Name</th>
-                                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Unit Price</th>
-                                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Available Qty</th>
-                                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Order Qty</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {
-                                                selectedItems.map(item => (
-                                                    <tr key={item.id} className="hover:bg-gray-50">
-                                                        <td className="px-4 py-3">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={item.selected}
-                                                                onChange={() => handleSelectItem(item.id)}
-                                                                disabled={item.quantity === 0}
-                                                                className="h-4 w-4 text-blue-600 rounded border-gray-300"
-                                                            />
-                                                        </td>
-                                                        <td className="px-4 py-3 font-medium">{item.itemName}</td>
-                                                        <td className="px-4 py-3">₹{item.sellingPrice}</td>
-                                                        <td className="px-4 py-3">{item.quantity}</td>
-                                                        <td className="px-4 py-3">
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                max={item.quantity}
-                                                                value={item.purchaseQuantity}
-                                                                onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                                                className="w-20 px-2 py-1 border rounded-md text-sm"
-                                                                disabled={!item.selected}
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>) :
-                                <div className="bg-white rounded-lg p-6 animate-pulse">
-                                    <div className="h-6 bg-gray-200 rounded mx-auto  mb-2 w-3/4"></div>
-                                    <div className="h-6 bg-gray-200 rounded mx-auto  mb-2 w-1/2"></div>
-                                    <div className="h-6 bg-gray-200 rounded mx-auto  w-2/3"></div>
-                                </div>
-                        }
-
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-6"
+                    >
+                        {selectedItems.length ? (
+                            <div className="bg-white rounded-xl border border-purple-100 shadow-lg overflow-hidden">
+                                <table className="w-full">
+                                    <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
+                                        <tr>
+                                            {["Select", "Item Name", "Unit Price", "Available Qty", "Order Qty"].map((header, idx) => (
+                                                <th
+                                                    key={idx}
+                                                    className="px-4 py-3 text-left text-sm font-semibold first:rounded-tl-xl last:rounded-tr-xl"
+                                                >
+                                                    {header}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-purple-100">
+                                        {selectedItems.map(item => (
+                                            <motion.tr
+                                                key={item.id}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                className="hover:bg-purple-50 transition-colors"
+                                            >
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={item.selected}
+                                                        onChange={() => handleSelectItem(item.id)}
+                                                        disabled={item.quantity === 0}
+                                                        className="h-5 w-5 text-purple-600 rounded border-purple-300 focus:ring-purple-500"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-purple-900">{item.itemName}</td>
+                                                <td className="px-4 py-3 text-violet-700">
+                                                    <IndianRupee className="inline w-4 h-4 mr-1" />
+                                                    {item.sellingPrice}
+                                                </td>
+                                                <td className="px-4 py-3 text-purple-800">{item.quantity}</td>
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max={item.quantity}
+                                                        value={item.purchaseQuantity}
+                                                        onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                                        className="w-20 px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
+                                                        disabled={!item.selected}
+                                                    />
+                                                </td>
+                                            </motion.tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="bg-purple-50 rounded-xl p-6 animate-pulse flex flex-col items-center">
+                                <div className="h-8 bg-purple-200 rounded-full w-3/4 mb-4" />
+                                <div className="h-6 bg-purple-200 rounded-full w-1/2 mb-3" />
+                                <div className="h-6 bg-purple-200 rounded-full w-2/3" />
+                            </div>
+                        )}
 
                         {/* Selected Items Summary */}
                         {selectedItems.filter(item => item.selected).length > 0 ? (
-                            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-                                <h3 className="text-lg font-semibold">Selected Items</h3>
-                                <div className="space-y-4">
+                            <motion.div
+                                initial={{ scale: 0.98, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="bg-white rounded-xl border border-purple-100 shadow-lg p-6 space-y-4"
+                            >
+                                <h3 className="text-xl font-bold text-purple-900 flex items-center gap-2">
+                                    <ShoppingCart className="w-6 h-6 text-violet-600" />
+                                    Selected Items
+                                </h3>
+
+                                <div className="space-y-3">
                                     {selectedItems.filter(item => item.selected).map(item => (
-                                        <div
+                                        <motion.div
                                             key={item.id}
-                                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                            initial={{ x: -10 }}
+                                            animate={{ x: 0 }}
+                                            className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border-l-4 border-violet-500"
                                         >
-                                            <span className="font-medium">{item.itemName}</span>
-                                            <div className="flex items-center gap-6">
-                                                <span className="w-20">₹{item.sellingPrice}</span>
-                                                <span className="w-20">× {item.purchaseQuantity}</span>
-                                                <span className="w-24 font-medium">
-                                                    ₹{item.sellingPrice * item.purchaseQuantity}
+                                            <span className="font-medium text-purple-800">{item.itemName}</span>
+                                            <div className="flex items-center gap-6 text-violet-700">
+                                                <span><IndianRupee className="inline w-4 h-4" />{item.sellingPrice}</span>
+                                                <span>× {item.purchaseQuantity}</span>
+                                                <span className="font-semibold">
+                                                    <IndianRupee className="inline w-4 h-4" />
+                                                    {item.sellingPrice * item.purchaseQuantity}
                                                 </span>
                                             </div>
-                                        </div>
+                                        </motion.div>
                                     ))}
                                 </div>
 
-                                <div className="pt-4 border-t border-gray-200 space-y-4">
+                                <div className="pt-4 border-t border-purple-100 space-y-4">
                                     <select
-                                        name="paymentMethod"
-                                        id="paymentMethod"
                                         value={selectedAccount}
                                         onChange={(e) => setSelectedAccount(e.target.value)}
-                                        className="w-full p-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                        className="w-full p-3 border-2 border-purple-200 rounded-xl bg-white focus:border-violet-500 focus:ring-2 focus:ring-purple-200 text-purple-900"
                                     >
                                         {accounts.map((account, idx) => (
-                                            <option key={idx} value={account}>{account}</option>
+                                            <option key={idx} value={account} className="text-purple-900">
+                                                {account}
+                                            </option>
                                         ))}
                                     </select>
 
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-lg font-semibold">Total Amount:</span>
-                                        <span className="text-2xl font-bold text-blue-600">
-                                            ₹{selectedItems
+                                    <div className="flex justify-between items-center bg-violet-100/50 p-4 rounded-xl">
+                                        <span className="text-lg font-bold text-purple-900">Total Amount:</span>
+                                        <span className="text-2xl font-extrabold text-violet-700">
+                                            <IndianRupee className="inline w-6 h-6 mr-1" />
+                                            {selectedItems
                                                 .filter(item => item.selected)
                                                 .reduce((sum, item) => sum + item.sellingPrice * item.purchaseQuantity, 0)}
                                         </span>
                                     </div>
 
-                                    <button
+                                    <motion.button
                                         onClick={handlePayment}
-                                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="w-full py-4 bg-gradient-to-r from-purple-600 to-violet-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
                                     >
+                                        <CheckCircle className="inline w-5 h-5 mr-2" />
                                         Process Payment
-                                    </button>
+                                    </motion.button>
                                 </div>
-                            </div>
+                            </motion.div>
                         ) : (
-                            <div className="bg-slate-100 font-semibold text-xl  text-gray-600 text-center  rounded-lg p-6  ">
-                                No Item seleted for purchase
+                            <div className="bg-purple-50 rounded-xl p-8 text-center border-2 border-dashed border-purple-200">
+                                <ShoppingCart className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+                                <p className="text-lg font-semibold text-purple-700">
+                                    No items selected for purchase
+                                </p>
+                                <p className="text-purple-500 mt-2">
+                                    Select items from the list above to begin
+                                </p>
                             </div>
                         )}
-                    </div>
+                    </motion.div>
                 ) : (
                     <StudentsStockPaymentHistory
                         student={student}
-                        transactions={transactions}
+                        transactions={paginatedTransactions}
                         setTransactions={setTransactions}
                         deleteStockTransaction={deleteStockTransaction}
+                        currentPage={currentPage}
+                        pageSize={pageSize}
+                        totalItems={transactions.length || 0}
+                        onPageChange={setCurrentPage}
                     />
                 )}
             </main>
         </div>
+
     );
 };
 
-// Sub-components for better readability
-const TabButton = ({ active, children, onClick }) => (
-    <button
-        className={`px-6 py-3 font-medium ${active ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-        onClick={onClick}
-    >
-        {children}
-    </button>
-);
 
 
 export default StudentStockAllocation;

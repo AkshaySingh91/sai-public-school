@@ -19,6 +19,7 @@ import TableLoader from "../../../../components/TableLoader"
 import { useSchool } from "../../../../contexts/SchoolContext"
 import { getNewClassFees } from "./StudentDetail"
 import Swal from "sweetalert2";
+import { motion } from "framer-motion"
 
 const StudentList = () => {
   const { userData } = useAuth();
@@ -380,263 +381,222 @@ const StudentList = () => {
   };
 
 
-  return (<>
-    {
-      loading ?
-        <div className="max-w-7xl mx-auto  p-4 pt-8 bg-gradient-to-br from-gray-50 to-purple-50 min-h-screen">
-          <TableLoader
-            headers={6}
-            rows={5}
-            className="border-purple-200/40"
-          />
-        </div> :
-        <div className="w-full bg-white rounded-lg shadow-sm border border-gray-100">
-          {/* Filters and Actions */}
-          <div className="p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+return (
+  <>
+    {loading ? (
+      <div className="max-w-7xl mx-auto p-4 pt-8 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
+        <TableLoader
+          headers={6}
+          rows={5}
+          className="border-purple-200/40"
+        />
+      </div>
+    ) : (
+      <div className="w-full bg-white rounded-2xl shadow-xl border border-purple-100">
+        {/* Filters and Actions */}
+        <div className="p-6 flex flex-wrap items-center justify-between gap-4 border-b border-purple-100">
+          <div className="flex items-center gap-3">
+            <motion.div whileHover={{ scale: 1.05 }} className="relative">
               <select
-                className="px-4 py-2 text-sm border rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="px-4 py-2.5 text-sm border-2 border-purple-100 rounded-xl bg-purple-50 text-violet-900 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
                 value={filters.class}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, class: e.target.value }))
-                }
+                onChange={(e) => setFilters((prev) => ({ ...prev, class: e.target.value }))}
               >
                 <option value="all">All Classes</option>
                 {classes.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+            </motion.div>
 
+            <motion.div whileHover={{ scale: 1.05 }} className="relative">
               <select
-                className="px-4 py-2 text-sm border rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="px-4 py-2.5 text-sm border-2 border-purple-100 rounded-xl bg-purple-50 text-violet-900 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
                 value={filters.div}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, div: e.target.value }))
-                }
+                onChange={(e) => setFilters((prev) => ({ ...prev, div: e.target.value }))}
               >
                 <option value="all">All Divisions</option>
                 {divisions.map((div) => (
-                  <option key={div} value={div}>
-                    {div}
-                  </option>
+                  <option key={div} value={div}>{div}</option>
                 ))}
               </select>
-
-              <button className="p-2 text-gray-600 border rounded-md hover:bg-gray-50">
-                <Filter size={18} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Search size={20} className="text-gray-500" />
-                </div>
-                <input
-                  type="text"
-                  className="py-2 pl-10 pr-3 border rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Search students..."
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, search: e.target.value }))
-                  }
-                />
-              </div>
-
-              <button
-                onClick={exportToPDF}
-                className="flex items-center px-3 py-2 text-sm border rounded-md bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <FileText size={16} className="mr-2" />
-                <span>Export PDF</span>
-              </button>
-
-              <button
-                onClick={exportToExcel}
-                className="flex items-center px-3 py-2 text-sm border rounded-md bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <FileSpreadsheet size={16} className="mr-2" />
-                <span>Export Excel</span>
-              </button>
-              <button
-                onClick={handleBatchMove}
-                disabled={selectedStudents.length === 0}
-                className="px-4 py-2 bg-green-600 text-white rounded-md disabled:opacity-50"
-              >
-                Move Selected to Next Year
-              </button>
-            </div>
+            </motion.div>
           </div>
 
-
-          {/* Student Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-400">
-              <thead className="bg-gradient-to-br from-indigo-50 to-violet-50 ">
-                <tr>
-                  <th className="px-4 py-3 w-12">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      checked={
-                        selectedStudents.length === currentItems.length &&
-                        currentItems.length > 0
-                      }
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                  {[
-                    "Academic",
-                    "Name",
-                    "Type",
-                    "Fee ID",
-                    "Class",
-                    "Div",
-                    "Gender",
-                    "Father Contact",
-                    "Status",
-                    "Details",
-                  ].map((header) => (
-                    <th
-                      key={header}
-                      className="px-4 py-3 text-left text-sm font-semibold text-indigo-900 uppercase tracking-wider"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl shadow-sm">
-                {currentItems.map((student) => (
-                  <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        checked={selectedStudents.includes(student.id)}
-                        onChange={() => toggleSelectStudent(student.id)}
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {student.academicYear}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {student.fname} {student.mname} {student.lname}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {student.type}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-indigo-600 font-mono">
-                      {student.feeId}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {student.class}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {student.div}
-                    </td>
-                    <td className={`px-2 py-1`}>
-                      <span
-                        className={`px-3 py-1 text-xs font-medium rounded-lg  ${student.gender === "Male"
-                          ? "bg-blue-100 text-blue-400"
-                          : "bg-red-100 text-red-800"
-                          }`}
-                      >
-                        {student.gender}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {student.fatherMobile}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-4 py-1  text-xs font-medium rounded-full ${statusStyles[student.status] || "bg-red-100 text-red-800"
-                          }`}
-                      >
-                        {student.status.charAt(0).toUpperCase() +
-                          student.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => navigate(`/student/${student.id}`)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        <SettingsIcon size={20} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="px-4 py-3 border-t border-gray-400 flex items-center justify-between bg-indigo-50">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="px-4 py-2 border rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                className="ml-3 px-4 py-2 border rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Next
-              </button>
-            </div>
-
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing{" "}
-                  <span className="font-medium">{idxStart + 1}</span> to{" "}
-                  <span className="font-medium">
-                    {Math.min(idxEnd, filteredStudents.length)}
-                  </span>{" "}
-                  of <span className="font-medium">{filteredStudents.length}</span>{" "}
-                  students
-                </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <Search size={20} className="text-purple-400" />
               </div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-
-                {[...Array(totalPages).keys()].map((page) => (
-                  <button
-                    key={page + 1}
-                    onClick={() => setCurrentPage(page + 1)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page + 1
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                      }`}
-                  >
-                    {page + 1}
-                  </button>
-                ))}
-
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </nav>
+              <input
+                type="text"
+                className="pl-10 pr-4 py-2.5 border-2 border-purple-100 rounded-xl bg-purple-50 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                placeholder="Search students..."
+                value={filters.search}
+                onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+              />
             </div>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={exportToPDF}
+              className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl hover:from-purple-600 hover:to-violet-700 transition-all shadow-md hover:shadow-lg"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              PDF
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={exportToExcel}
+              className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Excel
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={handleBatchMove}
+              disabled={selectedStudents.length === 0}
+              className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
+            >
+              Move Selected to Next Year
+            </motion.button>
           </div>
         </div>
-    }
-  </>);
+
+        {/* Student Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-purple-100">
+            <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
+              <tr>
+                <th className="px-6 py-4 w-12">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                    checked={selectedStudents.length === currentItems.length && currentItems.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                {["Academic", "Name", "Type", "Fee ID", "Class", "Div", "Gender", "Father Contact", "Status", "Details"].map((header) => (
+                  <th
+                    key={header}
+                    className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider"
+                  >
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-purple-100 bg-white">
+              {currentItems.map((student) => (
+                <motion.tr
+                  key={student.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="hover:bg-purple-50/80 transition-colors"
+                >
+                  <td className="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                      checked={selectedStudents.includes(student.id)}
+                      onChange={() => toggleSelectStudent(student.id)}
+                    />
+                  </td>
+                  <td className="px-6 py-4 text-sm text-violet-900">{student.academicYear}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-violet-900">
+                    {student.fname} {student.mname} {student.lname}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{student.type}</td>
+                  <td className="px-6 py-4 text-sm text-violet-700 font-medium">{student.feeId}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{student.class}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{student.div}</td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-xl ${
+                        student.gender === "Male"
+                          ? "bg-blue-100/80 text-blue-700"
+                          : "bg-pink-100/80 text-pink-700"
+                      }`}
+                    >
+                      {student.gender}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{student.fatherMobile}</td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-xl ${
+                        statusStyles[student.status] || "bg-red-100/80 text-red-700"
+                      }`}
+                    >
+                      {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      onClick={() => navigate(`/student/${student.id}`)}
+                      className="text-violet-600 hover:text-violet-800"
+                    >
+                      <SettingsIcon size={20} />
+                    </motion.button>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="px-6 py-4 border-t border-purple-100 flex items-center justify-between bg-purple-50">
+          <div className="text-sm text-violet-800/90">
+            Showing <span className="font-medium">{idxStart + 1}</span> to{" "}
+            <span className="font-medium">{Math.min(idxEnd, filteredStudents.length)}</span> of{" "}
+            <span className="font-medium">{filteredStudents.length}</span> students
+          </div>
+          <nav className="relative z-0 inline-flex rounded-xl shadow-sm -space-x-px">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-l-xl hover:bg-violet-200 transition-colors disabled:opacity-50"
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="w-5 h-5 mr-1" />
+              Previous
+            </motion.button>
+
+            {[...Array(totalPages).keys()].map((page) => (
+              <motion.button
+                key={page + 1}
+                whileHover={{ scale: 1.05 }}
+                onClick={() => setCurrentPage(page + 1)}
+                className={`px-4 py-2 text-sm font-medium ${
+                  currentPage === page + 1
+                    ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white"
+                    : "bg-white text-violet-800 hover:bg-violet-100"
+                } border border-violet-200`}
+              >
+                {page + 1}
+              </motion.button>
+            ))}
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-r-xl hover:bg-violet-200 transition-colors disabled:opacity-50"
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="w-5 h-5 ml-1" />
+            </motion.button>
+          </nav>
+        </div>
+      </div>
+    )}
+  </>
+);
 };
 
 

@@ -9,6 +9,8 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { autoTable } from 'jspdf-autotable'
 import TableLoader from "../../../components/TableLoader"
+import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 function StockAllocate() {
   const { school } = useSchool();
@@ -151,67 +153,63 @@ function StockAllocate() {
     setExportLoading(false);
   };
 
-  return (<>
-    {
-      !currentStudents.length ? <TableLoader /> :
-        <div className="p-8 space-y-6">
+
+
+  return (
+    <>
+      {!currentStudents.length ? (
+        <TableLoader />
+      ) : (
+        <div className="p-8 space-y-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
+          {/* Header Section */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-            <h1 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Stock Allocation</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-violet-700 bg-clip-text text-transparent mb-4 md:mb-0">
+              Stock Allocation
+            </h1>
             <div className="flex gap-3">
-              <button
+              <motion.button
                 onClick={exportToExcel}
                 disabled={exportLoading}
-                className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center px-4 py-2.5 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-xl hover:from-purple-600 hover:to-violet-700 disabled:opacity-50 shadow-md transition-all"
               >
-                <LuDownload className="mr-2" /> Excel
-              </button>
-              <button
+                <LuDownload className="mr-2 w-4 h-4" /> Excel
+              </motion.button>
+              <motion.button
                 onClick={exportToPDF}
                 disabled={exportLoading}
-                className="flex items-center px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl hover:from-violet-600 hover:to-purple-700 disabled:opacity-50 shadow-md transition-all"
               >
-                <LuDownload className="mr-2" /> PDF
-              </button>
+                <LuDownload className="mr-2 w-4 h-4" /> PDF
+              </motion.button>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-4 rounded-lg shadow">
-            <select
-              name="class"
-              value={filters.class}
-              onChange={handleFilterChange}
-              className="border rounded-lg p-2 text-sm"
-            >
-              <option value="">All Classes</option>
-              {classOptions.map(cls => (
-                <option key={cls} value={cls}>{cls}</option>
-              ))}
-            </select>
-
-            <select
-              name="div"
-              value={filters.div}
-              onChange={handleFilterChange}
-              className="border rounded-lg p-2 text-sm"
-            >
-              <option value="">All Divisions</option>
-              {divOptions.map(div => (
-                <option key={div} value={div}>{div}</option>
-              ))}
-            </select>
-
-            <select
-              name="gender"
-              value={filters.gender}
-              onChange={handleFilterChange}
-              className="border rounded-lg p-2 text-sm"
-            >
-              <option value="">All Genders</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-4 rounded-xl shadow-lg border border-purple-100">
+            {[
+              { name: "class", options: classOptions, label: "All Classes" },
+              { name: "div", options: divOptions, label: "All Divisions" },
+              { name: "gender", options: ["Male", "Female", "Other"], label: "All Genders" },
+            ].map((filter) => (
+              <select
+                key={filter.name}
+                name={filter.name}
+                value={filters[filter.name]}
+                onChange={handleFilterChange}
+                className="border-2 border-purple-200 rounded-xl p-2 text-sm text-purple-900 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              >
+                <option value="">{filter.label}</option>
+                {filter.options.map((option) => (
+                  <option key={option} value={option} className="text-purple-900">
+                    {option}
+                  </option>
+                ))}
+              </select>
+            ))}
 
             <input
               type="text"
@@ -219,83 +217,99 @@ function StockAllocate() {
               placeholder="Search by name..."
               value={filters.search}
               onChange={handleFilterChange}
-              className="border rounded-lg p-2 text-sm"
+              className="border-2 border-purple-200 rounded-xl p-2 text-sm text-purple-900 placeholder-purple-400 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             />
 
             <select
               value={itemsPerPage}
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              className="border rounded-lg p-2 text-sm"
+              className="border-2 border-purple-200 rounded-xl p-2 text-sm text-purple-900 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             >
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
-              <option value={100}>100 per page</option>
+              {[10, 25, 50, 100].map((value) => (
+                <option key={value} value={value} className="text-purple-900">
+                  {value} per page
+                </option>
+              ))}
             </select>
           </div>
 
           {/* Students Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full">
-              <thead className="text-black bg-gradient-to-br from-indigo-50 to-violet-50 ">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-purple-100">
+            <table className="w-full table-fixed">
+              <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-xs">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Class</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Division</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Gender</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                  {["Name", "Class", "Division", "Gender", "Actions"].map((header) => (
+                    <th
+                      key={header}
+                      className="px-4 py-3 text-left font-semibold tracking-wide whitespace-normal break-words border-r border-purple-500/30 last:border-r-0"
+                    >
+                      {header}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl shadow-sm">
-                {currentStudents.map(student => (
-                  <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm">{student.fname} {student.lname}</td>
-                    <td className="px-6 py-4 text-sm">{student.class}</td>
-                    <td className="px-6 py-4 text-sm">{student.div}</td>
-                    <td className="px-6 py-4 text-sm">{student.gender}</td>
+              <tbody className="divide-y divide-purple-100 text-xs">
+                {currentStudents.map((student, index) => (
+                  <motion.tr
+                    key={student.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
+                  >
+                    <td className="px-6 py-4 text-sm font-medium text-purple-900">
+                      {student.fname} {student.lname}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-purple-800">{student.class}</td>
+                    <td className="px-6 py-4 text-sm text-purple-800">{student.div}</td>
+                    <td className="px-6 py-4 text-sm text-purple-800">{student.gender}</td>
                     <td className="px-6 py-4">
                       <Link
                         to={`/stockallocate/${student.id}`}
-                        className="text-indigo-600 hover:text-indigo-900"
+                        className="text-violet-600 hover:text-violet-800 transition-colors"
                       >
-                        <LuWallet className="w-5 h-5" />
+                        <LuWallet className="w-6 h-6" />
                       </Link>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
-          <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow">
-            <span className="text-sm text-gray-600 mb-2 md:mb-0">
-              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredStudents.length)} of {filteredStudents.length} entries
+          <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-lg border border-purple-100">
+            <span className="text-sm text-violet-700 mb-2 md:mb-0">
+              Showing {indexOfFirstItem + 1} to{" "}
+              {Math.min(indexOfLastItem, filteredStudents.length)} of{" "}
+              {filteredStudents.length} entries
             </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+            <div className="flex space-x-2">
+              <motion.button
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
-              </button>
-              <span className="px-4 py-2 text-gray-600">
+                <ChevronLeft className="w-5 h-5 mr-1" />Previous
+              </motion.button>
+              <span className="px-4 py-2.5 text-violet-700 font-medium">
                 Page {currentPage} of {totalPages}
               </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+              <motion.button
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
-              </button>
+                <ChevronRight className="w-5 h-5 ml-1" />Next
+              </motion.button>
             </div>
           </div>
         </div>
-    }
-
-  </>);
+      )}
+    </>
+  );
 }
 
 export default StockAllocate;

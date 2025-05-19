@@ -23,6 +23,9 @@ import TransactionHistory from "../Transactions/TransactionHistoryTab.jsx";
 import TransactionForm from "../FeeManagement/TransactionForm.jsx";
 import PersonalInfo from "./PersonalInfo.jsx";
 import StudentDocumentTab from "../Documents/StudentDocumentTab.jsx"
+import { motion, AnimatePresence } from 'framer-motion'
+import { ReceiptText, History } from 'lucide-react'
+
 
 export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, student) => {
   try {
@@ -182,6 +185,8 @@ export function StudentDetail() {
   });
   const { school: schoolData, refresh } = useSchool();
   const navigate = useNavigate();
+  const tabLabels = ["Student Details", "Fee Details", "Transactions", "Documents"]
+
   // first the student data will fetch using id /student/id using student data we will set form, student previous transaction, school details
   useEffect(() => {
     setLoading(true);
@@ -574,7 +579,6 @@ export function StudentDetail() {
     }
   };
 
-
   const goToNextAcademicYear = async () => {
 
     const result = await Swal.fire({
@@ -697,7 +701,6 @@ export function StudentDetail() {
       }
     }
   };
-
   const handleStudentDelete = async () => {
     const result = await Swal.fire({
       title: 'Delete this student?',
@@ -737,71 +740,115 @@ export function StudentDetail() {
             />
 
             <div className="md:w-2/3">
-              <div className="flex border-b mb-6">
-                {[
-                  "Student Details",
-                  "Fee Details",
-                  "Transactions",
-                  "Documents",
-                ].map((tab, idx) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(idx)}
-                    className={`px-6 py-3 font-medium ${activeTab === idx
-                      ? "text-purple-600 border-b-2 border-purple-600"
-                      : "text-gray-500 hover:text-purple-500"
-                      }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
+              {/* Animated Tabs */}
+              <div className="relative border-b-2 border-purple-200 mb-6">
+                <div className="flex">
+                  {tabLabels.map((label, idx) => (
+                    <button
+                      key={label}
+                      onClick={() => setActiveTab(idx)}
+                      className="relative flex-1 py-3 text-center"
+                    >
+                      <motion.span
+                        className={`flex items-center justify-center gap-2 text-sm font-medium ${activeTab === idx
+                          ? 'text-purple-600'
+                          : 'text-gray-500 hover:text-purple-500'
+                          }`}
+                        whileHover={activeTab === idx ? {} : { scale: 1.05 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {idx === 0 && <ReceiptText className="w-5 h-5" />}
+                        {idx === 2 && <History className="w-5 h-5" />}
+                        {label}
+                      </motion.span>
 
-              {activeTab === 0 && (
-                <PersonalInfo
-                  formData={formData}
-                  setFormData={setFormData}
-                  studentId={student}
-                  handleFeeUpdate={handleFeeUpdate}
-                  schoolData={schoolData}
-                />
-              )}
-
-              {activeTab === 1 && (
-                <div className="space-y-6">
-                  <FeeManagement
-                    student={student}
-                    transactions={transactions}
-                    formData={formData}
-                    setFormData={setFormData}
-                    handleFeeUpdate={handleFeeUpdate}
-                  />
-                  <TransactionForm
-                    newTransaction={newTransaction}
-                    setNewTransaction={setNewTransaction}
-                    schoolData={schoolData}
-                    formData={formData}
-                    setFormData={setFormData}
-                    handleTransactionSubmit={handleTransactionSubmit}
-                    student={student}
-                  />
+                      {activeTab === idx && (
+                        <motion.div
+                          layoutId="tab-underline"
+                          className="absolute bottom-0 left-0 w-full h-1 bg-purple-600 rounded-t"
+                        />
+                      )}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+              <AnimatePresence exitBeforeEnter>
+                {activeTab === 0 && (
+                  <motion.div
+                    key="details"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <PersonalInfo
+                      formData={formData}
+                      setFormData={setFormData}
+                      studentId={student}
+                      handleFeeUpdate={handleFeeUpdate}
+                      schoolData={schoolData}
+                    />
+                  </motion.div>
+                )}
 
-              {activeTab === 2 && (
-                <TransactionHistory
-                  student={student}
-                  transactions={transactions}
-                  setTransactions={setTransactions}
-                  handleTransactionStatusUpdate={handleTransactionStatusUpdate}
-                />
-              )}
-              {activeTab === 3 && (
-                <StudentDocumentTab
-                  student={student}
-                  setStudent={setStudent}
-                />
-              )}
+
+                {activeTab === 1 && (
+                  <motion.div
+                    key="fees"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                  >
+                    <FeeManagement
+                      student={student}
+                      transactions={transactions}
+                      formData={formData}
+                      setFormData={setFormData}
+                      handleFeeUpdate={handleFeeUpdate}
+                    />
+                    <TransactionForm
+                      newTransaction={newTransaction}
+                      setNewTransaction={setNewTransaction}
+                      schoolData={schoolData}
+                      formData={formData}
+                      setFormData={setFormData}
+                      handleTransactionSubmit={handleTransactionSubmit}
+                      student={student}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === 2 && (
+                  <motion.div
+                    key="transactions"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                  >
+                    <TransactionHistory
+                      student={student}
+                      transactions={transactions}
+                      setTransactions={setTransactions}
+                      handleTransactionStatusUpdate={handleTransactionStatusUpdate}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === 3 && (
+                  <motion.div
+                    key="docs"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, delay: 0.3 }}
+                  >
+                    <StudentDocumentTab
+                      student={student}
+                      setStudent={setStudent}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

@@ -22,10 +22,11 @@ import StockAllocate from './Student/StockAllocate';
 import Settings from "./Settings/Settings"
 import StudentStockAllocation from './Student/StudentStockAllocation';
 import StockFeeReceiptPage from './Student/StockFeeReceiptPage';
+import StockDailyBook from './Student/StockDailyBook';
 
 const AdminLayout = () => {
   return (
-    <div className="bg-gray-50 min-h-screen overflow-hidden">
+    <div className="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen overflow-hidden">
       <div className="">
         <AdminSidebar />
         <div className="pr-5 pl-5 ml-20 lg:ml-64 h-screen overflow-y-auto w-auto">
@@ -65,6 +66,7 @@ const AdminIndex = () => {
         <Route path='/stockallocate' element={<StockAllocate />} />
         <Route path='/stockallocate/:studentId' element={<StudentStockAllocation />} />
         <Route path='/stockallocate/:studentId/receipt/:receiptId' element={<StockFeeReceiptPage />} />
+        <Route path='/stock/daily-book' element={<StockDailyBook />} />
       </Route>
     </Routes>
   );

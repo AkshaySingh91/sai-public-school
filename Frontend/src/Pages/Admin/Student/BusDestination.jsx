@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { MdOutlineFileUpload, MdOutlinePictureAsPdf } from "react-icons/md";
-import { FaPlus, FaFileExcel } from "react-icons/fa";
+import { FaPlus, FaTimes, FaFileExcel, FaSearch } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { db } from "../../../config/firebase";
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc } from "firebase/firestore";
@@ -25,7 +25,7 @@ function BusDestination() {
   const [assignedMap, setAssignedMap] = useState({});
   const [busFilter, setBusFilter] = useState("All");
   const [loading, setLoading] = useState(false);
-  const fileref = useRef(null);
+  const [uploading, setUploading] = useState(false);
   const [updatingDestinationId, setUpdatingDestinationId] = useState(null);
 
   const { userData } = useAuth();
@@ -40,35 +40,57 @@ function BusDestination() {
   const currentDestinations = filteredDestinations.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredDestinations.length / itemsPerPage);
 
-
+  useEffect(() => { console.log(loading) }, [loading])
   const fetchDestinations = async () => {
-    const ref = collection(db, "allDestinations");
-    const snap = await getDocs(ref);
-    const dests = snap.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .filter((d) => d.schoolCode === userData.schoolCode);
-    setDestinations(dests);
-    console.log({ dests })
-    setFilteredDestinations(dests);
+    setLoading(true);
+    try {
+      const ref = collection(db, "allDestinations");
+      const snap = await getDocs(ref);
+      const dests = snap.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((d) => d.schoolCode === userData.schoolCode);
+      setDestinations(dests);
+      console.log({ dests })
+      setFilteredDestinations(dests);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message,
+      })
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchBuses = async () => {
-    const ref = collection(db, "allBuses");
-    const snap = await getDocs(ref);
-    const busesData = snap.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .filter((bus) => bus.schoolCode === userData.schoolCode);
-    setBuses(busesData);
+    setLoading(true);
+    try {
+      const ref = collection(db, "allBuses");
+      const snap = await getDocs(ref);
+      const busesData = snap.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((bus) => bus.schoolCode === userData.schoolCode);
+      setBuses(busesData);
 
-    const map = {};
-    console.log({ busesData })
-    busesData.forEach((bus) => {
-      (bus.destinations || []).forEach((dest) => {
-        map[dest.name] = { busDocId: bus.id, active: dest.active ?? true };
+      const map = {};
+      console.log({ busesData })
+      busesData.forEach((bus) => {
+        (bus.destinations || []).forEach((dest) => {
+          map[dest.name] = { busDocId: bus.id, active: dest.active ?? true };
+        });
       });
-    });
-    console.log({ map })
-    setAssignedMap(map);
+      console.log({ map })
+      setAssignedMap(map);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message,
+      })
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addDestination = async () => {
@@ -152,7 +174,7 @@ function BusDestination() {
     const file = e.target.files[0];
     if (!file) return;
 
-    setLoading(true);
+    setUploading(true);
     try {
       const existingDestSnap = await getDocs(collection(db, "allDestinations"));
       const existingDestNames = existingDestSnap.docs
@@ -298,7 +320,7 @@ function BusDestination() {
         confirmButtonColor: '#2563eb'
       });
     } finally {
-      setLoading(false);
+      setUploading(false);
       e.target.value = ""; // Reset file input
     }
   };
@@ -357,43 +379,47 @@ function BusDestination() {
 
   return (
     <>
-      <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
+      <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
         {
-          (!currentDestinations.length || loading) ? <TableLoader /> :
-            <div className="max-w-7xl mx-auto">
+          (loading) ? <TableLoader /> :
+            <div className="max-w-7xl mx-auto space-y-6">
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <div className="flex gap-3 flex-wrap">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setShowDestinationModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                    className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                   >
-                    <FaPlus /> Add Destination
+                    <FaPlus className="w-4 h-4" />
+                    Add Destination
                   </motion.button>
 
                   <motion.button
                     whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                     onClick={() => setShowExcelModal(true)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
                   >
-                    <MdOutlineFileUpload />
-                    Bulk Upload
+                    <MdOutlineFileUpload className="w-5 h-5" />                    Bulk Upload
                   </motion.button>
                 </div>
 
                 <div className="ml-auto flex gap-3">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl hover:from-purple-600 hover:to-violet-700 transition-all shadow-md hover:shadow-lg"
                     onClick={exportToExcel}
-                    className="flex items-center gap-2 px-4 py-2 border border-[#2563eb] text-[#2563eb] hover:bg-[#2563eb] hover:text-white rounded-lg transition-all"
                   >
                     <FaFileExcel /> Excel
                   </motion.button>
 
                   <motion.button
                     whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
                     onClick={exportToPDF}
-                    className="flex items-center gap-2 px-4 py-2 border border-[#7c3aed] text-[#7c3aed] hover:bg-[#7c3aed] hover:text-white rounded-lg transition-all"
                   >
                     <MdOutlinePictureAsPdf /> PDF
                   </motion.button>
@@ -401,123 +427,126 @@ function BusDestination() {
               </div>
 
               {/* Search and Filters */}
-              <div className="bg-white p-4 rounded-xl shadow-sm">
-                <input
-                  type="text"
-                  placeholder="Search destinations..."
-                  className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              <div className="bg-white p-1.5 rounded-xl shadow-sm border border-purple-100 ">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search destinations..."
+                    className="w-full p-4 py-2.5 border-2 border-purple-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <FaSearch className="absolute right-4 top-1/4 text-xl text-purple-400" />
+                </div>
               </div>
               {/* Table Section */}
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-400">
-                  <thead className="text-black bg-gradient-to-br from-indigo-50 to-violet-50 ">
-                    <tr>
-                      <th className="p-4 text-left">Destination</th>
-                      <th className="p-4 text-left">Fee</th>
-                      <th className="p-4 text-left">Academic Year</th>
-                      <th className="p-4 text-left">Assigned Bus</th>
-                      <th className="p-4 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50">
-                    {currentDestinations.map((dest) => {
-                      const assignment = assignedMap[dest.name] || {};
-                      const isUpdating = updatingDestinationId === dest.id;
-
-                      return (
-                        <tr key={dest.id} className="hover:bg-blue-50 transition-colors">
-                          {/* Destination Cells */}
-                          <td className="p-4 font-medium align-middle">{dest.name}</td>
-                          <td className="p-4 align-middle">₹{dest.fee}</td>
-                          <td className="p-4 text-blue-600 align-middle">{dest.academicYear}</td>
-
-                          {/* Bus Assignment Dropdown */}
-                          <td className="p-4 align-middle">
-                            <select
-                              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                              value={assignment.busDocId || ""}
-                              onChange={(e) => assignBus(dest, e.target.value)}
-                            >
-                              <option value="">Select Bus</option>
-                              {buses.map(bus => (
-                                <option key={bus.id} value={bus.id}>
-                                  {bus.busNo} ({bus.driverName})
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-
-                          {/* Status Toggle */}
-                          <td className="p-4 align-middle">
-                            <div className="flex items-center justify-center h-full">
-                              {isUpdating ? (
-                                <div className="w-20 flex justify-center"> {/* Fixed width matching toggle+text */}
-                                  <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
-                                </div>
-                              ) : (
-                                <label className="relative inline-flex items-center gap-2 cursor-pointer group">
-                                  <input
-                                    type="checkbox"
-                                    checked={assignment.active}
-                                    onChange={() => {
-                                      if (assignment.busDocId) {
-                                        setUpdatingDestinationId(dest.id);
-                                        toggleStatus(dest).finally(() => setUpdatingDestinationId(null));
-                                      }
-                                    }}
-                                    disabled={!assignment.busDocId}
-                                    className="sr-only peer"
-                                    aria-label={`Toggle status for ${dest.name}`}
-                                  />
-
-                                  {/* Toggle Track */}
-                                  <div className={`
-                  w-11 h-6 bg-gray-200 rounded-full 
-                  peer-focus:ring-2 peer-focus:ring-blue-300 
-                  transition-colors duration-200
-                  ${!assignment.busDocId
-                                      ? 'opacity-50 cursor-not-allowed'
-                                      : 'group-hover:bg-gray-300'
-                                    }
-                  ${assignment.active ? 'bg-blue-600' : 'bg-gray-400'}
-                `}>
-                                    {/* Toggle Thumb */}
-                                    <div className={`
-                    absolute top-0.5 left-[2px] bg-white rounded-full h-5 w-5
-                    transition-transform duration-200
-                    ${assignment.active ? 'translate-x-full' : ''}
-                    ${!assignment.busDocId ? 'left-[2px]' : ''}
-                  `} />
-                                  </div>
-
-                                  {/* Status Text */}
-                                  <span className={`
-                  text-sm font-medium 
-                  ${!assignment.busDocId
-                                      ? 'text-gray-400'
-                                      : assignment.active
-                                        ? 'text-green-700'
-                                        : 'text-red-700'
-                                    }
-                `}>
-                                    {assignment.busDocId
-                                      ? (assignment.active ? 'Active' : 'Inactive')
-                                      : 'Not Assigned'}
-                                  </span>
-                                </label>
-                              )}
-                            </div>
-                          </td>
+              <div className="overflow-x-auto rounded-xl border border-purple-100 shadow-lg overflow-y-hidden">
+                {
+                  currentDestinations.length ?
+                    <table className="min-w-full divide-y divide-purple-100 overflow-y-hidden">
+                      <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-sm">
+                        <tr>
+                          {["Destination", "Fee", "Academic Year", "Assigned Bus", "Status"].map(
+                            (header, index) => (
+                              <th
+                                key={index}
+                                className="px-4 py-3 text-left font-semibold tracking-wide whitespace-nowrap border-r border-purple-500/30 last:border-r-0"
+                              >
+                                {header}
+                              </th>
+                            )
+                          )}
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody className="divide-y divide-purple-100 bg-white">
+                        {currentDestinations.map((dest, index) => {
+                          const assignment = assignedMap[dest.name] || {};
+                          const isUpdating = updatingDestinationId === dest.id;
+                          return (
+                            <motion.tr
+                              key={dest.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150">
+                              {/* Destination Cells */}
+                              <td className="px-4 py-3 font-medium text-violet-900">{dest.name}</td>
+                              <td className="px-4 py-3 font-medium text-violet-900 align-middle">₹{dest.fee}</td>
+                              <td className="px-4 py-3 font-medium text-violet-900 align-middle">{dest.academicYear}</td>
+
+                              {/* Bus Assignment Dropdown */}
+                              <td className="p-4 align-middle">
+                                <select
+                                  className="border-2 border-purple-200 w-full rounded-xl p-2 text-sm text-purple-900 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
+                                  value={assignment.busDocId || ""}
+                                  onChange={(e) => assignBus(dest, e.target.value)}
+                                >
+                                  <option
+                                    className="text-purple-900"
+                                    value="">Select Bus</option>
+                                  {buses.map(bus => (
+                                    <option key={bus.id} value={bus.id}>
+                                      {bus.busNo} ({bus.driverName})
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+
+                              {/* Status Toggle */}
+                              <td className="px-4 py-3 font-medium text-violet-900 align-middle">
+                                <div className="flex items-center justify-center h-full">
+                                  {isUpdating ? (
+                                    <div className="w-20 flex justify-center">
+                                      <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
+                                    </div>
+                                  ) : (
+                                    <label
+                                      className={` relative inline-flex items-center gap-2 ${!assignment.busDocId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'} `}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={!!assignment.busDocId && assignment.active}
+                                        onChange={() => {
+                                          if (assignment.busDocId) {
+                                            setUpdatingDestinationId(dest.id);
+                                            toggleStatus(dest).finally(() => setUpdatingDestinationId(null));
+                                          }
+                                        }}
+                                        disabled={!assignment.busDocId}
+                                        className="sr-only peer"
+                                        aria-label={`Toggle status for ${dest.name}`}
+                                      />
+                                      {/* Track */}
+                                      <div
+                                        className={` relative w-11 h-6 rounded-full transition-colors duration-200 ${assignment.active ? 'bg-blue-600' : 'bg-gray-400'} ${!assignment.busDocId ? 'bg-gray-300' : ''}`}
+                                      >
+                                        {/* Thumb */}
+                                        <div
+                                          className={` absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-200 ${assignment.active ? 'translate-x-full' : 'translate-x-0'} ${!assignment.busDocId ? 'translate-x-0' : ''}`}
+                                        />
+                                      </div>
+                                      {/* Status Text */}
+                                      <span
+                                        className={`text-sm font-medium ${!assignment.busDocId ? 'text-gray-500' : assignment.active ? 'text-green-700' : 'text-red-700'}`}>
+                                        {assignment.busDocId
+                                          ? (assignment.active ? 'Active' : 'Inactive')
+                                          : 'Disabled'
+                                        }
+                                      </span>
+                                    </label>
+                                  )}
+                                </div>
+                              </td>
+
+                            </motion.tr>
+                          );
+                        })}
+                      </tbody>
+                    </table> :
+                    <div className="text-center text-xl font-semibold py-6 text-gray-400">No Bus Destination Found</div>
+                }
                 {/* pagination */}
-                <div className="flex justify-between items-center p-4 border-t">
+                <div className="flex justify-between items-center p-4 border-t border-gray-400">
                   <span className="text-gray-600">
                     Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredDestinations.length)} of {filteredDestinations.length} entries
                   </span>
@@ -525,15 +554,17 @@ function BusDestination() {
                     <button
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="px-4 py-2 border rounded-lg disabled:opacity-50"
+                      className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Previous
                     </button>
-                    <span className="px-4 py-2">Page {currentPage} of {totalPages}</span>
+                    <span className="px-4 py-2 text-sm text-violet-800/90">
+                      Page {currentPage} of {totalPages}
+                    </span>
                     <button
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
-                      className="px-4 py-2 border rounded-lg disabled:opacity-50"
+                      className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -556,10 +587,10 @@ function BusDestination() {
                 initial={{ scale: 0.95 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.95 }}
-                className="bg-white rounded-2xl p-8 max-w-md w-full space-y-6 shadow-xl"
+                className="bg-white rounded-2xl p-8 max-w-md w-full space-y-6 shadow-2xl border border-purple-100"
                 onClick={(e) => e.stopPropagation()}
               >
-                <h2 className="text-2xl font-bold text-blue-600">Add New Destination</h2>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">Add New Destination</h2>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -593,7 +624,7 @@ function BusDestination() {
                   </button>
                   <button
                     onClick={addDestination}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200"
                   >
                     Add Destination
                   </button>
@@ -617,62 +648,72 @@ function BusDestination() {
                 initial={{ scale: 0.95 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.95 }}
-                className="bg-white rounded-2xl p-8 max-w-2xl w-full space-y-6 shadow-xl"
+                className="bg-white rounded-2xl p-6 max-w-2xl w-full space-y-6 shadow-2xl border border-purple-100"
                 onClick={(e) => e.stopPropagation()}
               >
-                <h2 className="text-2xl font-bold text-blue-600">Upload Destinations via Excel</h2>
+                <div className="flex justify-between items-center pb-4 border-b border-purple-100">
+                  <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                    Bulk Upload Template
+                  </h2>
+                  <button
+                    onClick={() => setShowExcelModal(false)}
+                    className="text-purple-500 hover:text-purple-700 transition-colors"
+                  >
+                    <FaTimes className="text-xl" />
+                  </button>
+                </div>
 
                 <div className="space-y-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-medium text-blue-800 mb-2">Required Format:</h3>
-                    <table className="w-full border-collapse border-2 border-gray-200">
-                      <thead className="text-black bg-gradient-to-br from-indigo-50 to-violet-50 ">
+                  <p className="text-sm text-gray-600 text-center">
+                    Column names should follow this format <span className="text-purple-600">(*required)</span>
+                  </p>
+
+                  <div className="overflow-x-auto rounded-xl border border-purple-100">
+                    <table className="min-w-full divide-y divide-purple-100 text-sm">
+                      <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
                         <tr>
-                          <th className="p-3 text-left">Destination</th>
-                          <th className="p-3 text-left">Fee</th>
+                          {["Destination", "Fee"].map((header) => (
+                            <th
+                              key={header}
+                              className="px-4 py-2.5 text-left font-medium border-r border-purple-500/30 last:border-r-0"
+                            >
+                              {header}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl shadow-sm">
+                      <tbody className="bg-white divide-y divide-purple-100">
                         <tr>
-                          <td className="p-3 border">New York</td>
-                          <td className="p-3 border">1500</td>
+                          <td className="px-4 py-2.5 font-medium text-violet-900">New York</td>
+                          <td className="px-4 py-2.5 text-purple-800">1500</td>
                         </tr>
                         <tr>
-                          <td className="p-3 border">Los Angeles</td>
-                          <td className="p-3 border">2000</td>
+                          <td className="px-4 py-2.5 font-medium text-violet-900">Los Angeles</td>
+                          <td className="px-4 py-2.5 text-purple-800">2000</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
 
-                  <label className="block">
-                    <span className="sr-only">Choose Excel file</span>
+                  <motion.label
+                    whileHover={{ scale: 1.02 }}
+                    className="block w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl text-center cursor-pointer hover:from-purple-700 hover:to-violet-700 shadow-md transition-all"
+                  >
+                    {uploading ? "Uploading..." : "Choose Excel File"}
                     <input
                       type="file"
-                      accept=".xlsx, .xls"
+                      accept=".xls,.xlsx"
                       onChange={handleExcelUpload}
-                      className="block w-full text-sm text-gray-500
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-full file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-blue-50 file:text-blue-700
-                      hover:file:bg-blue-100"
+                      className="hidden"
+                      disabled={uploading}
                     />
-                  </label>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setShowExcelModal(false)}
-                    className="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                  >
-                    Close
-                  </button>
+                  </motion.label>
                 </div>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
+
       </div>
     </>
   );

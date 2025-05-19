@@ -6,12 +6,11 @@ import * as XLSX from "xlsx";
 import Swal from "sweetalert2";
 import { jsPDF } from "jspdf";
 import { autoTable } from 'jspdf-autotable'
-import { TriangleAlert, Search, Settings, Trash2 } from "lucide-react"
+import { TriangleAlert, Search, Upload, Settings, Trash2, FileText } from "lucide-react"
 import TableLoader from "../../../components/TableLoader"
 import busAnimation from "../../../assets/busAnimation.gif"
 import { motion, AnimatePresence } from "framer-motion";
-import { FaPlus, FaFileExcel } from "react-icons/fa";
-import { MdOutlineFileUpload, MdOutlinePictureAsPdf } from "react-icons/md";
+import { FaPlus } from "react-icons/fa";
 
 function BusList() {
   const [isLoading, setIsLoading] = useState(true);
@@ -77,7 +76,7 @@ function BusList() {
     }
     const busData = {
       ...newBus,
-      assistant: newBus.assistant || "Not assigned",
+      assistant: newBus.assistant || "-",
       insuranceDate: newBus.insuranceDate || "Not set",
       schoolCode: users?.schoolCode,
     };
@@ -231,7 +230,7 @@ function BusList() {
           busNo: bus["Bus No"].toString().trim(),
           driverName: bus["Driver Name"].toString().trim(),
           mobile: bus["Mobile"]?.toString().trim() || "",
-          assistant: bus["Assistant"]?.toString().trim() || "Not assigned",
+          assistant: bus["Assistant"]?.toString().trim() || "-",
           status: ["Active", "Inactive"].includes(bus["Status"]?.toString().trim())
             ? bus["Status"].toString().trim()
             : "Inactive",
@@ -322,410 +321,454 @@ function BusList() {
   useEffect(() => { fetchBuses(); }, [users?.schoolCode]);
 
   return (
-    <div className="p-4 space-y-6 relative min-h-screen">
-      {/* <style>{`
-  @keyframes moveBusLR {
-    0% { transform: translateX(-100%) rotateY(0deg); }
-    100% { transform: translateX(100%) rotateY(0deg); }
-  }
-  @keyframes moveBusRL {
-    0% { transform: translateX(100%) rotateY(180deg); }
-    100% { transform: translateX(-100%) rotateY(180deg); }
-  }
-  .animate-moveBusLR {
-    animation: moveBusLR 12s linear infinite;
-  }
-  .animate-moveBusRL {
-    animation: moveBusRL 12s linear infinite;
-  }
-    `}</style>
-      <div className="absolute bottom-4 h-24 w-full overflow-hidden z-0">
-        {[
-          { id: 1, direction: 'LR', delay: '0s', top: 'bottom-0' },
-          { id: 2, direction: 'RL', delay: '2s', top: 'bottom-4' },
-          { id: 3, direction: 'LR', delay: '4s', top: 'bottom-8' }
-        ].map((bus) => (
-          <img
-            key={bus.id}
-            src={busAnimation}
-            alt="Moving bus"
-            className={`absolute h-16 ${bus.top} ${bus.direction === 'LR'
-              ? 'animate-moveBusLR'
-              : 'animate-moveBusRL'
-              }`}
-            style={{
-              animationDelay: bus.delay,
-              [bus.direction === 'LR' ? 'left' : 'right']: '-10%'
-            }}
-          />
-        ))}
-      </div> */}
-
-      {/* Loading Overlay */}
-      {isLoading ?
-        <div className="max-w-7xl mx-auto  p-4 pt-8 bg-gradient-to-br from-gray-50 to-purple-50 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
+      {isLoading ? (
+        <div className="max-w-7xl mx-auto p-4 pt-8">
           <TableLoader
-            headers={6}
+            headers={8}
             rows={5}
             className="border-purple-200/40"
           />
-        </div> :
-        <>
+        </div>
+      ) : (
+        <div className="max-w-7xl mx-auto space-y-6">
           {/* Header Section */}
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              <div className="flex gap-3 flex-wrap">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => setShowBusModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
-                >
-                  <FaPlus /> Add Bus
-                </motion.button>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex gap-3 flex-wrap">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowBusModal(true)}
+                className="bg-gradient-to-r from-purple-600 to-violet-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+              >
+                <FaPlus className="w-5 h-5" />
+                Add Bus
+              </motion.button>
 
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => setShowExcelModal(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
-                >
-                  <MdOutlineFileUpload />
-                  Bulk Upload
-                </motion.button>
-              </div>
-
-              <div className="ml-auto flex gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={exportToExcel}
-                  className="flex items-center gap-2 px-4 py-2 border border-[#2563eb] text-[#2563eb] hover:bg-[#2563eb] hover:text-white rounded-lg transition-all"
-                >
-                  <FaFileExcel /> Excel
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={exportToPDF}
-                  className="flex items-center gap-2 px-4 py-2 border border-[#7c3aed] text-[#7c3aed] hover:bg-[#7c3aed] hover:text-white rounded-lg transition-all"
-                >
-                  <MdOutlinePictureAsPdf /> PDF
-                </motion.button>
-              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowExcelModal(true)}
+                className="bg-gradient-to-r from-violet-600 to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+              >
+                <Upload className="w-5 h-5" />
+                Bulk Upload
+              </motion.button>
             </div>
-            {/* Search and Filters */}
-            <div className="bg-white p-4 rounded-xl shadow-sm">
+
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={exportToExcel}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl hover:from-purple-600 hover:to-violet-700 transition-all shadow-md hover:shadow-lg"
+              >
+                <FileText className="w-4 h-4" />
+                Excel
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={exportToPDF}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+              >
+                <FileText className="w-4 h-4" />
+                PDF
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="bg-white p-1.5 rounded-xl shadow-sm border border-purple-100">
+            <div className="relative">
               <input
                 type="text"
-                placeholder="Search destinations..."
-                className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="Search bus..."
+                className="w-full p-4 py-2.5 border-2 border-purple-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
-          </div>
-          {/* Excel Upload Modal */}
-          {showExcelModal && (
-            <AnimatePresence>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowExcelModal(false)}
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 h-screen w-screen z-10">
-
-                <motion.div
-                  initial={{ scale: 0.95 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0.95 }}
-                  className="bg-white rounded-2xl p-8 max-w-2xl w-full space-y-6 shadow-xl z-50"
-                  onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-gray-800 text-center flex-grow">Excel Template Format</h2>
-                    <button onClick={() => setShowExcelModal(false)} className="text-gray-500 hover:text-gray-700">
-                      ✕
-                    </button>
-                  </div>
-
-                  <div className="mb-6">
-                    <h3 className="text-md font-medium mb-3 flex item-center gap-2">
-                      <TriangleAlert size={18} className="my-auto text-red-400" />
-                      Column name should be in same format <span className="text-gray-600">(* means required)</span>
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border-collapse border border-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="border border-gray-200 px-4 py-2">Bus No*</th>
-                            <th className="border border-gray-200 px-4 py-2">Number Plate*</th>
-                            <th className="border border-gray-200 px-4 py-2">Driver Name*</th>
-                            <th className="border border-gray-200 px-4 py-2">Mobile</th>
-                            <th className="border border-gray-200 px-4 py-2">Assistant</th>
-                            <th className="border border-gray-200 px-4 py-2">Status</th>
-                            <th className="border border-gray-200 px-4 py-2">Insurance Date</th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-sm">
-                          <tr>
-                            <td className="border border-gray-200 px-4 py-2">BUS-001</td>
-                            <td className="border border-gray-200 px-4 py-2">KA01AB1234</td>
-                            <td className="border border-gray-200 px-4 py-2">John Doe</td>
-                            <td className="border border-gray-200 px-4 py-2">9876543210</td>
-                            <td className="border border-gray-200 px-4 py-2">Jane Smith</td>
-                            <td className="border border-gray-200 px-4 py-2">Active</td>
-                            <td className="border border-gray-200 px-4 py-2">2024-12-31</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <label className="block w-full px-4 py-2 bg-[#2563eb] text-white rounded-lg text-center cursor-pointer hover:bg-[#1d4ed8] transition-colors">
-                    {uploading ? 'Uploading...' : 'Choose Excel File'}
-                    <input type="file" accept=".xls,.xlsx" onChange={handleFileUpload} className="hidden" disabled={uploading} />
-                  </label>
-                </motion.div>
-              </motion.div>
-            </AnimatePresence>
-          )}
-
-          {/* Add Bus Modal */}
-          {showBusModal && (
-            <AnimatePresence>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 "
-                onClick={(e) => e.target === e.currentTarget && setShowBusModal(false)}>
-                <motion.div
-                  initial={{ scale: 0.95 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0.95 }}
-                  className="bg-white rounded-2xl p-8 max-w-md w-full space-y-6 shadow-xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">Add New Bus</h2>
-                    <button onClick={() => setShowBusModal(false)} className="text-gray-500 hover:text-gray-700">
-                      ✕
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {Object.keys(newBus).map((key) => (
-                      key !== 'status' && key !== 'insuranceDate' && (
-                        <input key={key} placeholder={key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
-                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
-                          value={newBus[key]}
-                          onChange={(e) => setNewBus({ ...newBus, [key]: e.target.value })}
-                        />
-                      )
-                    ))}
-
-                    <select required className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
-                      value={newBus.status}
-                      onChange={(e) => setNewBus({ ...newBus, status: e.target.value })}>
-                      <option value="">Select Status</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-
-                    <input type="date" className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
-                      value={newBus.insuranceDate}
-                      onChange={(e) => setNewBus({ ...newBus, insuranceDate: e.target.value })}
-                    />
-
-                    <div className="flex justify-end gap-3 mt-4">
-                      <button onClick={() => setShowBusModal(false)}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800">
-                        Cancel
-                      </button>
-                      <button onClick={addBus}
-                        className="px-4 py-2 bg-[#2563eb] text-white rounded-lg hover:bg-[#1d4ed8] transition-colors">
-                        Add Bus
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-            </AnimatePresence>
-          )}
-          {/* Edit bus modal */}
-          {showEditModal && (
-            <AnimatePresence>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-                onClick={(e) => setShowEditModal(false)}>
-
-                <motion.div
-                  initial={{ scale: 0.95 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0.95 }}
-                  className="bg-white rounded-2xl p-8 max-w-2xl w-full space-y-6 shadow-xl"
-                  onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold text-gray-800">Edit Bus Details</h2>
-                    <button onClick={() => setShowEditModal(false)} className="text-gray-500 hover:text-gray-700">
-                      ✕
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    {Object.entries({
-                      busNo: 'Bus Number',
-                      numberPlate: 'License Plate',
-                      driverName: 'Driver Name',
-                      mobile: 'Contact Number',
-                      assistant: 'Assistant Name',
-                    }).map(([key, label]) => (
-                      <div key={key}>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          {label}
-                        </label>
-                        <input
-                          name={key}
-                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
-                          value={editingBus[key]}
-                          onChange={handleEditChange}
-                        />
-                      </div>
-                    ))}
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Status
-                      </label>
-                      <select
-                        name="status"
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
-                        value={editingBus.status}
-                        onChange={handleEditChange}
-                      >
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Insurance Expiry
-                      </label>
-                      <input
-                        type="date"
-                        name="insuranceDate"
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
-                        value={editingBus.insuranceDate}
-                        onChange={handleEditChange}
-                      />
-                    </div>
-
-                    <div className="flex justify-end gap-3 mt-6">
-                      <button
-                        onClick={() => setShowEditModal(false)}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={updateBus}
-                        className="px-4 py-2 bg-[#2563eb] text-white rounded-lg hover:bg-[#1d4ed8] transition-colors"
-                      >
-                        Save Changes
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-            </AnimatePresence>
-          )}
-          {/* Pagination Controls */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Rows per page:</span>
-              <select className="px-2 py-1 border rounded"
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border rounded disabled:opacity-50">
-                Previous
-              </button>
-              <span className="px-3 py-1 text-sm">Page {currentPage} of {totalPages}</span>
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 border rounded disabled:opacity-50">
-                Next
-              </button>
+              <Search className="absolute right-4 top-1/4 text-xl text-purple-400" />
             </div>
           </div>
 
           {/* Buses Table */}
-          <div className="overflow-x-auto rounded-lg shadow-sm">
-            <table className="min-w-full divide-y divide-gray-400 text-black bg-gradient-to-br from-indigo-50 to-violet-50 w-full">
-              <thead className="text-black bg-gradient-to-br from-indigo-50 to-violet-50 w-auto whitespace-nowrap">
+          <div className="overflow-x-auto rounded-2xl shadow-xl border border-purple-100">
+            <table className="min-w-full divide-y divide-purple-100">
+              <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-sm">
                 <tr>
-                  {['Bus No', 'Number Plate', 'Driver', 'Mobile', 'Assistant', 'Status', 'Insurance Date', 'Action'].map((header) => (
-                    <th key={header} className="px-5 py-3 text-left text-md font-medium">
+                  {['Bus No', 'Number Plate', 'Driver', 'Mobile', 'Assistant', 'Status', 'Insurance Date', 'Action'].map((header, i) => (
+                    <th
+                      key={i}
+                      className="w-auto px-4 py-3 text-left font-semibold tracking-wide whitespace-nowrap border-r border-purple-500/30 last:border-r-0"
+                    >
                       {header}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl shadow-sm">
+              <tbody className="divide-y divide-purple-100 bg-white">
                 {currentBuses.length > 0 ? (
-                  currentBuses.map((bus) => (
-                    <tr key={bus.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-3">{bus.busNo}</td>
-                      <td className="px-5 py-3 font-mono tracking-[.03em]">{bus.numberPlate}</td>
-                      <td className="px-5 py-3">{bus.driverName}</td>
-                      <td className="px-5 py-3">{bus.mobile || '-'}</td>
-                      <td className="px-5 py-3">{bus.assistant}</td>
-                      <td className="px-5 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium 
-                ${bus.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  currentBuses.map((bus, index) => (
+                    <motion.tr
+                      key={bus.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
+                    >
+                      <td className="px-4 py-3 font-medium text-violet-900">{bus.busNo}</td>
+                      <td className="px-4 py-3 font-mono tracking-tight text-purple-800">{bus.numberPlate}</td>
+                      <td className="px-4 py-3 text-gray-700">{bus.driverName}</td>
+                      <td className="px-4 py-3 text-gray-600">{bus.mobile || '-'}</td>
+                      <td className="px-4 py-3 text-gray-600">{bus.assistant}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${bus.status === 'Active'
+                          ? 'bg-emerald-100/80 text-emerald-800'
+                          : 'bg-red-100/80 text-red-800'
+                          }`}>
                           {bus.status}
                         </span>
                       </td>
-                      <td className="px-4 py-2">{bus.insuranceDate}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 text-gray-600">{bus.insuranceDate}</td>
+                      <td className="px-4 py-3">
                         <div className="flex gap-3 items-center">
                           <button
                             onClick={() => openEditModal(bus)}
-                            className="text-gray-600 hover:text-[#2563eb] transition-colors"
+                            className="text-violet-600 hover:text-purple-800 transition-colors p-2 rounded-full hover:bg-purple-100/50"
                           >
-                            <Settings size={18} />
+                            <Settings className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => deleteBus(bus.id)}
-                            className="text-gray-600 hover:text-red-600 transition-colors"
+                            className="text-red-600 hover:text-red-800 transition-colors p-2 rounded-full hover:bg-red-100/50"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-4 py-2 text-center text-gray-500">
-                      No Bus
+                    <td colSpan="8" className="px-4 py-6 text-center text-gray-500">
+                      No buses found
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </>}
 
+          {/* Pagination */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-4">
+            <div className="text-sm text-violet-800/90">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+              {Math.min(currentPage * itemsPerPage, currentBuses.length)} of{' '}
+              {currentBuses.length} entries
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-sm font-medium text-violet-800">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+      {/* Excel Upload Modal */}
+      {showExcelModal && (
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowExcelModal(false)}
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-10"
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 max-w-fit w-full  shadow-xl border border-purple-100"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-purple-100">
+                <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                  Excel Template Format
+                </h2>
+                <button
+                  onClick={() => setShowExcelModal(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Instructions */}
+              <div className="mb-4">
+                <h3 className="flex items-center text-sm font-medium text-gray-700">
+                  <TriangleAlert size={18} className="mr-2 text-red-400" />
+                  Column names must match exactly <span className="ml-1 text-purple-600">(* required)</span>
+                </h3>
+              </div>
+
+              {/* Template Table */}
+              <div className="overflow-x-auto mb-6">
+                <table className="min-w-full divide-y divide-purple-100 text-sm border border-gray-200">
+                  <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
+                    <tr>
+                      {[
+                        "Bus No*",
+                        "Number Plate*",
+                        "Driver Name*",
+                        "Mobile",
+                        "Assistant",
+                        "Status",
+                        "Insurance Date",
+                      ].map((col) => (
+                        <th
+                          key={col}
+                          className="px-3 py-2 text-left font-medium border-r border-purple-500/30 last:border-r-0"
+                        >
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-purple-100">
+                    <tr>
+                      <td className="px-3 py-2">BUS-001</td>
+                      <td className="px-3 py-2">KA01AB1234</td>
+                      <td className="px-3 py-2">John Doe</td>
+                      <td className="px-3 py-2">9876543210</td>
+                      <td className="px-3 py-2">Jane Smith</td>
+                      <td className="px-3 py-2">Active</td>
+                      <td className="px-3 py-2">2024-12-31</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* File Input */}
+              <motion.label
+                whileHover={{ scale: 1.02 }}
+                className="block w-full px-4 py-2 mb-4 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-xl text-center cursor-pointer hover:from-purple-600 hover:to-violet-700 shadow-sm transition-all"
+              >
+                {uploading ? "Uploading..." : "Choose Excel File"}
+                <input
+                  type="file"
+                  accept=".xls,.xlsx"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+              </motion.label>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      {/* Add Bus Modal */}
+      {showBusModal && (
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-10"
+            onClick={(e) => e.target === e.currentTarget && setShowBusModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl border border-purple-100"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-purple-100">
+                <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                  Add New Bus
+                </h2>
+                <button
+                  onClick={() => setShowBusModal(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4">
+                {Object.keys(newBus).map((key) =>
+                  key !== 'status' && key !== 'insuranceDate' ? (
+                    <input
+                      key={key}
+                      placeholder={key
+                        .replace(/([A-Z])/g, ' $1')
+                        .replace(/^./, str => str.toUpperCase())}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      value={newBus[key]}
+                      onChange={(e) => setNewBus({ ...newBus, [key]: e.target.value })}
+                    />
+                  ) : null
+                )}
+
+                <select
+                  required
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  value={newBus.status}
+                  onChange={(e) => setNewBus({ ...newBus, status: e.target.value })}
+                >
+                  <option value="">Select Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  value={newBus.insuranceDate}
+                  onChange={(e) => setNewBus({ ...newBus, insuranceDate: e.target.value })}
+                />
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-purple-100">
+                  <button
+                    onClick={() => setShowBusModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={addBus}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg shadow-sm hover:from-purple-600 hover:to-violet-700 transition-all"
+                  >
+                    Add Bus
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
+      )}
+      {/* Edit Bus Modal */}
+      {showEditModal && (
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-10"
+            onClick={() => setShowEditModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl border border-purple-100"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-purple-100">
+                <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                  Edit Bus Details
+                </h2>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4">
+                {Object.entries({
+                  busNo: 'Bus Number',
+                  numberPlate: 'License Plate',
+                  driverName: 'Driver Name',
+                  mobile: 'Contact Number',
+                  assistant: 'Assistant Name',
+                }).map(([key, label]) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      {label}
+                    </label>
+                    <input
+                      name={key}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      value={editingBus[key]}
+                      onChange={handleEditChange}
+                    />
+                  </div>
+                ))}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    value={editingBus.status}
+                    onChange={handleEditChange}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Insurance Expiry
+                  </label>
+                  <input
+                    type="date"
+                    name="insuranceDate"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    value={editingBus.insuranceDate}
+                    onChange={handleEditChange}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-purple-100">
+                  <button
+                    onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={updateBus}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg shadow-sm hover:from-purple-600 hover:to-violet-700 transition-all"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
+      )}
     </div >
   );
 }

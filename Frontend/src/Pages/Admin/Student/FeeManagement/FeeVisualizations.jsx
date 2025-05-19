@@ -11,7 +11,7 @@ export const PieChart = ({ title, paid, total, color }) => {
 
   return (
     <div className="w-1/2 bg-white p-4 rounded-lg shadow border border-gray-200 transition-all hover:shadow-md">
-      <h4 className="text-md font-semibold mb-2 text-gray-700">{title}</h4>
+      <h4 className="text-md text-center font-semibold mb-2 text-gray-700">{title}</h4>
       <div className="relative h-40">
         <svg viewBox="0 0 100 100" className="w-full h-full">
           <circle cx="50" cy="50" r={radius} fill="none" 
