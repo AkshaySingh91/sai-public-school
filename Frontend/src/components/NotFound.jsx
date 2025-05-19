@@ -2,55 +2,36 @@
 import { useNavigate } from 'react-router-dom';
 
 const NotFound = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="text-center space-y-6">
-                <div className="space-y-2">
-                    <h1 className="text-9xl font-bold text-[#be185d]">404</h1>
-                    <h2 className="text-3xl font-semibold text-gray-900">Page Not Found</h2>
-                    <p className="text-gray-600">
-                        The page you're looking for doesn't exist or has been moved.
-                    </p>
-                </div>
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100/10 via-purple-100/10 to-blue-50/10">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="p-8 text-center"> 
+          <h1 className="text-7xl font-extrabold text-purple-600 mb-4">404</h1>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Page Not Found</h2>
+          <p className="text-gray-600 mb-6">
+            Sorry, we couldn’t find the page you’re looking for. It might have moved or doesn’t exist.
+          </p>
 
-                <div className="flex justify-center space-x-4">
-                    <button
-                        onClick={() => navigate(-1)}
-                        variant="outline"
-                        className="px-6 py-3"
-                    >
-                        Go Back
-                    </button>
-                    <button
-                        onClick={() => navigate('/')}
-                        className="bg-[#be185d] text-white px-6 py-3 hover:bg-[#9f1d4d]"
-                    >
-                        Return Home
-                    </button>
-                </div>
-
-                {/* Optional decorative element */}
-                <div className="mt-12">
-                    <svg
-                        className="mx-auto h-24 w-24 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                    </svg>
-                </div>
-            </div>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-6 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition"
+            >
+              Go Back
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            >
+              Return Home
+            </button>
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default NotFound;

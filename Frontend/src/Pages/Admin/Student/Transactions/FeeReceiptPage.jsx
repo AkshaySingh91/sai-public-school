@@ -72,13 +72,42 @@ export default function FeeReceiptPage() {
         }
     }, [student, school, transaction]);
 
-    if (!student) return <div className="p-6 text-center">Loading student data...</div>;
-    if (!school) return <div className="p-6 text-center">Loading school info...</div>;
-    if (!transaction) return <div className="p-6 text-center">Receipt not found</div>;
+    if (!student) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-gray-600 text-lg font-medium bg-white shadow-md rounded-xl px-6 py-4">
+                    Loading student data...
+                </div>
+            </div>
+        );
+    }
+    if (!school) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-gray-600 text-lg font-medium bg-white shadow-md rounded-xl px-6 py-4">
+                    Loading school info...
+                </div>
+            </div>
+        );
+    }
+    if (!transaction) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-xl text-red-500 font-semibold bg-slate-100 border border-red-200 shadow rounded-2xl px-6 py-5 text-center">
+                    Receipt not found
+                </div>
+            </div>
+        );
+    }
+
 
     const tx = student.transactions.find(t => t.receiptId == receiptId);
     if (!tx || tx.status !== 'completed') {
-        return <div className="p-6 text-center">Receipt not available</div>;
+        return <div className="flex items-center justify-center h-64">
+            <div className="text-xl text-red-500 font-semibold bg-slate-100 border border-red-200 shadow rounded-2xl px-6 py-5 text-center">
+                Transaction is not completed !
+            </div>
+        </div>
     }
     return (
         <>

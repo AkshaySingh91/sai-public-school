@@ -357,191 +357,191 @@ function BusDestination() {
 
   return (
     <>
-      {loading && <TableLoader />}
       <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="flex gap-3 flex-wrap">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={() => setShowDestinationModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
-              >
-                <FaPlus /> Add Destination
-              </motion.button>
+        {
+          (!currentDestinations.length || loading) ? <TableLoader /> :
+            <div className="max-w-7xl mx-auto">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div className="flex gap-3 flex-wrap">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setShowDestinationModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                  >
+                    <FaPlus /> Add Destination
+                  </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={() => setShowExcelModal(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
-              >
-                <MdOutlineFileUpload />
-                Bulk Upload
-              </motion.button>
-            </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setShowExcelModal(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                  >
+                    <MdOutlineFileUpload />
+                    Bulk Upload
+                  </motion.button>
+                </div>
 
-            <div className="ml-auto flex gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={exportToExcel}
-                className="flex items-center gap-2 px-4 py-2 border border-[#2563eb] text-[#2563eb] hover:bg-[#2563eb] hover:text-white rounded-lg transition-all"
-              >
-                <FaFileExcel /> Excel
-              </motion.button>
+                <div className="ml-auto flex gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={exportToExcel}
+                    className="flex items-center gap-2 px-4 py-2 border border-[#2563eb] text-[#2563eb] hover:bg-[#2563eb] hover:text-white rounded-lg transition-all"
+                  >
+                    <FaFileExcel /> Excel
+                  </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={exportToPDF}
-                className="flex items-center gap-2 px-4 py-2 border border-[#7c3aed] text-[#7c3aed] hover:bg-[#7c3aed] hover:text-white rounded-lg transition-all"
-              >
-                <MdOutlinePictureAsPdf /> PDF
-              </motion.button>
-            </div>
-          </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={exportToPDF}
+                    className="flex items-center gap-2 px-4 py-2 border border-[#7c3aed] text-[#7c3aed] hover:bg-[#7c3aed] hover:text-white rounded-lg transition-all"
+                  >
+                    <MdOutlinePictureAsPdf /> PDF
+                  </motion.button>
+                </div>
+              </div>
 
-          {/* Search and Filters */}
-          <div className="bg-white p-4 rounded-xl shadow-sm">
-            <input
-              type="text"
-              placeholder="Search destinations..."
-              className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          {/* Table Section */}
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-400">
-              <thead className="text-black bg-gradient-to-br from-indigo-50 to-violet-50 ">
-                <tr>
-                  <th className="p-4 text-left">Destination</th>
-                  <th className="p-4 text-left">Fee</th>
-                  <th className="p-4 text-left">Academic Year</th>
-                  <th className="p-4 text-left">Assigned Bus</th>
-                  <th className="p-4 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50">
-                {currentDestinations.map((dest) => {
-                  const assignment = assignedMap[dest.name] || {};
-                  const bus = buses.find(b => b.id === assignment.busDocId);
-                  const isUpdating = updatingDestinationId === dest.id;
+              {/* Search and Filters */}
+              <div className="bg-white p-4 rounded-xl shadow-sm">
+                <input
+                  type="text"
+                  placeholder="Search destinations..."
+                  className="w-full p-3 border-2 border-blue-100 rounded-lg focus:outline-none focus:border-blue-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              {/* Table Section */}
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-400">
+                  <thead className="text-black bg-gradient-to-br from-indigo-50 to-violet-50 ">
+                    <tr>
+                      <th className="p-4 text-left">Destination</th>
+                      <th className="p-4 text-left">Fee</th>
+                      <th className="p-4 text-left">Academic Year</th>
+                      <th className="p-4 text-left">Assigned Bus</th>
+                      <th className="p-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50">
+                    {currentDestinations.map((dest) => {
+                      const assignment = assignedMap[dest.name] || {};
+                      const isUpdating = updatingDestinationId === dest.id;
 
-                  return (
-                    <tr key={dest.id} className="hover:bg-blue-50 transition-colors">
-                      {/* Destination Cells */}
-                      <td className="p-4 font-medium align-middle">{dest.name}</td>
-                      <td className="p-4 align-middle">₹{dest.fee}</td>
-                      <td className="p-4 text-blue-600 align-middle">{dest.academicYear}</td>
+                      return (
+                        <tr key={dest.id} className="hover:bg-blue-50 transition-colors">
+                          {/* Destination Cells */}
+                          <td className="p-4 font-medium align-middle">{dest.name}</td>
+                          <td className="p-4 align-middle">₹{dest.fee}</td>
+                          <td className="p-4 text-blue-600 align-middle">{dest.academicYear}</td>
 
-                      {/* Bus Assignment Dropdown */}
-                      <td className="p-4 align-middle">
-                        <select
-                          className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                          value={assignment.busDocId || ""}
-                          onChange={(e) => assignBus(dest, e.target.value)}
-                        >
-                          <option value="">Select Bus</option>
-                          {buses.map(bus => (
-                            <option key={bus.id} value={bus.id}>
-                              {bus.busNo} ({bus.driverName})
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+                          {/* Bus Assignment Dropdown */}
+                          <td className="p-4 align-middle">
+                            <select
+                              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                              value={assignment.busDocId || ""}
+                              onChange={(e) => assignBus(dest, e.target.value)}
+                            >
+                              <option value="">Select Bus</option>
+                              {buses.map(bus => (
+                                <option key={bus.id} value={bus.id}>
+                                  {bus.busNo} ({bus.driverName})
+                                </option>
+                              ))}
+                            </select>
+                          </td>
 
-                      {/* Status Toggle */}
-                      <td className="p-4 align-middle">
-                        <div className="flex items-center justify-center h-full">
-                          {isUpdating ? (
-                            <div className="w-20 flex justify-center"> {/* Fixed width matching toggle+text */}
-                              <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
-                            </div>
-                          ) : (
-                            <label className="relative inline-flex items-center gap-2 cursor-pointer group">
-                              <input
-                                type="checkbox"
-                                checked={assignment.active}
-                                onChange={() => {
-                                  if (assignment.busDocId) {
-                                    setUpdatingDestinationId(dest.id);
-                                    toggleStatus(dest).finally(() => setUpdatingDestinationId(null));
-                                  }
-                                }}
-                                disabled={!assignment.busDocId}
-                                className="sr-only peer"
-                                aria-label={`Toggle status for ${dest.name}`}
-                              />
+                          {/* Status Toggle */}
+                          <td className="p-4 align-middle">
+                            <div className="flex items-center justify-center h-full">
+                              {isUpdating ? (
+                                <div className="w-20 flex justify-center"> {/* Fixed width matching toggle+text */}
+                                  <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
+                                </div>
+                              ) : (
+                                <label className="relative inline-flex items-center gap-2 cursor-pointer group">
+                                  <input
+                                    type="checkbox"
+                                    checked={assignment.active}
+                                    onChange={() => {
+                                      if (assignment.busDocId) {
+                                        setUpdatingDestinationId(dest.id);
+                                        toggleStatus(dest).finally(() => setUpdatingDestinationId(null));
+                                      }
+                                    }}
+                                    disabled={!assignment.busDocId}
+                                    className="sr-only peer"
+                                    aria-label={`Toggle status for ${dest.name}`}
+                                  />
 
-                              {/* Toggle Track */}
-                              <div className={`
+                                  {/* Toggle Track */}
+                                  <div className={`
                   w-11 h-6 bg-gray-200 rounded-full 
                   peer-focus:ring-2 peer-focus:ring-blue-300 
                   transition-colors duration-200
                   ${!assignment.busDocId
-                                  ? 'opacity-50 cursor-not-allowed'
-                                  : 'group-hover:bg-gray-300'
-                                }
+                                      ? 'opacity-50 cursor-not-allowed'
+                                      : 'group-hover:bg-gray-300'
+                                    }
                   ${assignment.active ? 'bg-blue-600' : 'bg-gray-400'}
                 `}>
-                                {/* Toggle Thumb */}
-                                <div className={`
+                                    {/* Toggle Thumb */}
+                                    <div className={`
                     absolute top-0.5 left-[2px] bg-white rounded-full h-5 w-5
                     transition-transform duration-200
                     ${assignment.active ? 'translate-x-full' : ''}
                     ${!assignment.busDocId ? 'left-[2px]' : ''}
                   `} />
-                              </div>
+                                  </div>
 
-                              {/* Status Text */}
-                              <span className={`
+                                  {/* Status Text */}
+                                  <span className={`
                   text-sm font-medium 
                   ${!assignment.busDocId
-                                  ? 'text-gray-400'
-                                  : assignment.active
-                                    ? 'text-green-700'
-                                    : 'text-red-700'
-                                }
+                                      ? 'text-gray-400'
+                                      : assignment.active
+                                        ? 'text-green-700'
+                                        : 'text-red-700'
+                                    }
                 `}>
-                                {assignment.busDocId
-                                  ? (assignment.active ? 'Active' : 'Inactive')
-                                  : 'Not Assigned'}
-                              </span>
-                            </label>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {/* pagination */}
-            <div className="flex justify-between items-center p-4 border-t">
-              <span className="text-gray-600">
-                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredDestinations.length)} of {filteredDestinations.length} entries
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 border rounded-lg disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <span className="px-4 py-2">Page {currentPage} of {totalPages}</span>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 border rounded-lg disabled:opacity-50"
-                >
-                  Next
-                </button>
+                                    {assignment.busDocId
+                                      ? (assignment.active ? 'Active' : 'Inactive')
+                                      : 'Not Assigned'}
+                                  </span>
+                                </label>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {/* pagination */}
+                <div className="flex justify-between items-center p-4 border-t">
+                  <span className="text-gray-600">
+                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredDestinations.length)} of {filteredDestinations.length} entries
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 border rounded-lg disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="px-4 py-2">Page {currentPage} of {totalPages}</span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 border rounded-lg disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-
+        }
         {/* Add Destination Modal */}
         <AnimatePresence>
           {showDestinationModal && (

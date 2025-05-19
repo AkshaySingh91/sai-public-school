@@ -1,21 +1,63 @@
-import React from 'react';
+import React from 'react'; 
 
-function toWords(num) {
-    const a = [
-        '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-        'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen',
-        'Eighteen', 'Nineteen'
+function convertToWords(n) {
+    if (n === 0)
+        return "Zero";
+    const units = [
+        "", "One", "Two", "Three",
+        "Four", "Five", "Six", "Seven",
+        "Eight", "Nine", "Ten", "Eleven",
+        "Twelve", "Thirteen", "Fourteen", "Fifteen",
+        "Sixteen", "Seventeen", "Eighteen", "Nineteen"
     ];
-    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy',
-        'Eighty', 'Ninety'];
 
-    if (num === 0) return 'Zero';
-    if (num < 20) return a[num];
-    if (num < 100) return b[Math.floor(num / 10)] + (num % 10 ? ' ' + a[num % 10] : '');
-    if (num < 1000) return a[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' ' + toWords(num % 100) : '');
-    if (num < 100000) return toWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 ? ' ' + toWords(num % 1000) : '');
-    if (num < 10000000) return toWords(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 ? ' ' + toWords(num % 100000) : '');
-    return 'Amount too large';
+    // Words for numbers multiple of 10        
+    const tens = [
+        "", "", "Twenty", "Thirty", "Forty",
+        "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+    ];
+
+    const multiplier = ["", "Thousand", "Million", "Billion"];
+
+    let res = "";
+    let group = 0;
+
+    // Process number in group of 1000s
+    while (n > 0) {
+        if (n % 1000 !== 0) {
+
+            let value = n % 1000;
+            let temp = "";
+
+            // Handle 3 digit number
+            if (value >= 100) {
+                temp = units[Math.floor(value / 100)] + " Hundred ";
+                value %= 100;
+            }
+
+            // Handle 2 digit number
+            if (value >= 20) {
+                temp += tens[Math.floor(value / 10)] + " ";
+                value %= 10;
+            }
+
+            // Handle unit number
+            if (value > 0) {
+                temp += units[value] + " ";
+            }
+
+            // Add the multiplier according to the group
+            temp += multiplier[group] + " ";
+
+            // Add the result of this group to overall result
+            res = temp + res;
+        }
+        n = Math.floor(n / 1000);
+        group++;
+    }
+
+    // Remove trailing space
+    return res.trim();
 }
 
 function humanize(str) {
@@ -106,7 +148,7 @@ export default function FeeReceipt({ student, school, transaction }) {
 
     // Formatting function
     const format = amt => `₹${Math.abs(amt).toFixed(2)}`;
-    const amountInWords = toWords(Math.round(txAmount)) + ' Only';
+    const amountInWords = convertToWords(Math.round(txAmount)) + ' Only';
 
     console.log({ rows })
     return (

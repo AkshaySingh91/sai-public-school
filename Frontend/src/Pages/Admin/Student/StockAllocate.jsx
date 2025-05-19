@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../../config/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import Loader1 from "../../../components/Loader1"; // Custom loader
-import AddPaymentTable from "./AddPaymentTable";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
-import StudentsStockPaymentHistory from "./StudentsStockPaymentHistory";
 import { useSchool } from "../../../contexts/SchoolContext";
+import { LuWallet, LuDownload } from "react-icons/lu";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import { autoTable } from 'jspdf-autotable'
+import TableLoader from "../../../components/TableLoader"
 
 function StockAllocate() {
   const { school } = useSchool();
+  const { userData: users } = useAuth();
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [filters, setFilters] = useState({
@@ -17,347 +21,281 @@ function StockAllocate() {
     gender: "",
     search: "",
   });
-  const [expandedStudent, setExpandedStudent] = useState(null);
-  const [studentStock, setStudentStock] = useState([]);
-  const [loadingStock, setLoadingStock] = useState(false);
-  const [selectedItems, setSelectedItems] = useState([]);
-  const users = useAuth().userData;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  // Class and division options
   const classOptions = school.class?.length ? school.class : [
     "Nursery", "JRKG", "SRKG", "1st", "2nd", "3rd", "4th",
     "5th", "6th", "7th", "8th", "9th"
   ];
   const divOptions = school.divisions?.length ? school.divisions : ["A", "B", "C", "D", "SEMI"];
+
   useEffect(() => {
     const fetchStudents = async () => {
       const studentsCollection = collection(db, "students");
       try {
-        const studentsSnapshot = await getDocs(studentsCollection);
-        const studentsList = studentsSnapshot.docs.map((doc) => ({
-          ...doc.data(),
+        const q = query(
+          studentsCollection,
+          where("schoolCode", "==", users?.schoolCode)
+        );
+        const snapshot = await getDocs(q);
+        const studentsList = snapshot.docs.map(doc => ({
           id: doc.id,
-          schoolCode: doc.data().schoolCode,
+          ...doc.data()
         }));
-
-        const schoolsCollection = collection(db, "schools");
-        const updatedStudents = await Promise.all(
-          studentsList.map(async (student) => {
-            const schoolQuery = query(
-              schoolsCollection,
-              where("Code", "==", student.schoolCode)
-            );
-            const schoolSnapshot = await getDocs(schoolQuery);
-            const schoolDoc = schoolSnapshot.docs[0];
-            return {
-              ...student,
-              schoolId: schoolDoc ? schoolDoc.id : null,
-            };
-          })
-        );
-
-        const schoolcodefromuser = users?.schoolCode;
-        const filterstudent = updatedStudents.filter(
-          (student) => student.schoolCode === schoolcodefromuser
-        );
-
-        setStudents(filterstudent);
-        setFilteredStudents(filterstudent);
+        setStudents(studentsList);
+        setFilteredStudents(studentsList);
       } catch (error) {
         console.error("Error fetching students:", error);
       }
     };
     fetchStudents();
-  }, []);
-
-  useEffect(() => {
-    if (expandedStudent) {
-      const fetchStock = async () => {
-        setLoadingStock(true);
-        const stockCollection = collection(db, "allStocks");
-        const formattedClass = expandedStudent.class.replace("Class ", "");
-        const q = query(
-          stockCollection,
-          where("className", "==", formattedClass),
-          where("schoolCode", "==", users?.schoolCode)
-        );
-        try {
-          const stockSnapshot = await getDocs(q);
-          const stockList = stockSnapshot.docs.map((doc) => doc.data());
-          const updatedStockList = stockList.map((stock) => ({
-            ...stock,
-            quantity: 1,
-            selected: false,
-          }));
-          setStudentStock(updatedStockList);
-        } catch (error) {
-          console.error("Error fetching stock:", error);
-        }
-        setLoadingStock(false);
-      };
-      fetchStock();
-    }
-  }, [expandedStudent]);
+  }, [users?.schoolCode]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     const newFilters = { ...filters, [name]: value };
-    console.log({ newFilters })
     setFilters(newFilters);
 
-    const filtered = students.filter((student) => {
-      return (
-        (newFilters.class ? student.class === newFilters.class : true) &&
-        (newFilters.div ? student.div === newFilters.div : true) &&
-        (newFilters.gender ? student.gender === newFilters.gender : true) &&
-        (newFilters.search
-          ? student.fname
-            .toLowerCase()
-            .includes(newFilters.search.toLowerCase())
-          : true)
-      );
-    });
+    const filtered = students.filter(student =>
+      (newFilters.class ? student.class === newFilters.class : true) &&
+      (newFilters.div ? student.div === newFilters.div : true) &&
+      (newFilters.gender ? student.gender === newFilters.gender : true) &&
+      (newFilters.search ? student.fname.toLowerCase().includes(newFilters.search.toLowerCase()) : true)
+    );
     setFilteredStudents(filtered);
+    setCurrentPage(1);
   };
 
-  const handleStudentClick = (student) => {
-    setExpandedStudent((prev) =>
-      prev && prev.id === student.id ? null : student
-    );
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+
+  // Export functions
+  const calculateStockData = (student) => {
+    const stockDetails = student.StockPaymentDetail || [];
+    const allItems = new Set();
+    let totalPayment = 0;
+
+    stockDetails.forEach(transaction => {
+      transaction.items.forEach(item => {
+        allItems.add(item.itemName);
+        totalPayment += item.amount * item.quantity;
+      });
+    });
+
+    return {
+      totalItemBought: allItems.size,
+      totalPayment: totalPayment
+    };
   };
 
-  const handleCheckboxChange = (index) => {
-    const updatedStock = [...studentStock];
-    updatedStock[index].selected = !updatedStock[index].selected;
-    setStudentStock(updatedStock);
-    updateSelectedItems(updatedStock);
+  const exportToExcel = () => {
+    setExportLoading(true);
+    const data = filteredStudents.map(student => {
+      const stockData = calculateStockData(student);
+      return {
+        "Student ID": student.id,
+        "Name": `${student.fname} ${student.lname}`,
+        "Class": student.class,
+        "Division": student.div,
+        "Gender": student.gender,
+        "Total Items Bought": stockData.totalItemBought,
+        "Total Payment": stockData.totalPayment,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stock Allocation");
+    XLSX.writeFile(wb, "Stock_Allocation.xlsx");
+    setExportLoading(false);
   };
 
-  const updateSelectedItems = (updatedStock) => {
-    const selected = updatedStock.filter((stock) => stock.selected);
-    setSelectedItems(selected);
+  const exportToPDF = () => {
+    setExportLoading(true);
+    const doc = new jsPDF();
+    const headers = [
+      ["Student ID", "Name", "Class", "Division", "Gender", "Items Bought", "Total Payment"]
+    ];
+    const data = filteredStudents.map(student => {
+      const stockData = calculateStockData(student);
+      return [
+        student.id,
+        `${student.fname} ${student.lname}`,
+        student.class,
+        student.div,
+        student.gender,
+        stockData.totalItemBought,
+        stockData.totalPayment,
+      ];
+    });
+
+    autoTable(doc, {
+      head: headers,
+      body: data,
+      theme: "grid",
+      headStyles: {
+        fillColor: [79, 70, 229],
+        textColor: 255,
+        fontStyle: "bold"
+      },
+      margin: { top: 20 },
+      styles: { fontSize: 9 }
+    });
+    doc.save("Stock_Allocation.pdf");
+    setExportLoading(false);
   };
 
-  const handleDeleteItem = (index) => {
-    const updatedStock = studentStock.filter((_, i) => i !== index);
-    setStudentStock(updatedStock);
-  };
+  return (<>
+    {
+      !currentStudents.length ? <TableLoader /> :
+        <div className="p-8 space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <h1 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Stock Allocation</h1>
+            <div className="flex gap-3">
+              <button
+                onClick={exportToExcel}
+                disabled={exportLoading}
+                className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                <LuDownload className="mr-2" /> Excel
+              </button>
+              <button
+                onClick={exportToPDF}
+                disabled={exportLoading}
+                className="flex items-center px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50"
+              >
+                <LuDownload className="mr-2" /> PDF
+              </button>
+            </div>
+          </div>
 
-  const calculateTotalPrice = () => {
-    return studentStock.reduce(
-      (total, stock) =>
-        stock.selected ? total + stock.sellingPrice * stock.quantity : total,
-      0
-    );
-  };
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-4 rounded-lg shadow">
+            <select
+              name="class"
+              value={filters.class}
+              onChange={handleFilterChange}
+              className="border rounded-lg p-2 text-sm"
+            >
+              <option value="">All Classes</option>
+              {classOptions.map(cls => (
+                <option key={cls} value={cls}>{cls}</option>
+              ))}
+            </select>
 
+            <select
+              name="div"
+              value={filters.div}
+              onChange={handleFilterChange}
+              className="border rounded-lg p-2 text-sm"
+            >
+              <option value="">All Divisions</option>
+              {divOptions.map(div => (
+                <option key={div} value={div}>{div}</option>
+              ))}
+            </select>
 
+            <select
+              name="gender"
+              value={filters.gender}
+              onChange={handleFilterChange}
+              className="border rounded-lg p-2 text-sm"
+            >
+              <option value="">All Genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
 
-  const getTextColorByStatus = (status) => {
-    switch (status) {
-      case "Completed":
-        return "text-green-500";
-      case "In Progress":
-        return "text-yellow-500";
-      case "Pending":
-        return "text-red-500";
-      default:
-        return "text-gray-800";
-    }
-  };
+            <input
+              type="text"
+              name="search"
+              placeholder="Search by name..."
+              value={filters.search}
+              onChange={handleFilterChange}
+              className="border rounded-lg p-2 text-sm"
+            />
 
-  return (
-    <div className="p-8 space-y-10">
-      <h1 className="text-5xl font-extrabold text-gray-900 mb-6 opacity-90">
-        📦 Stock Allocation
-      </h1>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className="border rounded-lg p-2 text-sm"
+            >
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+            </select>
+          </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <select
-          name="class"
-          onChange={handleFilterChange}
-          value={filters.class}
-          className="px-5 py-3 border-2 border-gray-300 rounded-xl"
-        >
-          <option value="">Select Class</option>
-          {classOptions.map((classOption) => (
-            <option key={classOption} value={classOption}>
-              {classOption}
-            </option>
-          ))}
-        </select>
-
-        <select
-          name="div"
-          onChange={handleFilterChange}
-          value={filters.div}
-          className="px-5 py-3 border-2 border-gray-300 rounded-xl"
-        >
-          <option value="">Select Div</option>
-          {divOptions.map((divOption) => (
-            <option key={divOption} value={divOption}>
-              {divOption}
-            </option>
-          ))}
-        </select>
-
-        <select
-          name="gender"
-          onChange={handleFilterChange}
-          value={filters.gender}
-          className="px-5 py-3 border-2 border-gray-300 rounded-xl"
-        >
-          <option value="">Select Gender</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
-
-        <input
-          type="text"
-          name="search"
-          placeholder="Search by name"
-          value={filters.search}
-          onChange={handleFilterChange}
-          className="px-5 py-3 border-2 border-gray-300 rounded-xl"
-        />
-      </div>
-
-      {/* Student List */}
-      <div className="bg-white shadow-xl rounded-xl overflow-hidden">
-        <table className="min-w-full table-auto">
-          <thead className="bg-gradient-to-r from-purple-700 to-indigo-700 text-white">
-            <tr>
-              <th className="px-6 py-4 text-left">Name</th>
-              <th className="px-6 py-4 text-left">Class</th>
-              <th className="px-6 py-4 text-left">Division</th>
-              <th className="px-6 py-4 text-left">Gender</th>
-              <th className="px-6 py-4 text-left">Fee ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredStudents.map((student) => (
-              <React.Fragment key={student.id}>
-                <tr
-                  onClick={() => handleStudentClick(student)}
-                  className="cursor-pointer hover:bg-indigo-100"
-                >
-                  <td
-                    className={`px-6 py-4 ${getTextColorByStatus(
-                      student.taskStatus
-                    )} font-bold`}
-                  >
-                    {student.fname} {student.lname}
-                  </td>
-                  <td className="px-6 py-4">{student.class}</td>
-                  <td className="px-6 py-4">{student.div}</td>
-                  <td className="px-6 py-4">{student.gender}</td>
-                  <td className="px-6 py-4">{student.feeId}</td>
+          {/* Students Table */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="w-full">
+              <thead className="text-black bg-gradient-to-br from-indigo-50 to-violet-50 ">
+                <tr>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Class</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Division</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Gender</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
-
-                {expandedStudent && expandedStudent.id === student.id && (
-                  <tr>
-                    <td colSpan="5" className="bg-gray-100 p-6 rounded-b-xl">
-                      {loadingStock ? (
-                        <Loader1 />
-                      ) : (
-                        <>
-                          {/* ... existing stock table UI ... */}
-                          {studentStock.length === 0 ? (
-                            <div className="text-center text-gray-500 py-6">
-                              No stock available
-                            </div>
-                          ) : (
-                            <>
-                              <table className="w-full table-auto mb-8 border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-                                <thead className="bg-indigo-100 text-indigo-700 text-sm font-semibold">
-                                  <tr>
-                                    <th className="px-6 py-3 text-left border-b border-gray-300">
-                                      Item Name
-                                    </th>
-                                    <th className="px-6 py-3 text-left border-b border-gray-300">
-                                      Price
-                                    </th>
-                                    <th className="px-6 py-3 text-center border-b border-gray-300">
-                                      Select
-                                    </th>
-                                    <th className="px-6 py-3 text-center border-b border-gray-300">
-                                      Action
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="text-gray-700 text-sm">
-                                  {studentStock.map((stock, index) => (
-                                    <tr
-                                      key={index}
-                                      className="hover:bg-gray-50 transition duration-150 ease-in-out"
-                                    >
-                                      <td className="px-6 py-4 border-b border-gray-100">
-                                        {stock.itemName}
-                                      </td>
-                                      <td className="px-6 py-4 border-b border-gray-100">
-                                        ₹{stock.sellingPrice}
-                                      </td>
-                                      <td className="px-6 py-4 border-b border-gray-100 text-center">
-                                        <input
-                                          type="checkbox"
-                                          checked={stock.selected}
-                                          onChange={() =>
-                                            handleCheckboxChange(index)
-                                          }
-                                          className="w-4 h-4 text-indigo-600"
-                                        />
-                                      </td>
-                                      <td className="px-6 py-4 border-b border-gray-100 text-center">
-                                        <button
-                                          onClick={() =>
-                                            handleDeleteItem(index)
-                                          }
-                                          className="text-red-600 hover:text-red-800 hover:underline font-medium"
-                                        >
-                                          Delete
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                  {studentStock.length === 0 && (
-                                    <tr>
-                                      <td
-                                        colSpan="4"
-                                        className="text-center py-6 text-gray-400 font-medium"
-                                      >
-                                        No items available.
-                                      </td>
-                                    </tr>
-                                  )}
-                                </tbody>
-                              </table>
-
-                              <div className="text-right font-semibold text-lg mb-4">
-                                Total Price: ₹{calculateTotalPrice()}
-                              </div>
-                            </>
-                          )}
-
-                          <AddPaymentTable
-                            selectedItems={selectedItems}
-                            studentId={student.id}
-                            schoolId={student.schoolId}
-                            studentClass={student.class}
-                          />
-
-                          {/* ✅ Add this line to show history for selected student */}
-                          <StudentsStockPaymentHistory student={student} />
-                        </>
-                      )}
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl shadow-sm">
+                {currentStudents.map(student => (
+                  <tr key={student.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm">{student.fname} {student.lname}</td>
+                    <td className="px-6 py-4 text-sm">{student.class}</td>
+                    <td className="px-6 py-4 text-sm">{student.div}</td>
+                    <td className="px-6 py-4 text-sm">{student.gender}</td>
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/stockallocate/${student.id}`}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        <LuWallet className="w-5 h-5" />
+                      </Link>
                     </td>
                   </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow">
+            <span className="text-sm text-gray-600 mb-2 md:mb-0">
+              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredStudents.length)} of {filteredStudents.length} entries
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+    }
+
+  </>);
 }
 
 export default StockAllocate;

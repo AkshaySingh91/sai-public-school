@@ -20,6 +20,8 @@ import StockList from './Student/StockList';
 import StockGroup from './Student/StockGroup';
 import StockAllocate from './Student/StockAllocate';
 import Settings from "./Settings/Settings"
+import StudentStockAllocation from './Student/StudentStockAllocation';
+import StockFeeReceiptPage from './Student/StockFeeReceiptPage';
 
 const AdminLayout = () => {
   return (
@@ -61,6 +63,8 @@ const AdminIndex = () => {
         <Route path='/stocklist' element={<StockList />} />
         <Route path='/stockgroup' element={<StockGroup />} />
         <Route path='/stockallocate' element={<StockAllocate />} />
+        <Route path='/stockallocate/:studentId' element={<StudentStockAllocation />} />
+        <Route path='/stockallocate/:studentId/receipt/:receiptId' element={<StockFeeReceiptPage />} />
       </Route>
     </Routes>
   );
