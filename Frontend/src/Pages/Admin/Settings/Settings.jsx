@@ -1,237 +1,249 @@
 // Settings.js (Parent Component)
-import { useState, useEffect } from 'react';
-import { useAuth } from '../../../contexts/AuthContext';
-import { User, School, Upload, Trash2, Loader } from 'lucide-react';
-import Swal from "sweetalert2"
-import ProfileSettings from './ProfileSettings/ProfileSettings';
-import SchoolSettings from "./SchoolSettings/SchoolSettings"
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { auth } from '../../../config/firebase'
-
+import { useState, useEffect } from "react";
+import { useAuth } from "../../../contexts/AuthContext";
+import { User, School, Upload, Trash2, Loader } from "lucide-react";
+import Swal from "sweetalert2";
+import ProfileSettings from "./ProfileSettings/ProfileSettings";
+import SchoolSettings from "./SchoolSettings/SchoolSettings";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { auth } from "../../../config/firebase";
+ 
 const Settings = () => {
-    const { currentUser } = useAuth();
-    const [activeTab, setActiveTab] = useState('profile');
-    const [profile, setProfile] = useState(null);
-    const [school, setSchool] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const { currentUser } = useAuth();
+  const [activeTab, setActiveTab] = useState("profile");
+  const [profile, setProfile] = useState(null);
+  const [school, setSchool] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    const fetchData = async () => {
-        try {
-            // Get the authenticated user
-            const user = auth.currentUser;
-            console.log({ user })
-            if (!user) {
-                throw new Error('User not authenticated');
-            }
+  const fetchData = async () => {
+    try {
+      // Get the authenticated user
+      const user = auth.currentUser;
+      console.log({ user });
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
 
-            const userToken = await user.getIdToken();
+      const userToken = await user.getIdToken();
 
-            const [profileRes, schoolRes] = await Promise.all([
-                fetch('http://localhost:5000/admin/settings/profile', {
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                }),
-                fetch('http://localhost:5000/admin/settings/school', {
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                })
-            ]);
-            if (!profileRes.ok || !schoolRes.ok) {
-                const errorText = await profileRes.text().catch(() => 'Failed to fetch profile');
-                throw new Error(errorText || 'Failed to fetch data');
-            }
+      const [profileRes, schoolRes] = await Promise.all([
+        fetch("http://localhost:5000/admin/settings/profile", {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }),
+        fetch("http://localhost:5000/admin/settings/school", {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }),
+      ]);
+      if (!profileRes.ok || !schoolRes.ok) {
+        const errorText = await profileRes
+          .text()
+          .catch(() => "Failed to fetch profile");
+        throw new Error(errorText || "Failed to fetch data");
+      }
 
-            const [profileData, schoolData] = await Promise.all([
-                profileRes.json(),
-                schoolRes.json()
-            ]);
-            setProfile(profileData);
-            setSchool(schoolData);
-            setError(null);
-        } catch (err) {
-            console.error('Fetch error:', err);
-            setError(err.message || 'Failed to load settings');
-        } finally {
-            setLoading(false);
+      const [profileData, schoolData] = await Promise.all([
+        profileRes.json(),
+        schoolRes.json(),
+      ]);
+      setProfile(profileData);
+      setSchool(schoolData);
+      setError(null);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(err.message || "Failed to load settings");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchData();
+  }, []);
+  const handleProfileUpdate = async () => {
+    try {
+      const userToken = await auth.currentUser.getIdToken();
+      const response = await fetch(
+        "http://localhost:5000/admin/settings/profile",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify(profile),
         }
-    };
-    useEffect(() => {
-        fetchData();
-    }, []);
-    const handleProfileUpdate = async () => {
-        try {
-            const userToken = await auth.currentUser.getIdToken();
-            const response = await fetch('http://localhost:5000/admin/settings/profile', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${userToken}`
-                },
-                body: JSON.stringify(profile)
-            });
+      );
 
-            if (!response.ok) {
-                throw new Error('Failed to update profile');
-            }
-        } catch (err) {
-            console.log(err)
-            setError('Failed to update profile');
-        }
-    };
+      if (!response.ok) {
+        throw new Error("Failed to update profile");
+      }
+    } catch (err) {
+      console.log(err);
+      setError("Failed to update profile");
+    }
+  };
 
-    const handleImageUpload = async (file) => {
-        try {
-            setLoading(true);
-            const userToken = await auth.currentUser.getIdToken();
-            const formData = new FormData();
-            formData.append('image', file);
+  const handleImageUpload = async (file) => {
+      try {
+          setLoading(true);
+          const userToken = await auth.currentUser.getIdToken();
+          const formData = new FormData();
+          formData.append('image', file);
 
-            const response = await fetch('http://localhost:5000/admin/settings/upload-profile', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${userToken}`
-                },
-                body: formData
-            });
+          const response = await fetch('http://localhost:5000/admin/settings/upload-profile', {
+              method: 'POST',
+              headers: {
+                  'Authorization': `Bearer ${userToken}`
+              },
+              body: formData
+          });
 
-            if (!response.ok) throw new Error('Upload failed');
+          if (!response.ok) throw new Error('Upload failed');
 
-            const data = await response.json();
-            setProfile(prev => ({ ...prev, profileImage: data.imageUrl }));
-        } catch (err) {
-            setError(err.message || 'Failed to upload image');
-            Swal.fire({
-                icon: 'error',
-                title: 'Upload Failed',
-                text: err.message
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
+          const data = await response.json();
+          setProfile(prev => ({ ...prev, profileImage: data.imageUrl }));
+      } catch (err) {
+          setError(err.message || 'Failed to upload image');
+          Swal.fire({
+              icon: 'error',
+              title: 'Upload Failed',
+              text: err.message
+          });
+      } finally {
+          setLoading(false);
+      }
+  };
 
-    if (loading) return <SkeletonLoader type="settings" />;
-    if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
 
-    return (
-        <div className="max-w-4xl mx-auto p-6">
-            <div className="flex gap-4 mb-8 border-b border-gray-200">
-                <TabButton
-                    active={activeTab === 'profile'}
-                    onClick={() => setActiveTab('profile')}
-                    icon={<User size={18} />}
-                    label="Profile Settings"
-                />
-                <TabButton
-                    active={activeTab === 'school'}
-                    onClick={() => setActiveTab('school')}
-                    icon={<School size={18} />}
-                    label="School Settings"
-                />
-            </div>
 
-            {activeTab === 'profile' ? (
-                <ProfileSettings
-                    profile={profile}
-                    setProfile={setProfile}
-                    handleProfileUpdate={handleProfileUpdate}
-                    onImageUpload={handleImageUpload}
-                    loading={loading}
-                />
-            ) : (
-                <SchoolSettings
-                    school={school}
-                    setSchool={setSchool}
-                    currentUser={currentUser}
-                />
-            )}
-        </div>
-    );
+  if (loading) return <SkeletonLoader type="settings" />;
+  if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="flex gap-4 mb-8 border-b border-gray-200">
+        <TabButton
+          active={activeTab === "profile"}
+          onClick={() => setActiveTab("profile")}
+          icon={<User size={18} />}
+          label="Profile Settings"
+        />
+        <TabButton
+          active={activeTab === "school"}
+          onClick={() => setActiveTab("school")}
+          icon={<School size={18} />}
+          label="School Settings"
+        />
+      </div>
+
+      {activeTab === "profile" ? (
+        <ProfileSettings
+          profile={profile}
+          setProfile={setProfile}
+          handleProfileUpdate={handleProfileUpdate}
+          onImageUpload={handleImageUpload}
+          loading={loading}
+        />
+      ) : (
+        <SchoolSettings
+          school={school}
+          setSchool={setSchool}
+          currentUser={currentUser}
+        />
+      )}
+    </div>
+  );
 };
 
 const TabButton = ({ active, onClick, icon, label }) => (
-    <button
-        onClick={onClick}
-        className={`px-4 py-2 flex items-center gap-2 transition-colors ${active ? 'border-b-2 border-purple-600 text-purple-600' : 'text-gray-500 hover:text-purple-500'
-            }`}
-    >
-        {icon} {label}
-    </button>
+  <button
+    onClick={onClick}
+    className={`px-4 py-2 flex items-center gap-2 transition-colors ${
+      active
+        ? "border-b-2 border-purple-600 text-purple-600"
+        : "text-gray-500 hover:text-purple-500"
+    }`}
+  >
+    {icon} {label}
+  </button>
 );
 
 // SkeletonLoader.jsx
-const SkeletonLoader = ({ type = 'default' }) => {
-    const skeletonSettings = {
-        settings: (
-            <div className="max-w-4xl mx-auto p-6 animate-pulse">
-                {/* Tabs Skeleton */}
-                <div className="flex gap-4 mb-8">
-                    <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
-                    <div className="h-10 w-36 bg-gray-200 rounded-lg"></div>
-                </div>
+const SkeletonLoader = ({ type = "default" }) => {
+  const skeletonSettings = {
+    settings: (
+      <div className="max-w-4xl mx-auto p-6 animate-pulse">
+        {/* Tabs Skeleton */}
+        <div className="flex gap-4 mb-8">
+          <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+          <div className="h-10 w-36 bg-gray-200 rounded-lg"></div>
+        </div>
 
-                {/* Content Area */}
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                    <div className="flex flex-col md:flex-row gap-8">
-                        {/* Image Section */}
-                        <div className="w-full md:w-1/3">
-                            <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto"></div>
-                            <div className="flex gap-2 justify-center mt-4">
-                                <div className="h-10 w-24 bg-gray-200 rounded-lg"></div>
-                            </div>
-                        </div>
-
-                        {/* Form Section */}
-                        <div className="flex-1 space-y-4">
-                            <div className="space-y-3">
-                                <div className="h-4 bg-gray-200 w-1/4 rounded"></div>
-                                <div className="h-10 bg-gray-200 rounded-lg"></div>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="h-4 bg-gray-200 w-1/4 rounded"></div>
-                                <div className="h-10 bg-gray-200 rounded-lg"></div>
-                            </div>
-                            <div className="h-10 bg-purple-200 w-32 rounded-lg"></div>
-                        </div>
-                    </div>
-                </div>
+        {/* Content Area */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Image Section */}
+            <div className="w-full md:w-1/3">
+              <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto"></div>
+              <div className="flex gap-2 justify-center mt-4">
+                <div className="h-10 w-24 bg-gray-200 rounded-lg"></div>
+              </div>
             </div>
-        ),
-        default: (
-            <div className="p-6 space-y-4 animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-            </div>
-        )
-    };
 
-    return skeletonSettings[type] || skeletonSettings.default;
+            {/* Form Section */}
+            <div className="flex-1 space-y-4">
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 w-1/4 rounded"></div>
+                <div className="h-10 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 w-1/4 rounded"></div>
+                <div className="h-10 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="h-10 bg-purple-200 w-32 rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+    default: (
+      <div className="p-6 space-y-4 animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+        <div className="h-4 bg-gray-200 rounded w-full"></div>
+        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+      </div>
+    ),
+  };
+
+  return skeletonSettings[type] || skeletonSettings.default;
 };
 const ErrorDisplay = ({ message, onRetry }) => {
-    return (
-        <div className="max-w-4xl mx-auto p-6">
-            <div className="bg-red-50 rounded-xl p-6 text-center">
-                <div className="flex flex-col items-center justify-center space-y-4">
-                    <AlertCircle className="h-12 w-12 text-red-600" />
-                    <h3 className="text-lg font-medium text-red-800">Something went wrong</h3>
-                    <p className="text-red-700 text-sm">{message}</p>
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-red-50 rounded-xl p-6 text-center">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-600" />
+          <h3 className="text-lg font-medium text-red-800">
+            Something went wrong
+          </h3>
+          <p className="text-red-700 text-sm">{message}</p>
 
-                    {onRetry && (
-                        <button
-                            onClick={onRetry}
-                            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                        >
-                            <RefreshCw size={16} />
-                            Try Again
-                        </button>
-                    )}
-                </div>
-            </div>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+            >
+              <RefreshCw size={16} />
+              Try Again
+            </button>
+          )}
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 export default Settings;
