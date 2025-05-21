@@ -19,9 +19,10 @@ const menuItems = [
         path: "/students",
         subItems: [
             { text: "All Student", path: "/students" },
-            { text: "Add Student", path: "/students/add" },
             { text: "Daily Book", path: "/students/daily-book" },
             { text: "Outstanding Fees", path: "/students/outstanding-fee" },
+            { text: "Add Student", path: "/students/add" },
+            { text: "Import Student", path: "/students/import" },
         ]
     },
     {

@@ -113,7 +113,7 @@ student.allFees = {
   "lastYearTransportFeeDiscount": 2,
   "messFee": 0,
   "schoolFees": {
-    "AcademicFee": 3323,
+    "AdmissionFee": 3323,
     "TutionFee": 0,
     "total": 0
   },
@@ -187,5 +187,356 @@ give complete & beautiful dashboard with best UI use as many line of code as you
 
 
 
+{
+  "busStop": "MADHA BUS NO. 5",
+  "caste": "asdfasdf",
+  "category": "open",
+  "class": "5th",
+  "allFee" :{
+      "hostelFee": 0,
+  "lastYearBalanceFee": 20,
+  "lastYearDiscount": 16,
+  "lastYearTransportFee": 0,
+  "lastYearTransportFeeDiscount": 2,
+  "messFee": 0,
+  "schoolFees": {
+    "AdmissionFee": 3323,
+    "TutionFee": 0,
+    "total": 0
+  },
+  "tutionFeesDiscount": 13,
+  "transportFee": 0,
+  "transportFeeDiscount": 0
+  }
+  "createdAt": "14 May 2025 at 18:12:55 UTC+5:30",
+  "div": "B",
+  "divisions": ["A"],
+  "dob": "1212-12-12",
+  "fatherName": "sdf",
+  "feeId": "FEE-L4DVZV",
+  "fname": "qwe",
+  "gender": "Male",
+  "grNo": "",
+  "id": "3mnZNv2SGTdd7n1nZcYM",
+  "lname": "qwe",
+  "mname": "qwe",
+  "motherName": "eer",
+  "nationality": "Indian",
+  "penNo": "",
+  "religion": "Hindu",
+  "saralId": "",
+  "schoolCode": "12",
+  "status": "current",
+  "transactions": [{
+      "academicYear": "24-25",
+      "account": "123456790 (Noida)",
+      "amount": 2000,
+      "date": "2025-05-17",
+      "feeType": "SchoolFee",
+      "historicalSnapshot": {
+        "applicableDiscount": 0,
+        "feeCategory": "School",
+        "initialFee": 42100,
+        "previousPayments": 0,
+        "remainingAfter": 40100,
+        "remainingBefore": 42100,
+        "transactionDate": "2025-05-17T00:00:00.000Z"
+      },
+      "paymentMode": "CASH",
+      "receiptId": 7,
+      "remark": "remark",
+      "status": "completed",
+      "timestamp": "2025-05-17T20:25:06.578Z"
+    }
+  ],
+  "transportDetails": "transportDetails": {
+    "busId": "K2GsT919fDgMcEWCO0Yr",
+    "destinationId": "7ikV9BPNGK3ZpJPz07v1",
+    "discount": 0,
+    "finalTransportFee": 14500,
+    "transportFee": 14500
+  },
+  "type": "DS"
+}
 
 
+
+
+{
+  "sr no": 1,
+  "feeId": 12,
+  "Fname": "VIVAAN",
+  "fatherName": "HARISH",
+  "Sname": "ROTE",
+  "DOB": "2018-08-09",
+  "Sex": "M",
+  "Saral": "",
+  "Aadhar": "9152 8446 5352",
+  "FatherMob": 8698111003,
+  "MotherMob": "",
+  "class": "1st",
+  "Div": "A",
+  "Address": "KASABA PETH MADHA",
+  "MotherName": "ANKITA",
+  "lastYearBalanceFee": 0,
+  "tutionFeesDiscount": 0,
+  "lastYearTransportFee": 0,
+  "TutionFee": 0,
+  "TutionPaidFee": 0,
+  "TutionPendingFee": 0,
+  "transportFee": 0,
+  "transportFeeDiscount": 0,
+  "transportFeePaid": 0,
+  "transportFeePending": 0,
+  "Total Pending": 0,
+  "Ayear": "24-25",
+  "busStop": "NO BUS",
+  "busNoPlate": "",
+  "status": "Current", 
+  "email": "",
+  "caste": "",
+  "subCaste": "",
+  "nationality": "",
+  "category": "",
+  "religion": ""
+}
+i have excel sheet , for visulation i give you json some cell my be empty. 
+suppose we need to add 500+ student that are on prev school mangement website but we shift to other we have to add excel upload feature. see what i want : 
+1. from excel data that can easly added in student data will assign as it is like Fname, Sname, DOB, fatherName, DOB etc below i have given excat schema of student you can match field from excel & schema to add it.
+2. taking about student.allFee from excel  lastYearBalanceFee, lastYearTransportFee, tutionFeesDiscount, transportFeeDiscount assign to student.allFee. for TutionPaidFee(excel) we need to add one transaction in student.transactions, transactions detail will be
+{
+      "academicYear": "24-25",//school.academicYear
+      "account": "123456790 (Noida)"// school.accounts[0]
+      "amount": 2000, //TutionPaidFee (from excel)
+      "date": "2025-05-17",// today
+      "feeType": "SchoolFee", 
+      "historicalSnapshot": {
+        "applicableDiscount": 0, //tutionFeesDiscount(from excel)
+        "feeCategory": "School",
+        "initialFee": 42100,//TutionFee(from excel)
+        "previousPayments": 0, 
+        "remainingBefore": 42100,//TutionPaidFee (from excel)
+        "remainingAfter": 40100, (remainingBefore - amount)
+        "transactionDate": "2025-05-17T00:00:00.000Z" //today
+      },
+      "paymentMode": "CASH",
+      "receiptId": 7,
+      "remark": "remark",
+      "status": "completed",
+      "timestamp": "2025-05-17T20:25:06.578Z"
+    }
+this is because how much student has paid schoolFees, hostelFee, transportFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(schoolFee, transportFee) for each student. similar to this we need to create one transaction for transportFee we can use transportFeePaid(excel) , transportFeeDiscount(excel) to create transaction. we dont have to to anything with  TutionPendingFee(excel), transportFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
+3. messFee, hostelFee, lastYearDiscount, lastYearTransportFeeDiscount will default 0. this is how all student data will be added from excel sheet. first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (schoolFee, transportFee) & for amount we will use "TutionPaidFee", "transportFeePaid" from excel as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from excel.
+{
+  "busStop": "MADHA BUS NO. 5",
+  "caste": "asdfasdf",
+  "category": "open",
+  "class": "5th",
+  "allFee" :{
+      "hostelFee": 0,
+  "lastYearBalanceFee": 20,
+  "lastYearDiscount": 16,
+  "lastYearTransportFee": 0,
+  "lastYearTransportFeeDiscount": 2,
+  "messFee": 0,
+  "schoolFees": {
+    "AdmissionFee": 3323,
+    "TutionFee": 0,
+    "total": 0
+  },
+  "tutionFeesDiscount": 13,
+  "transportFee": 0,
+  "transportFeeDiscount": 0
+  }
+  "createdAt": "14 May 2025 at 18:12:55 UTC+5:30",
+  "div": "B",
+  "dob": "1212-12-12",
+  "fatherName": "sdf",
+  "feeId": "FEE-L4DVZV",
+  "fname": "qwe",
+  "gender": "Male",
+  "grNo": "",
+  "id": "3mnZNv2SGTdd7n1nZcYM",
+  "lname": "qwe",
+  "mname": "qwe",
+  "motherName": "eer",
+  "nationality": "Indian",
+  "penNo": "",
+  "religion": "Hindu",
+  "saralId": "",
+  "schoolCode": "12",
+  "status": "current",
+  "busNoPlate": "MH 25 T 0247",
+  "transactions": [{
+      "academicYear": "24-25",
+      "account": "123456790 (Noida)",
+      "amount": 2000,
+      "date": "2025-05-17",
+      "feeType": "SchoolFee",
+      "historicalSnapshot": {
+        "applicableDiscount": 0,
+        "feeCategory": "School",
+        "initialFee": 42100,
+        "previousPayments": 0,
+        "remainingAfter": 40100,
+        "remainingBefore": 42100,
+        "transactionDate": "2025-05-17T00:00:00.000Z"
+      },
+      "paymentMode": "CASH",
+      "receiptId": 7,
+      "remark": "remark",
+      "status": "completed",
+      "timestamp": "2025-05-17T20:25:06.578Z"
+    }
+  ],
+  "transportDetails": "transportDetails": {
+    "busId": "K2GsT919fDgMcEWCO0Yr",
+    "destinationId": "7ikV9BPNGK3ZpJPz07v1",
+    "discount": 0,
+    "finalTransportFee": 14500,
+    "transportFee": 14500
+  },
+  "type": "DS"
+}
+
+
+///////
+this is required data that are available 
+{
+  "sr no": 1,
+  "Fname": "VIVAAN",
+  "FatherName": "HARISH",
+  "Sname": "ROTE",
+  "DOB": "08-08-2018",
+  "Sex": "M",
+  "Saral": "",
+  "Aadhar": "9152 8446 5352",
+  "FatherMob": 8700000000,
+  "MotherMob": "",
+  "class": "1st",
+  "Div": "A",
+  "Address": "KASABA PETH MADHA",
+  "MotherName": "ANKITA",
+  "lastYearBalanceFee": 0,
+  "tutionFeesDiscount": 0,
+  "lastYearTransportFee": 0,
+  "TutionFee": 0,
+  "TutionPaidFee": 0,
+  "TutionPendingFee": 0,
+  "transportFee": 0,
+  "transportFeePaid": 0,
+  "transportDiscount": 0,
+  "transportFeePending": 0,
+  "Total Pending": 0,
+  "Ayear": "24-25",
+  "busStop": "NO BUS",
+  "BUS": "",
+  "STATUS": "Current",
+  "Total STOCK Paid AMOUNT": 3050,
+  "Email": "",
+  "caste": "",
+  "SubCaste": "",
+  "Nationality": "",
+  "category": "",
+  "Religion": "",
+  "FeeID": 325,
+  "Type": "DSS"
+}
+CONTEXT : we have have to create a component where we can add existing student (that are on different school management system) but school are changingto new website , that we have to add existing student data. 
+1. from first data we will create a input field, all that data like name, div,class,type,FeeId are assign my maping with student schema & changin its format based on field available in studentschema
+2. taking about student.allFee from data  lastYearBalanceFee, lastYearTransportFee, tutionFeesDiscount, transportFeeDiscount assign to student.allFee, but for TutionPaidFee we need to add one transaction in student.transactions, transactions detail will be
+{
+      "academicYear": "24-25",//school.academicYear
+      "account": "123456790 (Noida)"// school.accounts[0]
+      "amount": 2000, //TutionPaidFee (from input field)
+      "date": "2025-05-17",// today
+      "feeType": "SchoolFee", 
+      "historicalSnapshot": {
+        "applicableDiscount": 0, //tutionFeesDiscount(from excel)
+        "feeCategory": "School",
+        "initialFee": 42100,//TutionFee(from input field)
+        "previousPayments": 0, 
+        "remainingBefore": 42100,//TutionPaidFee(from input field)
+        "remainingAfter": 40100, (remainingBefore - amount)
+        "transactionDate": "2025-05-17T00:00:00.000Z" //today
+      },
+      "paymentMode": "CASH",
+      "receiptId": 7,
+      "remark": "remark",
+      "status": "completed",
+      "timestamp": "2025-05-17T20:25:06.578Z"
+    }
+this is because how much student has paid schoolFees, hostelFee, transportFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(schoolFee, transportFee) for each student. similar to this we need to create one transaction for transportFee we can use transportFeePaid(excel) , transportFeeDiscount(excel) to create transaction. we dont have to to anything with  TutionPendingFee(excel), transportFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
+3. messFee, hostelFee, lastYearDiscount, lastYearTransportFeeDiscount will default 0. this is how all student data will be added from input field (first object that i provide). first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (schoolFee, transportFee) & for amount we will use "TutionPaidFee", "transportFeePaid" from input as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from input.
+this is detail schema of student : 
+{
+  "busStop": "MADHA BUS NO. 5",
+  "caste": "asdfasdf",
+  "category": "open",
+  "class": "5th",
+  "allFee" :{
+      "hostelFee": 0,
+  "lastYearBalanceFee": 20,
+  "lastYearDiscount": 16,
+  "lastYearTransportFee": 0,
+  "lastYearTransportFeeDiscount": 2,
+  "messFee": 0,
+  "schoolFees": {
+    "AdmissionFee": 3323,
+    "TutionFee": 0,
+    "total": 0
+  },
+  "tutionFeesDiscount": 13,
+  "transportFee": 0,
+  "transportFeeDiscount": 0
+  }
+  "createdAt": "14 May 2025 at 18:12:55 UTC+5:30",
+  "div": "B",
+  "dob": "1212-12-12",
+  "fatherName": "sdf",
+  "feeId": "FEE-L4DVZV",
+  "fname": "qwe",
+  "gender": "Male",
+  "grNo": "",
+  "id": "3mnZNv2SGTdd7n1nZcYM",
+  "lname": "qwe",
+  "mname": "qwe",
+  "motherName": "eer",
+  "nationality": "Indian",
+  "penNo": "",
+  "religion": "Hindu",
+  "saralId": "",
+  "schoolCode": "12",
+  "status": "current",
+  "busNoPlate": "MH 25 T 0247",
+  "transactions": [{
+      "academicYear": "24-25",
+      "account": "123456790 (Noida)",
+      "amount": 2000,
+      "date": "2025-05-17",
+      "feeType": "SchoolFee",
+      "historicalSnapshot": {
+        "applicableDiscount": 0,
+        "feeCategory": "School",
+        "initialFee": 42100,
+        "previousPayments": 0,
+        "remainingAfter": 40100,
+        "remainingBefore": 42100,
+        "transactionDate": "2025-05-17T00:00:00.000Z"
+      },
+      "paymentMode": "CASH",
+      "receiptId": 7,
+      "remark": "remark",
+      "status": "completed",
+      "timestamp": "2025-05-17T20:25:06.578Z"
+    }
+  ],
+  "transportDetails": "transportDetails": {
+    "busId": "K2GsT919fDgMcEWCO0Yr",
+    "destinationId": "7ikV9BPNGK3ZpJPz07v1",
+    "discount": 0,
+    "finalTransportFee": 14500,
+    "transportFee": 14500
+  },
+  "type": "DS"
+}

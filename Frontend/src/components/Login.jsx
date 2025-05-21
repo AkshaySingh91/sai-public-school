@@ -4,34 +4,31 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../config/firebase";
 import { replace, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
- 
+import loginImage from "../assets/loginImage.png"; // Adjust the import path as needed
+
 const Login = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    // For accountants, they must supply the school code.
     const [schoolCode, setSchoolCode] = useState("");
     const [error, setError] = useState("");
     const navigate = useNavigate();
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-            // Now fetch user details from Firestore "users" collection.
-            // Assume that each user document has: role, schoolCode, and other info.
+
             const userDoc = await getDoc(doc(db, "Users", user.uid));
             if (!userDoc.exists()) {
                 throw new Error("User profile not found.");
             }
+
             const userData = userDoc.data();
-            console.log(userData)
-            // If the role is accountant, verify the school code.
-            if (userData.role === "accountant") {
-                if (schoolCode !== userData.schoolCode) {
-                    throw new Error("Invalid school code for this accountant.");
-                }
+            if (userData.role === "accountant" && schoolCode !== userData.schoolCode) {
+                throw new Error("Invalid school code for this accountant.");
             }
-            // Save the role in localStorage (or use a proper state management solution)
+
             localStorage.setItem("userRole", userData.role);
             navigate("/", replace);
         } catch (err) {
@@ -39,45 +36,70 @@ const Login = () => {
         }
     };
 
+
     return (
-        <div className="max-w-md mx-auto my-20 p-6 border rounded shadow">
-            <h1 className="text-xl font-bold mb-4 text-center">Login</h1>
-            {error && <p className="text-red-500 mb-2">{error}</p>}
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    className="w-full p-2 border rounded"
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+        <div className="bg-[#c3cee7] max-h-screen flex items-center justify-center overflow-hidden">
+            <div className="flex flex-col md:flex-row items-center justify-center md:items-start h-screen w-screen ">
+                <img
+                    alt="Login illustration"
+                    className="w-3/5 rounded-lg max-h-screen  self-center mr-[-3rem] object-cover"
+                    src={loginImage}
                 />
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    className="w-full p-2 border rounded"
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                />
-                {/* Show School Code input only if the user indicates they are an accountant */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">School Code (for Accountants)</label>
-                    <input
-                        type="text"
-                        placeholder="Enter your school code"
-                        value={schoolCode}
-                        className="w-full p-2 border rounded mt-1"
-                        onChange={(e) => setSchoolCode(e.target.value)}
-                    />
+
+                <div className="bg-[#f9f8f9] rounded-3xl p-8 w-full max-w-md flex flex-col items-center self-center">
+                    <h1 className="text-[#2a3e6f] font-extrabold text-3xl mb-8">Log In</h1>
+                    {error && <p className="text-red-500 mb-2 text-center">{error}</p>}
+
+                    <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+                        <input
+                            type="email"
+                            placeholder="Email"
+                            value={email}
+                            className="bg-[#d7d9e9] text-[#2a3e6f] rounded-xl py-3 px-5 text-lg placeholder-[#2a3e6f] focus:outline-none"
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            className="bg-[#d7d9e9] text-[#2a3e6f] rounded-xl py-3 px-5 text-lg placeholder-[#2a3e6f] focus:outline-none"
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+
+                        {/* School Code Input for Accountants */}
+                        <div className="mt-2">
+                            <input
+                                type="text"
+                                placeholder="School Code (for Accountants)"
+                                value={schoolCode}
+                                className="bg-[#d7d9e9] text-[#2a3e6f] rounded-xl py-3 px-5 text-lg placeholder-[#2a3e6f] focus:outline-none w-full"
+                                onChange={(e) => setSchoolCode(e.target.value)}
+                            />
+                        </div>
+
+                        <label className="flex items-center gap-3 text-[#2a3e6f] text-lg">
+                            <input
+                                type="checkbox"
+                                className="w-5 h-5 rounded-md bg-[#2a3e6f] border-none text-white focus:ring-0"
+                            />
+                            Remember me
+                        </label>
+
+                        <button
+                            type="submit"
+                            className="bg-[#2a3e6f] text-white font-bold text-lg rounded-full py-3 mt-2 hover:bg-[#1a2d4f] transition-colors"
+                        >
+                            LOG IN
+                        </button>
+                    </form>
+
+                    <a href="#" className="text-[#2a3e6f] text-lg mt-6 hover:underline">
+                        Forgot password?
+                    </a>
                 </div>
-                <button
-                    type="submit"
-                    className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
-                >
-                    Login
-                </button>
-            </form>
+            </div>
         </div>
     );
 };

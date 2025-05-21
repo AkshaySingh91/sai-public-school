@@ -23,6 +23,7 @@ import Settings from "./Settings/Settings"
 import StudentStockAllocation from './Student/StudentStockAllocation';
 import StockFeeReceiptPage from './Student/StockFeeReceiptPage';
 import StockDailyBook from './Student/StockDailyBook';
+import ImportExistingStudent from './Student/StudentManagement/ImportExistingStudent';
 
 const AdminLayout = () => {
   return (
@@ -53,6 +54,7 @@ const AdminIndex = () => {
         <Route path="/student/:studentId" element={<StudentDetail />} />
         <Route path="/students/daily-book" element={<DailyBook />} />
         <Route path="/students/outstanding-fee" element={<FeeReportContainer />} />
+        <Route path="/students/import" element={<ImportExistingStudent />} />
         <Route
           path="/student/:studentId/receipt/:receiptId"
           element={<FeeReceiptPage />}
