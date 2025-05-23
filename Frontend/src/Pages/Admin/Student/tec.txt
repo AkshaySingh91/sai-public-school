@@ -114,10 +114,10 @@ student.allFees = {
   "messFee": 0,
   "schoolFees": {
     "AdmissionFee": 3323,
-    "TutionFee": 0,
+    "tuitionFee": 0,
     "total": 0
   },
-  "tutionFeesDiscount": 13,
+  "tuitionFeesDiscount": 13,
   "transportFee": 0,
   "transportFeeDiscount": 0
 }
@@ -176,7 +176,7 @@ i have to create a dashboard where i will show different statistic some of like:
 
 2. on left show different card: 
     A. Todays Collection (eg; 12,300) it is sum of amount of transaction happend in past 24hrs
-    B. Discounted amount: it is sum of allFee.transportFeeDiscount + allFee.tutionFeesDiscount of all student whose academicYear(eg; "24-25") equal to school.academicYear & student status = "active"
+    B. Discounted amount: it is sum of allFee.transportFeeDiscount + allFee.tuitionFeesDiscount of all student whose academicYear(eg; "24-25") equal to school.academicYear & student status = "active"
     C. Expected Collection (eg; 1,12,300): it is sum of allFee.schoolFee.total + allFee.hostelFee + allFee.transportFee + allFee.messFee for all student of academicYear = school.academicYear   
     D. Collected Fee Till date: sum of all transacti.academion  for all student whose transaction academic = schoolcYear
     E. pending Fee: Expected - Collected fee Till date
@@ -201,10 +201,10 @@ give complete & beautiful dashboard with best UI use as many line of code as you
   "messFee": 0,
   "schoolFees": {
     "AdmissionFee": 3323,
-    "TutionFee": 0,
+    "tuitionFee": 0,
     "total": 0
   },
-  "tutionFeesDiscount": 13,
+  "tuitionFeesDiscount": 13,
   "transportFee": 0,
   "transportFeeDiscount": 0
   }
@@ -279,11 +279,11 @@ give complete & beautiful dashboard with best UI use as many line of code as you
   "Address": "KASABA PETH MADHA",
   "MotherName": "ANKITA",
   "lastYearBalanceFee": 0,
-  "tutionFeesDiscount": 0,
+  "tuitionFeesDiscount": 0,
   "lastYearTransportFee": 0,
-  "TutionFee": 0,
-  "TutionPaidFee": 0,
-  "TutionPendingFee": 0,
+  "tuitionFee": 0,
+  "tuitionPaidFee": 0,
+  "tuitionPendingFee": 0,
   "transportFee": 0,
   "transportFeeDiscount": 0,
   "transportFeePaid": 0,
@@ -303,19 +303,19 @@ give complete & beautiful dashboard with best UI use as many line of code as you
 i have excel sheet , for visulation i give you json some cell my be empty. 
 suppose we need to add 500+ student that are on prev school mangement website but we shift to other we have to add excel upload feature. see what i want : 
 1. from excel data that can easly added in student data will assign as it is like Fname, Sname, DOB, fatherName, DOB etc below i have given excat schema of student you can match field from excel & schema to add it.
-2. taking about student.allFee from excel  lastYearBalanceFee, lastYearTransportFee, tutionFeesDiscount, transportFeeDiscount assign to student.allFee. for TutionPaidFee(excel) we need to add one transaction in student.transactions, transactions detail will be
+2. taking about student.allFee from excel  lastYearBalanceFee, lastYearTransportFee, tuitionFeesDiscount, transportFeeDiscount assign to student.allFee. for tuitionPaidFee(excel) we need to add one transaction in student.transactions, transactions detail will be
 {
       "academicYear": "24-25",//school.academicYear
       "account": "123456790 (Noida)"// school.accounts[0]
-      "amount": 2000, //TutionPaidFee (from excel)
+      "amount": 2000, //tuitionPaidFee (from excel)
       "date": "2025-05-17",// today
       "feeType": "SchoolFee", 
       "historicalSnapshot": {
-        "applicableDiscount": 0, //tutionFeesDiscount(from excel)
+        "applicableDiscount": 0, //tuitionFeesDiscount(from excel)
         "feeCategory": "School",
-        "initialFee": 42100,//TutionFee(from excel)
+        "initialFee": 42100,//tuitionFee(from excel)
         "previousPayments": 0, 
-        "remainingBefore": 42100,//TutionPaidFee (from excel)
+        "remainingBefore": 42100,//tuitionPaidFee (from excel)
         "remainingAfter": 40100, (remainingBefore - amount)
         "transactionDate": "2025-05-17T00:00:00.000Z" //today
       },
@@ -325,8 +325,8 @@ suppose we need to add 500+ student that are on prev school mangement website bu
       "status": "completed",
       "timestamp": "2025-05-17T20:25:06.578Z"
     }
-this is because how much student has paid schoolFees, hostelFee, transportFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(schoolFee, transportFee) for each student. similar to this we need to create one transaction for transportFee we can use transportFeePaid(excel) , transportFeeDiscount(excel) to create transaction. we dont have to to anything with  TutionPendingFee(excel), transportFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
-3. messFee, hostelFee, lastYearDiscount, lastYearTransportFeeDiscount will default 0. this is how all student data will be added from excel sheet. first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (schoolFee, transportFee) & for amount we will use "TutionPaidFee", "transportFeePaid" from excel as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from excel.
+this is because how much student has paid schoolFees, hostelFee, transportFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(schoolFee, transportFee) for each student. similar to this we need to create one transaction for transportFee we can use transportFeePaid(excel) , transportFeeDiscount(excel) to create transaction. we dont have to to anything with  tuitionPendingFee(excel), transportFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
+3. messFee, hostelFee, lastYearDiscount, lastYearTransportFeeDiscount will default 0. this is how all student data will be added from excel sheet. first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (schoolFee, transportFee) & for amount we will use "tuitionPaidFee", "transportFeePaid" from excel as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from excel.
 {
   "busStop": "MADHA BUS NO. 5",
   "caste": "asdfasdf",
@@ -341,10 +341,10 @@ this is because how much student has paid schoolFees, hostelFee, transportFee et
   "messFee": 0,
   "schoolFees": {
     "AdmissionFee": 3323,
-    "TutionFee": 0,
+    "tuitionFee": 0,
     "total": 0
   },
-  "tutionFeesDiscount": 13,
+  "tuitionFeesDiscount": 13,
   "transportFee": 0,
   "transportFeeDiscount": 0
   }
@@ -418,11 +418,11 @@ this is required data that are available
   "Address": "KASABA PETH MADHA",
   "MotherName": "ANKITA",
   "lastYearBalanceFee": 0,
-  "tutionFeesDiscount": 0,
+  "tuitionFeesDiscount": 0,
   "lastYearTransportFee": 0,
-  "TutionFee": 0,
-  "TutionPaidFee": 0,
-  "TutionPendingFee": 0,
+  "tuitionFee": 0,
+  "tuitionPaidFee": 0,
+  "tuitionPendingFee": 0,
   "transportFee": 0,
   "transportFeePaid": 0,
   "transportDiscount": 0,
@@ -443,20 +443,22 @@ this is required data that are available
   "Type": "DSS"
 }
 CONTEXT : we have have to create a component where we can add existing student (that are on different school management system) but school are changingto new website , that we have to add existing student data. 
+
 1. from first data we will create a input field, all that data like name, div,class,type,FeeId are assign my maping with student schema & changin its format based on field available in studentschema
-2. taking about student.allFee from data  lastYearBalanceFee, lastYearTransportFee, tutionFeesDiscount, transportFeeDiscount assign to student.allFee, but for TutionPaidFee we need to add one transaction in student.transactions, transactions detail will be
+
+2. taking about student.allFee from data  lastYearBalanceFee, lastYearTransportFee, tuitionFeesDiscount, transportFeeDiscount assign to student.allFee, but for tuitionPaidFee we need to add one transaction in student.transactions, transactions detail will be
 {
       "academicYear": "24-25",//school.academicYear
       "account": "123456790 (Noida)"// school.accounts[0]
-      "amount": 2000, //TutionPaidFee (from input field)
+      "amount": 2000, //tuitionPaidFee (from input field)
       "date": "2025-05-17",// today
       "feeType": "SchoolFee", 
       "historicalSnapshot": {
-        "applicableDiscount": 0, //tutionFeesDiscount(from excel)
+        "applicableDiscount": 0, //tuitionFeesDiscount(from excel)
         "feeCategory": "School",
-        "initialFee": 42100,//TutionFee(from input field)
+        "initialFee": 42100,//tuitionFee(from input field)
         "previousPayments": 0, 
-        "remainingBefore": 42100,//TutionPaidFee(from input field)
+        "remainingBefore": 42100,//tuitionPaidFee(from input field)
         "remainingAfter": 40100, (remainingBefore - amount)
         "transactionDate": "2025-05-17T00:00:00.000Z" //today
       },
@@ -466,8 +468,8 @@ CONTEXT : we have have to create a component where we can add existing student (
       "status": "completed",
       "timestamp": "2025-05-17T20:25:06.578Z"
     }
-this is because how much student has paid schoolFees, hostelFee, transportFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(schoolFee, transportFee) for each student. similar to this we need to create one transaction for transportFee we can use transportFeePaid(excel) , transportFeeDiscount(excel) to create transaction. we dont have to to anything with  TutionPendingFee(excel), transportFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
-3. messFee, hostelFee, lastYearDiscount, lastYearTransportFeeDiscount will default 0. this is how all student data will be added from input field (first object that i provide). first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (schoolFee, transportFee) & for amount we will use "TutionPaidFee", "transportFeePaid" from input as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from input.
+this is because how much student has paid schoolFees, hostelFee, transportFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(schoolFee, transportFee) for each student. similar to this we need to create one transaction for transportFee we can use transportFeePaid(excel) , transportFeeDiscount(excel) to create transaction. we dont have to to anything with  tuitionPendingFee(excel), transportFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
+3. messFee, hostelFee, lastYearDiscount, lastYearTransportFeeDiscount will default 0. this is how all student data will be added from input field (first object that i provide). first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (schoolFee, transportFee) & for amount we will use "tuitionPaidFee", "transportFeePaid" from input as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from input.
 this is detail schema of student : 
 {
   "busStop": "MADHA BUS NO. 5",
@@ -483,10 +485,10 @@ this is detail schema of student :
   "messFee": 0,
   "schoolFees": {
     "AdmissionFee": 3323,
-    "TutionFee": 0,
+    "tuitionFee": 0,
     "total": 0
   },
-  "tutionFeesDiscount": 13,
+  "tuitionFeesDiscount": 13,
   "transportFee": 0,
   "transportFeeDiscount": 0
   }
@@ -539,4 +541,905 @@ this is detail schema of student :
     "transportFee": 14500
   },
   "type": "DS"
+}
+
+
+
+
+
+///// //// //// //// //// 
+import { useState, useEffect, useCallback, } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { collection, addDoc, doc, updateDoc, getDocs, where } from 'firebase/firestore';
+import { db } from '../../../../config/firebase';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { useSchool } from '../../../../contexts/SchoolContext';
+import Swal from 'sweetalert2';
+import { nanoid } from 'nanoid';
+import { InputField } from '../InputField';
+import { SelectField } from '../SelectField';
+import { read, utils } from 'xlsx';
+import TableLoader from "../../../../components/TableLoader"
+import { useDropzone } from 'react-dropzone';
+import { User, UploadCloud, FileText, XCircle, X } from 'lucide-react';
+import * as ReactDOM from 'react-dom';
+
+
+function Modal({ isOpen, onClose, children, title }) {
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+
+        if (isOpen) {
+            document.addEventListener('keydown', handleEsc);
+        }
+        return () => document.removeEventListener('keydown', handleEsc);
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    return ReactDOM.createPortal(
+        <div className="fixed inset-0 z-50">
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"
+                onClick={onClose}
+            />
+
+            {/* Modal Content */}
+            <div className="fixed inset-0 flex items-center justify-center p-4">
+                <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-4 border-b">
+                        <h3 className="text-lg font-semibold">{title}</h3>
+                        <button
+                            onClick={onClose}
+                            className="p-1 rounded-full hover:bg-gray-100"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-4">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+function DataTable({ headers, data, className = '' }) {
+    return (
+        <div className={`border rounded-lg overflow-hidden ${className}`}>
+            <div className="overflow-auto max-h-[60vh]">
+                <table className="w-full">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            {headers.map((header, index) => (
+                                <th
+                                    key={index}
+                                    className="px-4 py-3 text-left text-sm font-semibold text-gray-900"
+                                >
+                                    {header}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-gray-200">
+                        {data.map((row, rowIndex) => (
+                            <tr
+                                key={rowIndex}
+                                className="hover:bg-gray-50 transition-colors"
+                            >
+                                {row.map((cell, cellIndex) => (
+                                    <td
+                                        key={cellIndex}
+                                        className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"
+                                    >
+                                        {cell}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+
+                        {data.length === 0 && (
+                            <tr>
+                                <td
+                                    colSpan={headers.length}
+                                    className="px-4 py-6 text-center text-gray-500"
+                                >
+                                    No data available
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+const ExcelTemplateModal = ({ onClose }) => (
+    <Modal isOpen={true} onClose={onClose}>
+        <div className="p-6 max-w-3xl bg-white rounded-lg">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Excel Template Guide
+            </h2>
+
+            <DataTable
+                headers={['Field', 'Example Value', 'Required']}
+                data={[
+                    ['Fname', 'John', 'Yes'],
+                    ['Sname', 'Doe', 'Yes'],
+                    ['FatherMob', '9876543210', 'Yes'],
+                    ['Class', '5th', 'Yes'],
+                    ['FeeID', '123', 'Yes'],
+                    ['TutionFee', '15000', 'Yes'],
+                    ['TransportFee', '7000', 'No'],
+                    ['Aadhar', '123412341234', 'No'],
+                ]}
+                className="max-h-[60vh] overflow-auto"
+            />
+
+            <button
+                onClick={onClose}
+                className="mt-4 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg"
+            >
+                Close Guide
+            </button>
+        </div>
+    </Modal>
+);
+
+const ImportResultsModal = ({ results, onClose }) => (
+    <Modal isOpen={true} onClose={onClose}>
+        <div className="p-6 bg-white rounded-lg max-w-3xl">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-600" />
+                Import Errors ({results.length})
+            </h2>
+
+            <DataTable
+                headers={['Fee ID', 'Name', 'Errors']}
+                data={results.map(r => [
+                    r.FeeID,
+                    `${r.Fname} ${r.Sname}`,
+                    r.errors.join(', ')
+                ])}
+                className="max-h-[60vh] overflow-auto"
+            />
+        </div>
+    </Modal>
+);
+
+function BulkStudentImport() {
+    const { userData } = useAuth();
+    const { school } = useSchool();
+    const navigate = useNavigate();
+    const [processing, setProcessing] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [showTemplate, setShowTemplate] = useState(false);
+    const [importResults, setImportResults] = useState(null);
+
+    const fieldMappings = {
+        'Fname': 'fname',
+        'Mname': 'fatherName',
+        'Sname': 'sname',
+        'FatherMob': 'fatherMob',
+        'MotherMob': 'motherMob',
+        'Class': 'class',
+        'Division': 'div',
+        'FeeID': 'feeID',
+        'LastYearBalanceFee': 'lastYearBalanceFee',
+        'TutionFee': 'tuitionFee',
+        'TutionFeesDiscount': 'tuitionFeesDiscount',
+        'TutionPaidFee': 'tuitionPaidFee',
+        'TransportFee': 'transportFee',
+        'TransportDiscount': 'transportDiscount',
+        'TransportFeePaid': 'transportFeePaid',
+        'Ayear': 'Ayear',
+        'BusStop': 'busStop',
+        'BusNoPlate': 'busNoPlate',
+        'Status': 'status',
+        'Type': 'type',
+        'perm_addr': 'address',
+        'email': 'email',
+        'nat': 'nationality',
+        'scategory': 'category',
+        'religion': 'religion',
+        'aadhar': 'aadhar',
+        'saral': 'saral',
+        'Sex': 'sex',
+        'subcaste': 'subCaste',
+        'caste': 'caste',
+        'FatherName': 'fatherName',
+        'DOB': 'DOB',
+        'GrNo': 'grNo',
+        'PenNo': 'penNo'
+    };
+
+    // Add dropzone hook
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop: useCallback(handleBulkUpload, []),
+        accept: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+            'text/csv': ['.csv']
+        },
+        multiple: false
+    });
+
+    const validateStudent = (student) => {
+        const errors = [];
+        const requiredFields = ['Fname', 'Sname', 'FatherMob', 'Class', 'FeeID', 'TutionFee'];
+
+        requiredFields.forEach(field => {
+            if (!student[field]?.toString().trim()) {
+                errors.push(`${field} is required`);
+            }
+        });
+
+        if (student.FatherMob && !/^\d{10}$/.test(student.FatherMob)) {
+            errors.push('Invalid Father Mobile');
+        }
+
+        if (student.TutionFee && isNaN(student.TutionFee)) {
+            errors.push('Invalid Tuition Fee');
+        }
+
+        return errors;
+    };
+
+    const processStudent = async (student) => {
+        const transactions = [];
+
+        if (student.TutionPaidFee > 0) {
+            transactions.push({
+                academicYear: student.Ayear,
+                amount: Number(student.TutionPaidFee),
+                feeType: 'SchoolFee',
+                // Add full transaction details from previous implementation
+            });
+        }
+
+        if (student.TransportFeePaid > 0) {
+            transactions.push({
+                academicYear: student.Ayear,
+                amount: Number(student.TransportFeePaid),
+                feeType: 'TransportFee',
+                // Add full transaction details
+            });
+        }
+
+        const studentData = {
+            // Map all student fields
+            transactions,
+            schoolCode: userData.schoolCode,
+            createdAt: new Date(),
+        };
+
+        await addDoc(collection(db, 'students'), studentData);
+    };
+
+    const onDrop = useCallback(async (acceptedFiles) => {
+        setProcessing(true);
+        const file = acceptedFiles[0];
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = utils.sheet_to_json(worksheet);
+
+            Swal.fire({
+                title: 'Validating Data...',
+                html: 'Checking file structure and contents',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            // Validation phase
+            const results = jsonData.map((row, index) => {
+                const mappedRow = {};
+                Object.keys(fieldMappings).forEach(excelField => {
+                    const ourField = fieldMappings[excelField];
+                    mappedRow[ourField] = row[excelField];
+                });
+
+                const errors = validateStudent(mappedRow);
+                return { ...mappedRow, errors, index: index + 2 };
+            });
+
+            const validStudents = results.filter(r => r.errors.length === 0);
+            const invalidStudents = results.filter(r => r.errors.length > 0);
+
+            if (invalidStudents.length > 0) {
+                Swal.close();
+                setImportResults(invalidStudents);
+                return;
+            }
+
+            // Processing phase
+            Swal.fire({
+                title: 'Importing Students...',
+                html: `Processed 0/${validStudents.length} students`,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            for (let i = 0; i < validStudents.length; i++) {
+                try {
+                    await processStudent(validStudents[i]);
+                    Swal.getHtmlContainer().innerHTML =
+                        `Processed ${i + 1}/${validStudents.length} students`;
+                } catch (error) {
+                    invalidStudents.push({
+                        ...validStudents[i],
+                        errors: [error.message]
+                    });
+                }
+            }
+
+            setProcessing(false);
+            Swal.fire({
+                title: 'Import Complete',
+                icon: 'success',
+                text: `Successfully imported ${validStudents.length - invalidStudents.length} students`
+            });
+
+            if (invalidStudents.length > 0) {
+                setImportResults(invalidStudents);
+            }
+        };
+
+        reader.readAsArrayBuffer(file);
+    }, [school, userData]);
+
+    return (
+        <div className="p-6 max-w-4xl mx-auto">
+            <div className="bg-white rounded-xl shadow-lg p-8">
+                <div className="mb-8 text-center">
+                    <div className="inline-flex items-center justify-center w-14 h-14 bg-purple-100 rounded-2xl mb-4">
+                        <User className="w-8 h-8 text-purple-600" />
+                    </div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Bulk Student Import</h2>
+                    <p className="text-gray-600">Upload Excel file with student data</p>
+                </div>
+
+                <div className="space-y-6">
+                    <div
+                        {...getRootProps()}
+                        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+              ${isDragActive ? 'border-purple-500 bg-purple-50' : 'border-gray-300'}`}
+                    >
+                        <input {...getInputProps()} />
+                        <div className="flex flex-col items-center gap-4">
+                            <UploadCloud className="w-12 h-12 text-gray-400" />
+                            <div>
+                                <p className="font-semibold">
+                                    {isDragActive ? 'Drop file here' : 'Click to upload or drag and drop'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                    Excel (.xlsx, .csv) up to 5MB
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowTemplate(true)}
+                        className="text-purple-600 hover:text-purple-700 flex items-center gap-2 justify-center"
+                    >
+                        <FileText className="w-5 h-5" />
+                        Download Template / View Format Guide
+                    </button>
+                </div>
+            </div>
+
+            {showTemplate && <ExcelTemplateModal onClose={() => setShowTemplate(false)} />}
+            {importResults && (
+                <ImportResultsModal
+                    results={importResults}
+                    onClose={() => setImportResults(null)}
+                />
+            )}
+        </div>
+    );
+}
+export default function ImportExistingStudent() {
+    const { userData } = useAuth();
+    const { school } = useSchool();
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+
+    const [inputData, setInputData] = useState({
+        fname: 'HIRANYESHWARI',
+        sname: 'KAMBALE',
+        fatherName: 'VIJAY',
+        motherName: '',
+        DOB: '12-23-2004',
+        sex: 'M',
+        saral: '',
+        aadhar: '',
+        feeID: '93',
+        fatherMob: '1234567890',
+        motherMob: '',
+        class: '3rd',
+        div: 'A',
+        address: '',
+        lastYearBalanceFee: 0,
+        lastYearDiscount: 0,
+        tuitionFee: 15500,
+        tuitionFeesDiscount: 0,
+        tuitionPaidFee: 15500,
+        transportFee: 7000,
+        transportDiscount: 0,
+        transportFeePaid: 7000,
+        Ayear: '24-25',
+        busStop: 'MADHA BUS NO. 2',
+        busNoPlate: 'MH 12 KQ 8525',
+        status: 'Current',
+        email: '',
+        caste: '',
+        subCaste: '',
+        nationality: 'Indian',
+        category: '',
+        religion: '',
+        type: 'DS',
+        grNo: "",
+        penNo: "",
+    });
+    const [processing, setProcessing] = useState(false);
+    const [showTemplate, setShowTemplate] = useState(false);
+    const [importResults, setImportResults] = useState(null);
+    useEffect(() => {
+        if (school) setLoading(false);
+    }, [school]);
+    // Bulk upload handling
+    const handleBulkUpload = async (acceptedFiles) => {
+        setProcessing(true);
+        const file = acceptedFiles[0];
+        const reader = new FileReader();
+        // Add dropzone hook
+        const { getRootProps, getInputProps, isDragActive } = useDropzone({
+            onDrop: useCallback(handleBulkUpload, []),
+            accept: {
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                'text/csv': ['.csv']
+            },
+            multiple: false
+        });
+        reader.onload = async (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = utils.sheet_to_json(worksheet);
+
+            // Validation and processing logic
+            const results = jsonData.map(validateBulkStudent);
+            const validStudents = results.filter(r => r.errors.length === 0);
+            const invalidStudents = results.filter(r => r.errors.length > 0);
+
+            if (invalidStudents.length > 0) {
+                setImportResults(invalidStudents);
+                return;
+            }
+
+            // Process valid students
+            for (const student of validStudents) {
+                await processStudent(student);
+                setProgress(prev => prev + 1);
+            }
+
+            Swal.fire('Success!', `Imported ${validStudents.length} students`, 'success');
+            setProcessing(false);
+        };
+        reader.readAsArrayBuffer(file);
+    };
+    // Single dropzone configuration
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop: handleBulkUpload,
+        accept: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+            'text/csv': ['.csv']
+        },
+        multiple: false
+    });
+    // track validation errors
+    const [errors, setErrors] = useState({});
+
+    const validate = (data) => {
+        const errs = {};
+        // --- helper regexes ---
+        const dateRe = /^\d{2}-\d{2}-\d{4}$/;
+        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRe = /^\d{10}$/;
+        const aadharRe = /^\d{12}$/;
+        // --- always-required fields ---
+        const required = [
+            "fname", "sname", "DOB", "sex",
+            "fatherName", "fatherMob",
+            "class", "div", "Ayear", "type",
+            "feeID", "status",
+            "tuitionFee", "tuitionPaidFee",
+            "transportFee", "transportFeePaid"
+        ];
+        required.forEach((field) => {
+            if (!data[field]?.toString().trim()) {
+                errs[field] = `${field} This field is required`;
+            }
+        });
+
+        // pattern-checks on required fields
+        if (data.DOB && !dateRe.test(data.DOB))
+            errs.DOB = "Use DD-MM-YYYY format";
+        if (data.fatherMob && !phoneRe.test(data.fatherMob))
+            errs.fatherMob = "Enter a 10-digit mobile number";
+        if (data.email && !emailRe.test(data.email))
+            errs.email = "Invalid email address";
+
+        // --- optional fields: only if non-empty, then pattern-check ---
+        if (data.motherMob?.trim() && !phoneRe.test(data.motherMob))
+            errs.motherMob = "Enter a 10-digit mobile number";
+        if (data.aadhar?.trim() && !aadharRe.test(data.aadhar))
+            errs.aadhar = "Aadhar must be 12 digits";
+
+        // --- numeric >=0 checks for fee fields (all required above) ---
+        [
+            "tuitionFee", "tuitionFeesDiscount", "tuitionPaidFee",
+            "transportFee", "transportDiscount", "transportFeePaid",
+            "lastYearDiscount"
+        ].forEach((field) => {
+            // allow zero, but disallow negative or NaN
+            if (data[field] != null && isNaN(+data[field]) || +data[field] < 0) {
+                errs[field] = "Must be a non-negative number";
+            }
+        });
+
+        return errs;
+    };
+    const createTransaction = (feeType, paid, discount, feeAmount) => {
+        const accounts = school.accounts || [];
+
+        return {
+            academicYear: inputData.Ayear,
+            account: accounts.length > 0 ? `${accounts[0].AccountNo} (${accounts[0].Branch})` : 'Cash',
+            amount: Number(paid),
+            date: new Date().toISOString().split('T')[0],
+            feeType,
+            historicalSnapshot: {
+                applicableDiscount: Number(discount),
+                feeCategory: feeType.replace('Fee', ''),
+                initialFee: Number(feeAmount),
+                previousPayments: 0,
+                remainingBefore: Number(feeAmount - discount),
+                remainingAfter: Number(feeAmount - discount - paid),
+                transactionDate: new Date().toISOString()
+            },
+            paymentMode: 'CASH',
+            receiptId: `${feeType.replace('Fee', '')}-${nanoid(6).toUpperCase()}`,
+            remark: 'Imported from Old system',
+            status: 'completed',
+            timestamp: new Date().toISOString()
+        };
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        // 1. trim all string fields
+        const trimmed = Object.fromEntries(
+            Object.entries(inputData).map(([k, v]) =>
+                typeof v === "string" ? [k, v.trim()] : [k, v]
+            )
+        );
+        // 2. validate
+        const validationErrors = validate(trimmed);
+        setErrors(validationErrors);
+        // 3. if errors exist, stop here
+        if (Object.keys(validationErrors).length > 0) {
+            return;
+        }
+        // 4. now we know validation passed — flip submitting and proceed
+        setSubmitting(true);
+        try {
+            // Create transactions
+            const transactions = [];
+
+            if (inputData.tuitionPaidFee > 0) {
+                transactions.push(createTransaction(
+                    'SchoolFee',
+                    inputData.tuitionPaidFee,
+                    inputData.tuitionFeesDiscount,
+                    inputData.tuitionFee
+                ));
+            }
+
+            if (inputData.transportFeePaid > 0) {
+                transactions.push(createTransaction(
+                    'TransportFee',
+                    inputData.transportFeePaid,
+                    inputData.transportDiscount,
+                    inputData.transportFee
+                ));
+            }
+
+            // Build student object
+            const studentData = {
+                // Personal Info
+                fname: inputData.fname,
+                mname: inputData.fatherName,
+                lname: inputData.sname,
+                dob: inputData.DOB.split('-').reverse().join('-'),
+                gender: inputData.sex === 'M' ? 'Male' : 'Female',
+                motherName: inputData.motherName,
+                fatherContact: String(inputData.fatherMob),
+                motherContact: String(inputData.motherMob),
+                address: inputData.address,
+                // Academic Info
+                class: inputData.class,
+                div: inputData.div,
+                academicYear: inputData.Ayear,
+                status: inputData.status.toLowerCase(),
+                type: inputData.type,
+                // Address
+                address: inputData.address,
+
+                // Fee Details
+                feeId: `FEE- ${nanoid(6).toUpperCase()} `,
+                allFee: {
+                    lastYearBalanceFee: Number(inputData.lastYearBalanceFee),
+                    lastYearTransportFee: 0,
+                    lastYearDiscount: 0,
+                    lastYearTransportFeeDiscount: 0,
+                    // this year 
+                    schoolFees: {
+                        AdmissionFee: 1000,
+                        tuitionFee: Number(inputData.tuitionFee) >= 1000 ? Number(inputData.tuitionFee) - 1000 : 0,// Only tuition 
+                        total: (Number(inputData.tuitionFee) || 0)
+                    },
+                    tuitionFeesDiscount: Number(inputData.tuitionFeesDiscount),
+                    transportFee: Number(inputData.transportFee),
+                    transportFeeDiscount: Number(inputData.transportDiscount),
+                    messFee: 0,
+                    hostelFee: 0,
+                },
+                // Additional Fields
+                busNoPlate: inputData.busNoPlate,
+                busStop: inputData.busStop,
+                email: inputData.email,
+                caste: inputData.caste,
+                subCaste: inputData.subCaste,
+                nationality: inputData.nationality,
+                category: inputData.category,
+                religion: inputData.religion,
+                aadharNo: inputData.aadhar,
+                saralId: inputData.saral,
+                grNo: inputData.grNo,
+                penNo: inputData.penNo,
+                transactions,
+                // System Fields
+                schoolCode: userData.schoolCode,
+                createdAt: new Date(),
+            };
+
+            // Add to Firestore
+            await addDoc(collection(db, 'students'), studentData);
+
+            // // Update receipt counter
+            // if (transactions.length > 0) {
+            //     const schoolsRef = collection(db, 'schools');
+            //     const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+            //     const querySnapshot = await getDocs(q);
+            //     if (!querySnapshot.empty) {
+            //         await updateDoc(doc(db, 'schools', querySnapshot.docs[0].id), {
+            //             receiptCount: school.receiptCount + transactions.length
+            //         });
+            //     }
+            // }
+
+            Swal.fire('Success!', 'Student imported successfully', 'success');
+            navigate('/students');
+        } catch (error) {
+            Swal.fire('Error', error.message, 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (loading) return <TableLoader />
+
+
+    return (
+        <div className="p-6 max-w-4xl mx-auto">
+            <div className="p-6 max-w-4xl mx-auto">
+                <div className="bg-white rounded-xl shadow-lg p-8">
+                    {/* Bulk Upload Section */}
+                    <div className="mb-8">
+                        <h3 className="text-xl font-bold mb-4">Bulk Import Students</h3>
+                        <div
+                            {...getRootProps()}
+                            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+                            ${isDragActive ? 'border-purple-500 bg-purple-50' : 'border-gray-300'}`}
+                        >
+                            <input {...getInputProps()} />
+                            <div className="flex flex-col items-center gap-4">
+                                <UploadCloud className="w-12 h-12 text-gray-400" />
+                                <div>
+                                    <p className="font-semibold">
+                                        {isDragActive ? 'Drop file here' : 'Click to upload or drag and drop'}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                        Excel (.xlsx, .csv) up to 5MB
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowTemplate(true)}
+                            className="text-purple-600 hover:text-purple-700 mt-4"
+                        >
+                            <FileText className="w-5 h-5 mr-2 inline" />
+                            View Excel Template
+                        </button>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="my-8 border-t"></div>
+                    {/* Existing Single Student Form */}
+                    <div className="mb-8 text-center">
+                        <div className="bg-white rounded-xl shadow-lg p-8">
+                            {/* Header Section */}
+                            <div className="mb-8 text-center">
+                                <div className="inline-flex items-center justify-center w-14 h-14 bg-purple-100 rounded-2xl mb-4">
+                                    <User className="w-8 h-8 text-purple-600" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-4">Single Student Import</h3>
+                                <p className="text-gray-600">Fill in the student details below</p>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Error Summary */}
+                                {Object.keys(errors).length > 0 && (
+                                    <div className="md:col-span-2 bg-red-100 border border-red-400 text-red-700 p-4 rounded">
+                                        <p className="font-semibold">Please fix the following errors:</p>
+                                        <ul className="list-disc list-inside">
+                                            {Object.entries(errors).map(([field, msg]) => (
+                                                <li key={field}>{msg}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* Personal Information */}
+                                {<div className="md:col-span-2">
+                                    <h3 className="text-lg font-semibold mb-4 text-purple-600">Personal Information</h3>
+                                    <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                                        <InputField label="First Name *" value={inputData.fname} onChange={e => setInputData({ ...inputData, fname: e.target.value })} />
+                                        <InputField label="Last Name *" value={inputData.sname} onChange={e => setInputData({ ...inputData, sname: e.target.value })} />
+                                        <InputField label="DOB (DD-MM-YYYY) *" value={inputData.DOB} pattern="\d{2}-\d{2}-\d{4}" onChange={e => setInputData({ ...inputData, DOB: e.target.value })} />
+                                        <SelectField label="Gender *" options={["Male", "Female", "Other"]} value={inputData.sex} onChange={e => setInputData({ ...inputData, sex: e.target.value })} />
+                                        <InputField label="Father's Name *" value={inputData.fatherName} onChange={e => setInputData({ ...inputData, fatherName: e.target.value })} />
+                                        <InputField label="Mother's Name" value={inputData.motherName} onChange={e => setInputData({ ...inputData, motherName: e.target.value })} />
+                                        <InputField label="Father's Mobile *" type="tel" value={inputData.fatherMob} onChange={e => setInputData({ ...inputData, fatherMob: e.target.value })} />
+                                        <InputField label="Mother's Mobile" type="tel" value={inputData.motherMob} onChange={e => setInputData({ ...inputData, motherMob: e.target.value })} />
+                                        <InputField label="Caste" value={inputData.caste} onChange={e => setInputData({ ...inputData, caste: e.target.value })} />
+                                        <InputField label="Sub Caste" value={inputData.subCaste} onChange={e => setInputData({ ...inputData, subCaste: e.target.value })} />
+                                        <InputField label="Religion" value={inputData.religion} onChange={e => setInputData({ ...inputData, religion: e.target.value })} />
+                                        <InputField label="Category" value={inputData.category} onChange={e => setInputData({ ...inputData, category: e.target.value })} />
+                                        <InputField label="Email *" type="email" value={inputData.email} onChange={e => setInputData({ ...inputData, email: e.target.value })} />
+                                    </div>
+                                </div>}
+
+                                {/* Address */}
+                                {<div className="md:col-span-2">
+                                    <InputField label="Address *" value={inputData.address} onChange={e => setInputData({ ...inputData, address: e.target.value })} />
+                                </div>}
+
+                                {/* Academic Information */}
+                                {<div className="md:col-span-2">
+                                    <h3 className="text-lg font-semibold mb-4 text-purple-600">Academic Information</h3>
+                                    <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                                        <SelectField
+                                            label="Class *"
+                                            options={school.class}
+                                            value={inputData.class}
+                                            onChange={e => setInputData({ ...inputData, class: e.target.value })}
+                                        />
+                                        <SelectField
+                                            label="Division *"
+                                            options={school.divisions}
+                                            value={inputData.div}
+                                            onChange={e => setInputData({ ...inputData, div: e.target.value })}
+                                        />
+                                        <InputField
+                                            label="Academic Year *"
+                                            value={inputData.Ayear}
+                                            onChange={e => setInputData({ ...inputData, Ayear: e.target.value })}
+                                        />
+                                        <SelectField
+                                            label="Student Type *"
+                                            options={['DSS', 'DSR', 'DS']}
+                                            value={inputData.type}
+                                            onChange={e => setInputData({ ...inputData, type: e.target.value })}
+                                        />
+                                        <InputField
+                                            label="Bus No Plate"
+                                            value={inputData.busNoPlate}
+                                            onChange={e => setInputData({ ...inputData, busNoPlate: e.target.value })}
+                                        />
+                                        <InputField
+                                            label="Bus Stop"
+                                            value={inputData.busStop}
+                                            onChange={e => setInputData({ ...inputData, busStop: e.target.value })}
+                                        />
+                                        <InputField
+                                            label="Fee ID *"
+                                            value={inputData.feeID}
+                                            onChange={e => setInputData({ ...inputData, feeID: e.target.value })}
+                                        />
+                                        <SelectField
+                                            label="Status *"
+                                            options={['inactive', 'current', 'new']}
+                                            value={inputData.status}
+                                            onChange={e => setInputData({ ...inputData, status: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                }
+                                {/* Fee Information */}
+                                {<div className="md:col-span-2">
+                                    <h3 className="text-lg font-semibold mb-4 text-purple-600">Fee Information</h3>
+                                    <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                                        <InputField label="Tuition Fee *" type="number" value={inputData.tuitionFee} onChange={e => setInputData({ ...inputData, tuitionFee: e.target.value })} />
+                                        <InputField label="Tuition Discount" type="number" value={inputData.tuitionFeesDiscount} onChange={e => setInputData({ ...inputData, tuitionFeesDiscount: e.target.value })} />
+                                        <InputField label="Paid Tuition *" type="number" value={inputData.tuitionPaidFee} onChange={e => setInputData({ ...inputData, tuitionPaidFee: e.target.value })} />
+                                        <InputField label="Transport Fee *" type="number" value={inputData.transportFee} onChange={e => setInputData({ ...inputData, transportFee: e.target.value })} />
+                                        <InputField label="Transport Discount" type="number" value={inputData.transportDiscount} onChange={e => setInputData({ ...inputData, transportDiscount: e.target.value })} />
+                                        <InputField label="Paid Transport *" type="number" value={inputData.transportFeePaid} onChange={e => setInputData({ ...inputData, transportFeePaid: e.target.value })} />
+                                        <InputField label="Last Year Discount" type="number" value={inputData.lastYearDiscount} onChange={e => setInputData({ ...inputData, lastYearDiscount: e.target.value })} />
+                                    </div>
+                                </div>}
+
+                                {/* Additional Information */}
+                                {<div className="md:col-span-2">
+                                    <h3 className="text-lg font-semibold mb-4 text-purple-600">Additional Information</h3>
+                                    <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                                        <InputField label="Saral ID" value={inputData.saral} onChange={e => setInputData({ ...inputData, saral: e.target.value })} />
+                                        <InputField label="Aadhar" value={inputData.aadhar} onChange={e => setInputData({ ...inputData, aadhar: e.target.value })} />
+                                        <InputField label="GR No" value={inputData.grNo} onChange={e => setInputData({ ...inputData, grNo: e.target.value })} />
+                                        <InputField label="PEN No" value={inputData.penNo} onChange={e => setInputData({ ...inputData, penNo: e.target.value })} />
+                                    </div>
+                                </div>}
+
+                                {/* Submit Button */}
+                                <div className="md:col-span-2">
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition font-semibold"
+                                    >
+                                        {submitting ? 'Importing...' : 'Import Student'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {/* Modals */}
+                {showTemplate && <ExcelTemplateModal onClose={() => setShowTemplate(false)} />}
+                {importResults && (
+                    <ImportResultsModal
+                        results={importResults}
+                        onClose={() => setImportResults(null)}
+                    />
+                )}
+            </div>
+        </div>
+    );
 }

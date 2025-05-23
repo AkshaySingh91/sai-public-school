@@ -87,15 +87,15 @@ const StudentFeeDetails = ({
                 'Division': student.div,
                 // updated fee data this will show all fee informaion in excel
                 'Last Year Pending': (student?.lastYearSchoolBalance || 0) + (student?.lastYearTransportBalance || 0),
-                'Tution Fee': student?.tutionFeeNet || 0,
-                'TutionFee Paid': student?.tutionFeePaid || 0,
-                'Pending TutionFee ': (student?.tutionFeeNet || 0) - (student?.tutionFeePaid || 0),
+                'tuition Fee': student?.tuitionFeeNet || 0,
+                'tuitionFee Paid': student?.tuitionFeePaid || 0,
+                'Pending tuitionFee ': (student?.tuitionFeeNet || 0) - (student?.tuitionFeePaid || 0),
                 'TotalTransportFee': student?.totalTransportFee || 0,
                 'NetTransportFee': student?.transportFeeNet || 0,
                 'TransportFee paid': student?.transportFeePaid || 0,
                 'Pending TransportFee ': (student?.transportFeeNet) - (student?.transportFeePaid || 0),
-                'Total paid': (student?.tutionFeePaid || 0) + (student?.transportFeePaid || 0),
-                'Outstanding': ((student?.transportFeeNet || 0) + student?.tutionFeeNet || 0) - ((student?.transportFeePaid || 0) + (student?.tutionFeePaid || 0))
+                'Total paid': (student?.tuitionFeePaid || 0) + (student?.transportFeePaid || 0),
+                'Outstanding': ((student?.transportFeeNet || 0) + student?.tuitionFeeNet || 0) - ((student?.transportFeePaid || 0) + (student?.tuitionFeePaid || 0))
             }
         });
 

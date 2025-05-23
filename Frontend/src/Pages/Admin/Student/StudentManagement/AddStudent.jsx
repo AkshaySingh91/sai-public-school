@@ -17,7 +17,7 @@ export default function AddStudent() {
   const { school } = useSchool();
   const [formData, setFormData] = useState({
     fname: '',
-    mname: '',
+    fatherName: '',
     lname: '',
     fatherName: '',
     motherName: '',
@@ -48,7 +48,7 @@ export default function AddStudent() {
 
         if (!fsSnap.exists()) {
           console.error("Fee structure document not found");
-          return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+          return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
         }
 
         const structures = fsSnap.data().structures || [];
@@ -75,7 +75,7 @@ export default function AddStudent() {
 
         if (!yearStructure) {
           console.warn("No fee structures available");
-          return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+          return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
         }
 
         // Rest of the original logic remains the same
@@ -85,46 +85,44 @@ export default function AddStudent() {
 
         if (!classStructure) {
           console.warn(`No fee structure found for class ${newClass}`);
-          return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+          return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
         }
 
         return classStructure;
       } catch (error) {
         console.error("Error fetching fee structure:", error);
-        return { AdmissionFee: 0, TutionFee: 0, total: 0 };
+        return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
       }
     };
     try {
       // Calculate base fees
       const classStructure = await getNewClassFees(formData.class, formData.academicYear)
-
-
       const studentType = classStructure.studentType?.find(
         (st) =>
           st.name?.trim().toLowerCase() === formData.type?.trim().toLowerCase()
       );
       if (!studentType) {
         console.warn(`No fee structure found for student type ${formData.type}`);
-        return { AdmissionFee: 0, TutionFee: 0, total: 0 };
-      }
-      // very important if student is new than we dont have to assign addmission fee only tution fee required
+        return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
+      } 
+      // very important if student is new than we dont have to assign addmission fee only tuition fee required
       const feeStructure = studentType.feeStructure || {};
       let AdmissionFee = 0;
-      let tutionFee = 0;
+      let tuitionFee = 0;
       if (formData?.status?.toLowerCase() === "new") {
         AdmissionFee = Number(feeStructure.AdmissionFee) || 0;
-        tutionFee = Number(feeStructure.TutionFee) || 0;
+        tuitionFee = Number(feeStructure.TuitionFee) || 0;
       } else {
-        tutionFee = Number(feeStructure.TutionFee) || 0;
+        tuitionFee = Number(feeStructure.TuitionFee) || 0;
       }
       const schoolFees = {
         AdmissionFee: AdmissionFee,
-        TutionFee: tutionFee,
-        total: AdmissionFee + tutionFee,
+        tuitionFee: tuitionFee,
+        total: AdmissionFee + tuitionFee,
       };
       // Calculate DSS discount if applicable
-      let tutionFeesDiscount = 0;
-      // to calculate dis if student is new than we will subtract it from total of DS ie (tution+addminssion) else ig current than only subtract from tution because we dont take addmission fee.
+      let tuitionFeesDiscount = 0;
+      // to calculate dis if student is new than we will subtract it from total of DS ie (tuition+addminssion) else ig current than only subtract from tuition because we dont take addmission fee.
       if (formData.type === 'DSR' || formData.type === 'DSS') {
         const dsStructure = classStructure.studentType.find(st => st.name === 'DS');
         if (!dsStructure) {
@@ -132,14 +130,14 @@ export default function AddStudent() {
         }
         let dsTotal = 0;
         if (formData?.status?.toLowerCase() === "new") {
-          // addmission + tution
+          // addmission + tuition
           dsTotal = Object.values(dsStructure.feeStructure).reduce((a, b) => a + b, 0);
         } else {
-          // tution
-          dsTotal = dsStructure?.feeStructure?.TutionFee || 0;
+          // tuition
+          dsTotal = dsStructure?.feeStructure?.tuitionFee || 0;
         }
         const dssTotal = schoolFees.total;
-        tutionFeesDiscount = Math.max(dsTotal - dssTotal, 0);
+        tuitionFeesDiscount = Math.max(dsTotal - dssTotal, 0);
       }
 
       // Prepare student data with fees
@@ -153,7 +151,7 @@ export default function AddStudent() {
           lastYearTransportFee: 0,
           lastYearTransportFeeDiscount: 0,
           schoolFees,
-          tutionFeesDiscount,
+          tuitionFeesDiscount,
           transportFee: 0,
           transportFeeDiscount: 0,
           messFee: 0,
@@ -228,8 +226,8 @@ export default function AddStudent() {
                 />
                 <InputField
                   label="Middle Name"
-                  value={formData.mname}
-                  onChange={e => setFormData({ ...formData, mname: e.target.value })}
+                  value={formData.fatherName}
+                  onChange={e => setFormData({ ...formData, fatherName: e.target.value })}
                 />
                 <InputField
                   label="Last Name"
@@ -315,7 +313,7 @@ export default function AddStudent() {
                   options={["new", "current", "inactive"]}
                   required
                 />
-               
+
                 <InputField
                   label="Academic Year"
                   value={formData.academicYear}

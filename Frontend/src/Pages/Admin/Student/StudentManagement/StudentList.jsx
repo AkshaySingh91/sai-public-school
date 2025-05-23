@@ -10,7 +10,7 @@ import {
   Search,
   FileText,
   FileSpreadsheet,
-  Filter,
+  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   SettingsIcon,
@@ -33,8 +33,8 @@ const StudentList = () => {
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({ class: "all", div: "all", search: "" });
-  const itemsPerPage = 10;
-
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItem] = useState(false)
   // init class & division
   useEffect(() => {
     if (school.class) setClasses(school.class);
@@ -63,6 +63,7 @@ const StudentList = () => {
 
       setStudents(list);
       setFilteredStudents(list);
+      setTotalItem(list.length)
     } catch (error) {
       console.error("Error fetching students:", error);
     } finally {
@@ -73,11 +74,13 @@ const StudentList = () => {
   // filters
   useEffect(() => {
     const result = students.filter(s => {
-      const name = `${s.fname} ${s.mname} ${s.lname}`.toLowerCase();
+      const name = `${s.fname} ${s.fatherName} ${s.lname}`.toLowerCase();
+
       const matchSearch = name.includes(filters.search.toLowerCase()) ||
         s.feeId?.toLowerCase().includes(filters.search.toLowerCase());
-      const matchClass = filters.class === 'all' || s.class === filters.class;
-      const matchDiv = filters.div === 'all' || s.div === filters.div;
+
+      const matchClass = filters.class === 'all' || s.class?.toLowerCase() === filters.class?.toLowerCase();
+      const matchDiv = filters.div === 'all' || s.div?.toLowerCase() === filters.div?.toLowerCase();
       return matchSearch && matchClass && matchDiv;
     });
     setFilteredStudents(result);
@@ -85,10 +88,56 @@ const StudentList = () => {
   }, [filters, students]);
 
   // pagination
-  const idxEnd = currentPage * itemsPerPage;
-  const idxStart = idxEnd - itemsPerPage;
+  const idxEnd = currentPage * pageSize;
+  const idxStart = idxEnd - pageSize;
   const currentItems = filteredStudents.slice(idxStart, idxEnd);
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredStudents.length / pageSize);
+  // Generate page numbers with ellipsis logic
+  const generatePageNumbers = () => {
+    const delta = 2; // Number of pages to show around current page
+    const range = [];
+    const rangeWithDots = [];
+
+    // Always show first page
+    range.push(1);
+
+    // Add pages around current page
+    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+      range.push(i);
+    }
+
+    // Always show last page if more than 1 page
+    if (totalPages > 1) {
+      range.push(totalPages);
+    }
+
+    // Add ellipsis where needed
+    let prev = 0;
+    range.forEach(page => {
+      if (page - prev === 2) {
+        rangeWithDots.push(prev + 1);
+      } else if (page - prev !== 1) {
+        rangeWithDots.push('...');
+      }
+      rangeWithDots.push(page);
+      prev = page;
+    });
+
+    return rangeWithDots;
+  };
+
+  const pageNumbers = generatePageNumbers();
+
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToLastPage = () => setCurrentPage(totalPages);
+  const goToPrevPage = () => setCurrentPage(Math.max(1, currentPage - 1));
+  const goToNextPage = () => setCurrentPage(Math.min(totalPages, currentPage + 1));
 
   // selection
   const toggleSelectAll = (e) => {
@@ -200,24 +249,24 @@ const StudentList = () => {
           const rawFees = await getNewClassFees(userData.schoolCode, nextClass, nextYear, student);
           // this is add fee & tut fee of next class of that stu type
           const admission = newStatus === 'current' ? 0 : rawFees.studentFees.AdmissionFee;
-          const tuition = rawFees.studentFees.TutionFee;
+          const tuition = rawFees.studentFees.tuitionFee;
           // this is add fee & tut fee of next class of DSS stu type use to calc discount
           const originalAdmissionFee = newStatus === "current" ? 0 : rawFees.originalFees.AdmissionFee;
-          const originalTutuionFee = rawFees.originalFees.TutionFee;
+          const originalTutuionFee = rawFees.originalFees.tuitionFee;
 
           const tuitionDiscount = (originalAdmissionFee + originalTutuionFee) - (admission + tuition);
 
           const updatedAllFee = {
             ...allFee,
-            lastYearDiscount: allFee.tutionFeesDiscount,
+            lastYearDiscount: allFee.tuitionFeesDiscount,
             lastYearBalanceFee: lastBal,
             lastYearTransportFee: lastTrans,
             hostelFee: 0,
             messFee: 0,
             transportFee: allFee.transportFee,
             transportFeeDiscount: allFee.transportFeeDiscount,
-            schoolFees: { AdmissionFee: admission, TutionFee: tuition, total: admission + tuition },
-            tutionFeesDiscount: tuitionDiscount,
+            schoolFees: { AdmissionFee: admission, tuitionFee: tuition, total: admission + tuition },
+            tuitionFeesDiscount: tuitionDiscount,
           };
 
           const updated = {
@@ -277,14 +326,14 @@ const StudentList = () => {
   // Export handlers
   const exportToExcel = () => {
     const formattedData = filteredStudents.map((student, index) => {
-      const fullName = `${student.fname || ''} ${student.mname || ''} ${student.lname || ''}`.trim();
+      const fullName = `${student.fname || ''} ${student.fatherName || ''} ${student.lname || ''}`.trim();
 
       return {
         "S.No": index + 1,
         "Name": fullName,
         "Class": student.class || "",
         "Div": student.div || "",
-        "Name": `${(student.fname || '')} ${(student.mname || "")} ${(student.lname || "")}`,
+        "Name": `${(student.fname || '')} ${(student.fatherName || "")} ${(student.lname || "")}`,
         "Sex": student.gender || "",
         "DOB": student.dob || "",
         "Address": student.address || "",
@@ -348,7 +397,7 @@ const StudentList = () => {
           student.feeId,
           student.class,
           student.gender,
-          student.FatherMob,
+          student.fatherMobile,
           student.status,
         ]),
         theme: "grid",
@@ -381,222 +430,308 @@ const StudentList = () => {
   };
 
 
-return (
-  <>
-    {loading ? (
-      <div className="max-w-7xl mx-auto p-4 pt-8 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
-        <TableLoader
-          headers={6}
-          rows={5}
-          className="border-purple-200/40"
-        />
-      </div>
-    ) : (
-      <div className="w-full bg-white rounded-2xl shadow-xl border border-purple-100">
-        {/* Filters and Actions */}
-        <div className="p-6 flex flex-wrap items-center justify-between gap-4 border-b border-purple-100">
-          <div className="flex items-center gap-3">
-            <motion.div whileHover={{ scale: 1.05 }} className="relative">
-              <select
-                className="px-4 py-2.5 text-sm border-2 border-purple-100 rounded-xl bg-purple-50 text-violet-900 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-                value={filters.class}
-                onChange={(e) => setFilters((prev) => ({ ...prev, class: e.target.value }))}
-              >
-                <option value="all">All Classes</option>
-                {classes.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </motion.div>
+  return (
+    <>
+      {loading ? (
+        <div className="max-w-7xl mx-auto p-4 pt-8 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
+          <TableLoader headers={6} rows={5} className="border-purple-200/40" />
+        </div>
+      ) : (
+        <div className="w-full bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
+          {/* Filters and Actions */}
+          <div className="p-6 flex flex-wrap items-center justify-between gap-4 border-b border-purple-100">
+            <div className="flex items-center gap-3">
+              <motion.div whileHover={{ scale: 1.05 }} className="relative">
+                <select
+                  className="px-4 py-2.5 text-sm border-2 border-purple-100 rounded-xl bg-purple-50 text-violet-900 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                  value={filters.class}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, class: e.target.value }))}
+                >
+                  <option value="all">All Classes</option>
+                  {classes.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </motion.div>
 
-            <motion.div whileHover={{ scale: 1.05 }} className="relative">
-              <select
-                className="px-4 py-2.5 text-sm border-2 border-purple-100 rounded-xl bg-purple-50 text-violet-900 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-                value={filters.div}
-                onChange={(e) => setFilters((prev) => ({ ...prev, div: e.target.value }))}
-              >
-                <option value="all">All Divisions</option>
-                {divisions.map((div) => (
-                  <option key={div} value={div}>{div}</option>
-                ))}
-              </select>
-            </motion.div>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <Search size={20} className="text-purple-400" />
-              </div>
-              <input
-                type="text"
-                className="pl-10 pr-4 py-2.5 border-2 border-purple-100 rounded-xl bg-purple-50 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-                placeholder="Search students..."
-                value={filters.search}
-                onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-              />
+              <motion.div whileHover={{ scale: 1.05 }} className="relative">
+                <select
+                  className="px-4 py-2.5 text-sm border-2 border-purple-100 rounded-xl bg-purple-50 text-violet-900 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                  value={filters.div}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, div: e.target.value }))}
+                >
+                  <option value="all">All Divisions</option>
+                  {divisions.map((div) => (
+                    <option key={div} value={div}>{div}</option>
+                  ))}
+                </select>
+              </motion.div>
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={exportToPDF}
-              className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl hover:from-purple-600 hover:to-violet-700 transition-all shadow-md hover:shadow-lg"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              PDF
-            </motion.button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Search size={20} className="text-purple-400" />
+                </div>
+                <input
+                  type="text"
+                  className="pl-10 pr-4 py-2.5 border-2 border-purple-100 rounded-xl bg-purple-50 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                  placeholder="Search students..."
+                  value={filters.search}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                />
+              </div>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={exportToExcel}
-              className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
-            >
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Excel
-            </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={exportToPDF}
+                className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl hover:from-purple-600 hover:to-violet-700 transition-all shadow-md hover:shadow-lg"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                PDF
+              </motion.button>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={handleBatchMove}
-              disabled={selectedStudents.length === 0}
-              className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
-            >
-              Move Selected to Next Year
-            </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={exportToExcel}
+                className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Excel
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={handleBatchMove}
+                disabled={selectedStudents.length === 0}
+                className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
+              >
+                Move Selected to Next Year
+              </motion.button>
+            </div>
           </div>
-        </div>
 
-        {/* Student Table */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-purple-100">
-            <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
-              <tr>
-                <th className="px-6 py-4 w-12">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
-                    checked={selectedStudents.length === currentItems.length && currentItems.length > 0}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
-                {["Academic", "Name", "Type", "Fee ID", "Class", "Div", "Gender", "Father Contact", "Status", "Details"].map((header) => (
-                  <th
-                    key={header}
-                    className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider"
-                  >
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-purple-100 bg-white">
-              {currentItems.map((student) => (
-                <motion.tr
-                  key={student.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="hover:bg-purple-50/80 transition-colors"
-                >
-                  <td className="px-6 py-4">
+          {/* Student Table */}
+          <div className="relative">
+            <table className="w-full">
+              <thead className="sticky top-0 bg-gradient-to-r from-purple-600 to-violet-700 text-white shadow-sm">
+                <tr>
+                  <th className="p-3 w-12 text-center">
                     <input
                       type="checkbox"
                       className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
-                      checked={selectedStudents.includes(student.id)}
-                      onChange={() => toggleSelectStudent(student.id)}
+                      checked={selectedStudents.length === currentItems.length && currentItems.length > 0}
+                      onChange={toggleSelectAll}
                     />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-violet-900">{student.academicYear}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-violet-900">
-                    {student.fname} {student.mname} {student.lname}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{student.type}</td>
-                  <td className="px-6 py-4 text-sm text-violet-700 font-medium">{student.feeId}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{student.class}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{student.div}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 text-xs font-medium rounded-xl ${
-                        student.gender === "Male"
-                          ? "bg-blue-100/80 text-blue-700"
-                          : "bg-pink-100/80 text-pink-700"
-                      }`}
+                  </th>
+                  {["Academic", "Name", "Type", "Fee ID", "Class", "Div", "Gender", "Father Contact", "Status", "Actions"].map((header) => (
+                    <th
+                      key={header}
+                      className="p-3 text-left text-sm font-medium uppercase tracking-wider"
                     >
-                      {student.gender}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{student.fatherMobile}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 text-xs font-medium rounded-xl ${
-                        statusStyles[student.status] || "bg-red-100/80 text-red-700"
-                      }`}
-                    >
-                      {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      onClick={() => navigate(`/student/${student.id}`)}
-                      className="text-violet-600 hover:text-violet-800"
-                    >
-                      <SettingsIcon size={20} />
-                    </motion.button>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-purple-100 flex items-center justify-between bg-purple-50">
-          <div className="text-sm text-violet-800/90">
-            Showing <span className="font-medium">{idxStart + 1}</span> to{" "}
-            <span className="font-medium">{Math.min(idxEnd, filteredStudents.length)}</span> of{" "}
-            <span className="font-medium">{filteredStudents.length}</span> students
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-purple-100 capitalize">
+                {currentItems.map((student) => (
+                  <motion.tr
+                    key={student.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="hover:bg-purple-50/50 transition-colors"
+                  >
+                    <td className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                        checked={selectedStudents.includes(student.id)}
+                        onChange={() => toggleSelectStudent(student.id)}
+                      />
+                    </td>
+                    <td className="p-3 text-sm text-violet-800">{student.academicYear || "-"}</td>
+                    <td className="p-3 text-sm font-medium text-violet-900">
+                      {student.fname || "-"} {student.fatherName || "-"} {student.lname || "-"}
+                    </td>
+                    <td className="p-3 text-sm text-violet-700 uppercase">{student.type || "-"}</td>
+                    <td className="p-3 text-sm text-violet-600 font-medium">{student.feeId || "-"}</td>
+                    <td className="p-3 text-sm text-violet-700">{student.class || "-"}</td>
+                    <td className="p-3 text-sm text-violet-700 uppercase">{student.div || "-"}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-lg ${student?.gender?.toLowerCase() === "male"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-pink-100 text-pink-700"
+                          }`}
+                      >
+                        {student.gender || "-"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-sm text-violet-600">{student.fatherMobile}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-lg ${statusStyles[student.status?.toLowerCase()] || "bg-red-100 text-red-700"
+                          }`}
+                      >
+                        {student.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <motion.button
+                        whileHover={{ rotate: 90 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => navigate(`/student/${student.id}`)}
+                        className="text-violet-600 hover:text-violet-800 p-1 rounded-lg hover:bg-purple-100 cursor-pointer"
+                      >
+                        <SettingsIcon size={20} />
+                      </motion.button>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <nav className="relative z-0 inline-flex rounded-xl shadow-sm -space-x-px">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-l-xl hover:bg-violet-200 transition-colors disabled:opacity-50"
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-5 h-5 mr-1" />
-              Previous
-            </motion.button>
+          {/* Pagination */}
+          <div className="px-6 py-4 border-t border-purple-100 bg-purple-50">
+            {/* Top row - Info and page size selector */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-violet-800/90">
+                Showing{" "}
+                <span className="font-semibold text-violet-900">{idxStart + 1}</span> to{" "}
+                <span className="font-semibold text-violet-900">{idxEnd}</span> of{" "}
+                <span className="font-semibold text-violet-900">{totalItems.toLocaleString()}</span> students
+              </div>
 
-            {[...Array(totalPages).keys()].map((page) => (
-              <motion.button
-                key={page + 1}
-                whileHover={{ scale: 1.05 }}
-                onClick={() => setCurrentPage(page + 1)}
-                className={`px-4 py-2 text-sm font-medium ${
-                  currentPage === page + 1
-                    ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white"
-                    : "bg-white text-violet-800 hover:bg-violet-100"
-                } border border-violet-200`}
-              >
-                {page + 1}
-              </motion.button>
-            ))}
+              {/* Page Size Selector */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-violet-800/90">Show:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1); // Reset to first page when changing page size
+                  }}
+                  className="px-3 py-1 text-sm border border-violet-200 rounded-lg bg-white text-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-sm text-violet-800/90">per page</span>
+              </div>
+            </div>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-r-xl hover:bg-violet-200 transition-colors disabled:opacity-50"
-              disabled={currentPage === totalPages}
-            >
-              Next
-              <ChevronRight className="w-5 h-5 ml-1" />
-            </motion.button>
-          </nav>
+            {/* Bottom row - Navigation */}
+            <div className="flex items-center justify-between">
+              {/* Quick navigation info */}
+              <div className="text-xs text-violet-700/80">
+                Page {currentPage} of {totalPages}
+              </div>
+
+              {/* Pagination Controls */}
+              <nav className="relative z-0 inline-flex items-center rounded-xl shadow-sm">
+                {/* First Page Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={goToFirstPage}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-l-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={currentPage === 1}
+                  title="First page"
+                >
+                  <span className="text-xs">First</span>
+                </motion.button>
+
+                {/* Previous Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={goToPrevPage}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border-t border-b border-violet-200 hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={currentPage === 1}
+                  title="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </motion.button>
+
+                {/* Page Numbers */}
+                {pageNumbers.map((page, index) => (
+                  <div key={index}>
+                    {page === '...' ? (
+                      <span className="px-3 py-2 text-sm text-violet-600 bg-transparent">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </span>
+                    ) : (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => goToPage(page)}
+                        className={`px-3 py-2 text-sm font-medium border-t border-b border-violet-200 transition-all duration-200 ${currentPage === page
+                          ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg transform scale-105"
+                          : "bg-white text-violet-800 hover:bg-violet-100 hover:text-violet-900"
+                          }`}
+                        title={`Go to page ${page}`}
+                      >
+                        {page}
+                      </motion.button>
+                    )}
+                  </div>
+                ))}
+
+                {/* Next Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={goToNextPage}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border-t border-b border-violet-200 hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={currentPage === totalPages}
+                  title="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </motion.button>
+
+                {/* Last Page Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={goToLastPage}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-r-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={currentPage === totalPages}
+                  title="Last page"
+                >
+                  <span className="text-xs">Last</span>
+                </motion.button>
+              </nav>
+
+              {/* Quick Jump Input */}
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-violet-700/80">Go to:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  className="w-16 px-2 py-1 text-xs border border-violet-200 rounded-md bg-white text-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const page = parseInt(e.target.value);
+                      if (page >= 1 && page <= totalPages) {
+                        goToPage(page);
+                        e.target.value = '';
+                      }
+                    }
+                  }}
+                  placeholder={currentPage.toString()}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    )}
-  </>
-);
+      )}
+    </>
+  );
 };
 
 

@@ -12,7 +12,7 @@ export default function StudentDemographics() {
     const [studentTypes, setStudentTypes] = useState([]);
     const [classStrength, setClassStrength] = useState([]);
     const [loading, setLoading] = useState(true);
-    const divisions = school.divisions ? school.divisions : ['A', 'D', 'E', 'SEMI'];
+    const divisions = school.divisions ? school.divisions : ['A', 'B', 'C', 'D', 'E', 'SEMI'];
 
     useEffect(() => {
         const fetchData = async () => {

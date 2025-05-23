@@ -99,12 +99,12 @@ export default function FeeReportsContainer() {
 
         const totalPaid = Object.values(currentYearPaid).reduce((sum, val) => sum + val, 0);
         console.log({ totalPaid })
-        const totalDiscount = (fees.tutionFeesDiscount || 0) +
+        const totalDiscount = (fees.tuitionFeesDiscount || 0) +
             (fees.transportFeeDiscount || 0);
 
         const transportFeePaid = currentYearTransactions.filter(t => t.feeType === 'TransportFee' && t.status === "completed")
             .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-        const tutionFeePaid = totalPaid - transportFeePaid;
+        const tuitionFeePaid = totalPaid - transportFeePaid;
 
         return {
             ...student,
@@ -124,8 +124,8 @@ export default function FeeReportsContainer() {
             outstanding: totalFees - totalPaid,
             lastYearSchoolPaid, //use to visulize chart
             lastYearTransportPaid, //use to visulize chart
-            tutionFeeNet: totalFees - transportFeeNet, // use in excel total tution fee it inc mess, hostel also
-            tutionFeePaid, // use in excel it is total tution paid fee ic hostel, mess 
+            tuitionFeeNet: totalFees - transportFeeNet, // use in excel total tuition fee it inc mess, hostel also
+            tuitionFeePaid, // use in excel it is total tuition paid fee ic hostel, mess 
             totalTransportFee: transportFeeNet + (fees?.transportFeeDiscount || 0),// use in excel it is transport with discount
             transportFeeNet,// use in excel it is transport without discount
             transportFeePaid,// use in excel it is transport fee paid by stu
@@ -149,9 +149,9 @@ export default function FeeReportsContainer() {
 
                 existing.lastYear += (fees.lastYearTransportFee || 0) + (fees.lastYearBalanceFee || 0);
 
-                existing.original += (fees.schoolFees?.total || 0) + (fees.transportFee || 0) + (fees.messFee || 0) + (fees.hostelFee || 0) + (fees.transportFeeDiscount || 0) + (fees.tutionFeesDiscount || 0);
+                existing.original += (fees.schoolFees?.total || 0) + (fees.transportFee || 0) + (fees.messFee || 0) + (fees.hostelFee || 0) + (fees.transportFeeDiscount || 0) + (fees.tuitionFeesDiscount || 0);
 
-                existing.discount += (fees.tutionFeesDiscount || 0) + (fees.transportFeeDiscount || 0);
+                existing.discount += (fees.tuitionFeesDiscount || 0) + (fees.transportFeeDiscount || 0);
                 //    if payment is completed ie  t.status === "completed")
                 const paid = (student.transactions || [])
                     .filter(t => t.academicYear === student.academicYear && t.status === "completed")

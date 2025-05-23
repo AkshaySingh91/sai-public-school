@@ -37,12 +37,12 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
       return {
         originalFees: {
           AdmissionFee: 0,
-          TutionFee: 0,
+          tuitionFee: 0,
           total: 0,
         },
         studentFees: {
           AdmissionFee: 0,
-          TutionFee: 0,
+          tuitionFee: 0,
           total: 0,
         }
       }
@@ -75,12 +75,12 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
       return {
         originalFees: {
           AdmissionFee: 0,
-          TutionFee: 0,
+          tuitionFee: 0,
           total: 0,
         },
         studentFees: {
           AdmissionFee: 0,
-          TutionFee: 0,
+          tuitionFee: 0,
           total: 0,
         }
       }
@@ -95,12 +95,12 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
       return {
         originalFees: {
           AdmissionFee: 0,
-          TutionFee: 0,
+          tuitionFee: 0,
           total: 0,
         },
         studentFees: {
           AdmissionFee: 0,
-          TutionFee: 0,
+          tuitionFee: 0,
           total: 0,
         }
       }
@@ -115,12 +115,12 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
       return {
         originalFees: {
           AdmissionFee: 0,
-          TutionFee: 0,
+          tuitionFee: 0,
           total: 0,
         },
         studentFees: {
           AdmissionFee: 0,
-          TutionFee: 0,
+          tuitionFee: 0,
           total: 0,
         }
       }
@@ -129,25 +129,25 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
     // student fees details (new)
     const feeStructure = studentType.feeStructure || {};
     const AdmissionFee = Number(feeStructure.AdmissionFee) || 0;
-    const tutionFee = Number(feeStructure.TutionFee) || 0;
+    const tuitionFee = Number(feeStructure.TuitionFee) || 0;
     // orignal fee details
     const originalFees = classStructure.studentType?.find(
       (st) => st.name?.trim().toLowerCase() === "ds"
     );
     const originalFeeStructure = originalFees.feeStructure || {};
     const originalAdmissionFee = Number(originalFeeStructure.AdmissionFee) || 0;
-    const originalTutuionFee = Number(originalFeeStructure.TutionFee) || 0;
+    const originalTutuionFee = Number(originalFeeStructure.TuitionFee) || 0;
 
     return {
       originalFees: {
         AdmissionFee: originalAdmissionFee,
-        TutionFee: originalTutuionFee,
+        tuitionFee: originalTutuionFee,
         total: originalAdmissionFee + originalTutuionFee,
       },
       studentFees: {
         AdmissionFee: AdmissionFee,
-        TutionFee: tutionFee,
-        total: AdmissionFee + tutionFee,
+        tuitionFee: tuitionFee,
+        total: AdmissionFee + tuitionFee,
       }
     };
   } catch (error) {
@@ -155,12 +155,12 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
     return {
       originalFees: {
         AdmissionFee: 0,
-        TutionFee: 0,
+        tuitionFee: 0,
         total: 0,
       },
       studentFees: {
         AdmissionFee: 0,
-        TutionFee: 0,
+        tuitionFee: 0,
         total: 0,
       }
     }
@@ -348,8 +348,8 @@ export function StudentDetail() {
         // as this is fee from student.allfee is unchangable this adding previousPayments not required  
         switch (feeType) {
           case 'SchoolFee':
-            initialFee = (student.allFee.schoolFees?.total || 0) + (student.allFee.tutionFeesDiscount || 0);
-            applicableDiscount = student.allFee.tutionFeesDiscount || 0;
+            initialFee = (student.allFee.schoolFees?.total || 0) + (student.allFee.tuitionFeesDiscount || 0);
+            applicableDiscount = student.allFee.tuitionFeesDiscount || 0;
             currentBalance = initialFee - applicableDiscount;
             break;
           case 'TransportFee':
@@ -583,7 +583,7 @@ export function StudentDetail() {
 
     const result = await Swal.fire({
       title: 'Are you sure?',
-      text: "Student Fee will rollerover lastYearBalance = pending (mess + hostel + tution) & lastYearTransport = pending(transport) , next class tution fee will assign",
+      text: "Student Fee will rollerover lastYearBalance = pending (mess + hostel + tuition) & lastYearTransport = pending(transport) , next class tuition fee will assign",
       type: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -650,10 +650,10 @@ export function StudentDetail() {
         const rawFees = await getNewClassFees(userData.schoolCode, nextClass, nextAcademicYear, student);
         // If the student is now "current", admission fee is zero:
         const admissionFee = newStatus === "current" ? 0 : rawFees.studentFees.AdmissionFee;
-        const tuitionFee = rawFees.studentFees.TutionFee;
+        const tuitionFee = rawFees.studentFees.tuitionFee;
         // tuition discount will calculate from DS student
         const originalAdmissionFee = newStatus === "current" ? 0 : rawFees.originalFees.AdmissionFee;
-        const originalTutuionFee = rawFees.originalFees.TutionFee;
+        const originalTutuionFee = rawFees.originalFees.tuitionFee;
 
         const newTuitionFeeDiscount = (originalAdmissionFee + originalTutuionFee) - (admissionFee + tuitionFee);
 
@@ -667,7 +667,7 @@ export function StudentDetail() {
           lastYearBalanceFee: newLastYearBalance,
           lastYearTransportFee: newLastYearTransport,
           lastYearTransportFeeDiscount: transportDiscount,
-          lastYearDiscount: currentFees.tutionFeesDiscount || 0,
+          lastYearDiscount: currentFees.tuitionFeesDiscount || 0,
           // reset current‐year paid amounts
           hostelFee: 0,
           messFee: 0,
@@ -676,10 +676,10 @@ export function StudentDetail() {
           // set the new schoolFees and discounts
           schoolFees: {
             AdmissionFee: admissionFee,
-            TutionFee: tuitionFee,
+            tuitionFee: tuitionFee,
             total: admissionFee + tuitionFee,
           },
-          tutionFeesDiscount: newTuitionFeeDiscount,
+          tuitionFeesDiscount: newTuitionFeeDiscount,
         };
 
         // 8) Persist to Firestore

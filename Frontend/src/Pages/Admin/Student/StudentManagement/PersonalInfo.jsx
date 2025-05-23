@@ -403,9 +403,9 @@ export default function PersonalInfo({
             <InputField
               icon={<CreditCardIcon />}
               label="Aadhar Number"
-              value={formData.addharNo}
+              value={formData.aadharNo}
               onChange={(e) =>
-                setFormData({ ...formData, addharNo: e.target.value })
+                setFormData({ ...formData, aadharNo: e.target.value })
               }
             />
             <SelectField

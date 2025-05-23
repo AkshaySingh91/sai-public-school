@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { School, Upload, Loader } from 'lucide-react';
+import { School, Upload, Loader, Instagram } from 'lucide-react';
 import Swal from "sweetalert2";
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../config/firebase';
@@ -8,15 +8,24 @@ import { auth } from '../../../../config/firebase';
 
 const SchoolSettings = ({ school, setSchool }) => {
     const { userData } = useAuth();
-    const [logoFile, setLogoFile] = useState(null);
-    const [div, setDiv] = useState(school?.divisions?.length ? school.divisions.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
-    const [logoUrl, setLogoUrl] = useState(false);
-    const [classes, setClasses] = useState(school?.class?.length ? school.class.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
-    const [academicYear, setAcademicYear] = useState(school.academicYear);
 
+    const [schoolName, setSchoolName] = useState(school.schoolName || "");
+    const [academicYear, setAcademicYear] = useState(school.academicYear || "");
+    const [schoolLocation, setSchoolLocation] = useState(school.location || {});
+    const [div, setDiv] = useState(school?.divisions?.length ? school.divisions.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
+    const [classes, setClasses] = useState(school?.class?.length ? school.class.reduce((acc, c) => (acc + `${c}, `), "").trim() : "")
+
+    const [feeIdCount, setFeeIdCount] = useState(school.feeIdCount || 0)
     const [schoolReceiptHeader, setSchoolReceiptHeader] = useState(school.schoolReceiptHeader || "")
     const [transportReceiptHeader, setTransportReceiptHeader] = useState(school.transportReceiptHeader || "")
     const [stockReceiptHeader, setStockReceiptHeader] = useState(school.stockReceiptHeader || "")
+    const [tuitionReceiptCount, settuitionReceiptCount] = useState(school.tuitionReceiptCount || 0)
+    const [busReceiptCount, setBusReceiptCount] = useState(school.busReceiptCount || 0)
+    const [stockReceiptCount, setStockReceiptCount] = useState(school.stockReceiptCount || 0)
+
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoUrl, setLogoUrl] = useState(false);
+
 
     const checkIfClassFeeStructurePresent = async (newClass) => {
         try {
@@ -119,7 +128,21 @@ const SchoolSettings = ({ school, setSchool }) => {
                 text: 'Class not present in fee structure. Please add class in fee structure first.'
             });
         }
-        const updatedSchool = { ...school, divisions: divisionArr, class: classArr, academicYear, schoolReceiptHeader, transportReceiptHeader, stockReceiptHeader };
+        const updatedSchool = {
+            ...school,
+            divisions: divisionArr,
+            class: classArr,
+            schoolName,
+            academicYear,
+            schoolLocation,
+            feeIdCount,
+            schoolReceiptHeader,
+            transportReceiptHeader,
+            stockReceiptHeader,
+            tuitionReceiptCount,
+            busReceiptCount,
+            stockReceiptCount,
+        };
 
         let userToken;
         try {
@@ -226,8 +249,12 @@ const SchoolSettings = ({ school, setSchool }) => {
                         </label>
                         <input
                             type="text"
-                            value={school.schoolName || ''}
-                            onChange={(e) => setSchool({ ...school, schoolName: e.target.value })}
+                            value={schoolName || ''}
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== '') {
+                                    setSchoolName()
+                                }
+                            }}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             placeholder="Enter school name"
                             required
@@ -259,8 +286,12 @@ const SchoolSettings = ({ school, setSchool }) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">State <span className="text-red-500">*</span></label>
                         <input
                             type="text"
-                            value={school?.location?.state || ''}
-                            onChange={(e) => setSchool({ ...school, location: { ...location, state: e.target.value } })}
+                            value={schoolLocation.state || ''}
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== '') {
+                                    setSchoolLocation({ ...schoolLocation, state: e.target.value })
+                                }
+                            }}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             required
                         />
@@ -269,8 +300,12 @@ const SchoolSettings = ({ school, setSchool }) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">District <span className="text-red-500">*</span></label>
                         <input
                             type="text"
-                            value={school?.location?.district || ''}
-                            onChange={(e) => setSchool({ ...school, location: { ...location, district: e.target.value } })}
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== '') {
+                                    setSchoolLocation({ ...schoolLocation, district: e.target.value })
+                                }
+                            }}
+                            value={schoolLocation.district || ''}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             required
                         />
@@ -279,8 +314,12 @@ const SchoolSettings = ({ school, setSchool }) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Taluka <span className="text-red-500">*</span></label>
                         <input
                             type="text"
-                            value={school?.location?.taluka || ''}
-                            onChange={(e) => setSchool({ ...school, location: { ...location, taluka: e.target.value } })}
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== '') {
+                                    setSchoolLocation({ ...schoolLocation, taluka: e.target.value })
+                                }
+                            }}
+                            value={schoolLocation.taluka || ''}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             required
                         />
@@ -318,14 +357,66 @@ const SchoolSettings = ({ school, setSchool }) => {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Total Recipt Count
+                            Last student FeeId
                         </label>
                         <input
                             type="text"
-                            disabled
-                            value={school?.receiptCount || 0}
+                            value={feeIdCount}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== '' && !isNaN(e.target.value.trim())) {
+                                    setFeeIdCount(Number.parseInt(e.target.value.trim()));
+                                }
+                            }}
                         />
+                    </div>
+
+                    <div className="grid grid-cols-3 md:grid-cols-3 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Total tuition Receipt Count
+                            </label>
+                            <input
+                                type="number"
+                                value={tuitionReceiptCount}
+                                onChange={(e) => {
+                                    if (e.target.value.trim() !== '' && !isNaN(e.target.value.trim())) {
+                                        settuitionReceiptCount(Number.parseInt(e.target.value.trim()))
+                                    }
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Total Bus Receipt Count
+                            </label>
+                            <input
+                                type="number"
+                                value={busReceiptCount}
+                                onChange={(e) => {
+                                    if (e.target.value.trim() !== '' && !isNaN(e.target.value.trim())) {
+                                        setBusReceiptCount(Number.parseInt(e.target.value.trim()))
+                                    }
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Total Stock Receipt Count
+                            </label>
+                            <input
+                                type="number"
+                                value={stockReceiptCount}
+                                onChange={(e) => {
+                                    if (e.target.value.trim() !== '' && !isNaN(e.target.value.trim())) {
+                                        setStockReceiptCount(Number.parseInt(e.target.value.trim()))
+                                    }
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            />
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -334,7 +425,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                         <input
                             type="text"
                             disabled
-                            value={school?.Code || 0}
+                            value={school.Code || 0}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                         />
                     </div>

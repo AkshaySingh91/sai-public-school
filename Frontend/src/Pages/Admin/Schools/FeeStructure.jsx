@@ -460,7 +460,7 @@ const AddStudentTypeForm = ({
 
     const dsFees = {
       AdmissionFee: Number(fees["AdmissionFee"]),
-      TutionFee: Number(fees["TutionFee"]),
+      TuitionFee: Number(fees["TuitionFee"]),
     };
 
     // Add DS
@@ -469,14 +469,14 @@ const AddStudentTypeForm = ({
     // Add DSS: Half of DS
     const dssFees = {
       AdmissionFee: Math.round(dsFees.AdmissionFee / 2),
-      TutionFee: Math.round(dsFees.TutionFee / 2),
+      TuitionFee: Math.round(dsFees.TuitionFee / 2),
     };
     onAdd(year, className, "DSS", dssFees);
 
-    // Add DSR: AdmissionFee same, TutionFee 0
+    // Add DSR: AdmissionFee same, TuitionFee 0
     const dsrFees = {
       AdmissionFee: dsFees.AdmissionFee,
-      TutionFee: 0,
+      TuitionFee: 0,
     };
     onAdd(year, className, "DSR", dsrFees);
 

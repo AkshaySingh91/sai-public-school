@@ -94,7 +94,7 @@ export default function SchoolMetricsCards() {
                 const isActive = s.status === 'new' || s.status === 'current';
 
                 if (isActive) {
-                    metricsData.discountedAmount += (all.transportFeeDiscount || 0) + (all.tutionFeesDiscount || 0);
+                    metricsData.discountedAmount += (all.transportFeeDiscount || 0) + (all.tuitionFeesDiscount || 0);
                     metricsData.expectedCollection +=
                         (all.schoolFees?.total || 0) +
                         (all.transportFee || 0) +

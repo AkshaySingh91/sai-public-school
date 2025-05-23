@@ -9,12 +9,12 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
     // local copy of fees
     const [fees, setFees] = useState({
         // ensure the shape exists immediately
-        schoolFees: { AdmissionFee: 0, TutionFee: 0, total: 0 },
+        schoolFees: { AdmissionFee: 0, tuitionFee: 0, total: 0 },
         messFee: 0,
         hostelFee: 0,
         transportFee: 0,
         transportFeeDiscount: 0,
-        tutionFeesDiscount: 0,
+        tuitionFeesDiscount: 0,
         lastYearBalanceFee: 0,
         lastYearDiscount: 0,
         lastYearTransportFee: 0,
@@ -42,9 +42,9 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
     useEffect(() => {
         if (((fees.schoolFees?.total || 0) > 0) && (fees.messFee >= 0) && (fees.hostelFee >= 0) && (fees.transportFee >= 0)) {
             console.log("formData", formData);
-            const tution = Number(fees.schoolFees?.TutionFee) || 0;
+            const tuition = Number(fees.schoolFees?.tuitionFee) || 0;
             const academic = Number(fees.schoolFees?.AdmissionFee) || 0;
-            const schoolTotal = tution + academic;
+            const schoolTotal = tuition + academic;
             console.log({ fees })
             const mess = Number(fees.messFee) || 0;
             const hostel = Number(fees.hostelFee) || 0;
@@ -58,7 +58,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
             setSummaryTotal(schoolTotal + mess + hostel + transport);
         }
     }, [
-        fees.schoolFees?.TutionFee,
+        fees.schoolFees?.tuitionFee,
         fees.schoolFees?.AdmissionFee,
         fees.messFee,
         fees.hostelFee,
@@ -107,7 +107,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
     }, [transactions, student.academicYear]);
     // Calculate current year totals
     const currentYearTotals = useMemo(() => ({
-        SchoolFee: (fees.schoolFees?.AdmissionFee || 0) + (fees.schoolFees?.TutionFee || 0),
+        SchoolFee: (fees.schoolFees?.AdmissionFee || 0) + (fees.schoolFees?.tuitionFee || 0),
         TransportFee: fees.transportFee || 0,
         MessFee: fees.messFee || 0,
         HostelFee: fees.hostelFee || 0

@@ -23,15 +23,15 @@ export default function StudentEmployeeAnalytics() {
             const studentQueries = [
                 query(
                     collection(db, "students"),
-                    where("schoolCode", "==", code),
+                    where("schoolCode", "==", userData.schoolCode),
                     where("status", "==", "new"),
-                    ...(selectedClass ? [where("class", "==", selectedClass)] : [])
+                    ...(selectedClass ? [where("class", "==", selectedClass.toLowerCase())] : [])
                 ),
                 query(
                     collection(db, "students"),
-                    where("schoolCode", "==", code),
+                    where("schoolCode", "==", userData.schoolCode),
                     where("status", "==", "current"),
-                    ...(selectedClass ? [where("class", "==", selectedClass)] : [])
+                    ...(selectedClass ? [where("class", "==", selectedClass.toLowerCase())] : [])
                 )
             ];
 
@@ -44,7 +44,6 @@ export default function StudentEmployeeAnalytics() {
                 ...newStudentsSnap.docs,
                 ...currentStudentsSnap.docs
             ];
-
             const sexes = { male: 0, female: 0, other: 0 };
             studentsSnap.forEach(doc => {
                 const g = (doc.data().gender || '').toLowerCase();

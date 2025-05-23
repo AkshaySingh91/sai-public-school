@@ -156,17 +156,41 @@ router.get('/school', async (req, res) => {
 
 router.put('/school', async (req, res) => {
     try {
-        const { schoolName, location, divisions: d, class: c, academicYear, schoolReceiptHeader, transportReceiptHeader, stockReceiptHeader } = req.body;
+        const { schoolName,
+            divisions: d,
+            class: c,
+            location,
+            academicYear,
+            schoolReceiptHeader,
+            transportReceiptHeader,
+            stockReceiptHeader,
+            schoolLocation,
+            feeIdCount,
+            tuitionReceiptCount,
+            busReceiptCount,
+            stockReceiptCount,
+        } = req.body;
         const schoolDoc = await admin.firestore().collection('schools')
             .where('Code', '==', req.user.schoolCode)
             .get();
-        res.json({ message: "School updated successfully" });
         await schoolDoc.docs[0].ref.update({
-            schoolName, location, divisions: d, class: c, academicYear,
-            schoolReceiptHeader, transportReceiptHeader, stockReceiptHeader,
+            divisions: d,
+            class: c,
+            schoolName,
+            location,
+            academicYear,
+            schoolReceiptHeader,
+            transportReceiptHeader,
+            stockReceiptHeader,
             // if academic year change than set receipt count to 0
-            ...(academicYear !== schoolDoc.docs[0].data().academicYear ? { receiptCount: 0 } : {})
-        });
+            ...(academicYear !== schoolDoc.docs[0].data().academicYear ? { receiptCount: 0 } : {}),
+            location: schoolLocation,
+            feeIdCount,
+            tuitionReceiptCount,
+            busReceiptCount,
+            stockReceiptCount,
+        }); 
+        res.json({ message: "School updated successfully" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

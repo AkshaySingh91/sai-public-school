@@ -5,6 +5,7 @@ import { InputField } from '../InputField'
 import { SelectField } from '../SelectField'
 
 function TransactionForm({ newTransaction, setNewTransaction, schoolData, handleTransactionSubmit, student }) {
+    console.log({newTransaction})
     return (
         <>
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -49,7 +50,7 @@ function TransactionForm({ newTransaction, setNewTransaction, schoolData, handle
                     <SelectField
                         icon={<FileTextIcon />}
                         label="Fee Type"
-                        // schoolData.feeTypes will only have AdmissionFee, TutionFee that only school fees thus we need to add all fee
+                        // schoolData.feeTypes will only have AdmissionFee, tuitionFee that only school fees thus we need to add all fee
                         options={["SchoolFee", "MessFee", "HostelFee", "TransportFee"]}
                         value={newTransaction.feeType}
                         onChange={(e) => setNewTransaction({ ...newTransaction, feeType: e.target.value })}

@@ -66,19 +66,15 @@ export default function WeeklyCollectionChart() {
 
         const studSnap = await getDocs(studQ);
         const sums = days.reduce((acc, { key }) => ({ ...acc, [key]: 0 }), {});
-        console.log({ sums })
         studSnap.docs.forEach(d => {
             (d.data().transactions || []).forEach(tx => {
                 // check if today trans is completed than we consider it as transaction 
-                console.log({ tx })
                 if (tx.status === "completed") {
                     const date = tx.timestamp?.slice(0, 10);
                     if (date in sums) sums[date] += Number(tx.amount) || 0;
                 }
             });
         });
-        console.log({ sums })
-        console.log(studSnap.docs)
 
         const maxAmount = Math.max(...Object.values(sums), 1);
         const barData = days.map(({ key, label }) => ({
