@@ -373,9 +373,9 @@ function StockList() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowModal(true)}
-                  className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-3 rounded-xl flex sm:w-fit w-full items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaPlus className="w-4 h-4" />
+                  <FaPlus className="w-4 h-4 " />
                   Add Stock
                 </motion.button>
 
@@ -383,19 +383,19 @@ function StockList() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowExcelModal(true)}
-                  className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 sm:w-fit w-full text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                 >
                   <MdOutlineFileUpload className="w-5 h-5" />
                   Bulk Upload
                 </motion.button>
               </div>
 
-              <div className="ml-auto flex gap-3">
+              <div className="ml-auto flex items-center sm:gap-3 gap-3 w-full sm:w-auto justify-between ">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={exportToExcel}
-                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl hover:from-purple-600 hover:to-violet-700 transition-all shadow-md hover:shadow-lg"
+                  className="flex items-center w-1/2 gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl hover:from-purple-600 hover:to-violet-700 transition-all shadow-md hover:shadow-lg"
                 >
                   <FaFileExcel className="w-4 h-4" />
                   Excel
@@ -404,7 +404,7 @@ function StockList() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+                  className="flex items-center w-1/2 gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
                   onClick={exportToPDF}
                   >
                   <MdOutlinePictureAsPdf className="w-4 h-4" />

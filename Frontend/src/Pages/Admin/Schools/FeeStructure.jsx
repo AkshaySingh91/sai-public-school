@@ -8,7 +8,7 @@ import {
   doc,
   getDoc,
   setDoc,
-  updateDoc
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -110,9 +110,9 @@ export default function FeeStructure() {
       prev.map((s) =>
         s.year === year
           ? {
-            ...s,
-            classes: [...s.classes, { name: className, studentType: [] }],
-          }
+              ...s,
+              classes: [...s.classes, { name: className, studentType: [] }],
+            }
           : s
       )
     );
@@ -154,14 +154,14 @@ export default function FeeStructure() {
               ...c,
               studentType: existing
                 ? c.studentType.map((st) =>
-                  st.name === stName
-                    ? { ...st, feeStructure: validatedFees }
-                    : st
-                )
+                    st.name === stName
+                      ? { ...st, feeStructure: validatedFees }
+                      : st
+                  )
                 : [
-                  ...c.studentType,
-                  { name: stName, feeStructure: validatedFees },
-                ],
+                    ...c.studentType,
+                    { name: stName, feeStructure: validatedFees },
+                  ],
             };
           }),
         };
@@ -191,14 +191,13 @@ export default function FeeStructure() {
     setLoading(true);
     try {
       const fsRef = doc(db, "feeStructures", userData.schoolCode);
-      const schoolsRef = collection(db, 'schools');
+      const schoolsRef = collection(db, "schools");
       const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
       const querySnapshot = await getDocs(q);
       if (querySnapshot.empty) throw new Error("School not found");
       const schoolDoc = querySnapshot.docs[0];
 
-
-      console.log({ structures })
+      console.log({ structures });
       const allClasses = [];
       const sortedStructures = [...structures].sort((a, b) => {
         // Extract starting year from academic year format "YY-YY"
@@ -209,12 +208,12 @@ export default function FeeStructure() {
 
         return getStartYear(b.year) - getStartYear(a.year);
       })[0];
-      sortedStructures.classes.map(c => {
-        allClasses.push(c.name)
+      sortedStructures.classes.map((c) => {
+        allClasses.push(c.name);
       });
       // whenever we add new class we will update in school.class
-      await updateDoc(doc(db, 'schools', schoolDoc.id), {
-        class: allClasses
+      await updateDoc(doc(db, "schools", schoolDoc.id), {
+        class: allClasses,
       });
       // updating school feestructure
       await setDoc(fsRef, { structures }, { merge: true });
@@ -224,7 +223,6 @@ export default function FeeStructure() {
         icon: "success",
         confirmButtonColor: "#7e22ce",
       });
-
     } catch (err) {
       MySwal.fire({
         title: "Error!",
@@ -240,14 +238,60 @@ export default function FeeStructure() {
   if (error) return <ErrorDisplay error={error} />;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
+    // <div className="p-6 max-w-7xl mx-auto space-y-8">
+    //   <header className="space-y-4">
+    //     <h1 className="text-4xl font-bold text-purple-700">
+    //       Fee Structure Management
+    //     </h1>
+
+    //     <div className="flex flex-wrap gap-4 items-center">
+    //       <div className="flex-1 max-w-xs">
+    //         <input
+    //           type="text"
+    //           placeholder="Academic Year (e.g. 25-26)"
+    //           value={newYear}
+    //           onChange={(e) => setNewYear(e.target.value)}
+    //           className="w-full p-3 border-2 border-purple-100 rounded-lg focus:outline-none focus:border-purple-500"
+    //         />
+    //       </div>
+    //       <button
+    //         onClick={addYear}
+    //         className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+    //       >
+    //         Add Academic Year
+    //       </button>
+    //       <button
+    //         onClick={saveAll}
+    //         className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+    //       >
+    //         Save All Changes
+    //       </button>
+    //     </div>
+    //   </header>
+
+    //   <div className="space-y-8">
+    //     {structures.map((yearStruct) => (
+    //       <YearSection
+    //         key={yearStruct.year}
+    //         yearStruct={yearStruct}
+    //         schoolSchema={schoolSchema}
+    //         onDeleteYear={deleteYear}
+    //         onAddClass={addClass}
+    //         onDeleteClass={deleteClass}
+    //         onAddStudentType={addStudentType}
+    //         onDeleteStudentType={deleteStudentType}
+    //       />
+    //     ))}
+    //   </div>
+    // </div>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-8">
       <header className="space-y-4">
-        <h1 className="text-4xl font-bold text-purple-700">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-purple-700 text-center sm:text-left">
           Fee Structure Management
         </h1>
 
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex-1 max-w-xs">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4 items-stretch sm:items-center">
+          <div className="w-full sm:flex-1 sm:max-w-xs">
             <input
               type="text"
               placeholder="Academic Year (e.g. 25-26)"
@@ -256,15 +300,17 @@ export default function FeeStructure() {
               className="w-full p-3 border-2 border-purple-100 rounded-lg focus:outline-none focus:border-purple-500"
             />
           </div>
+
           <button
             onClick={addYear}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+            className="w-full sm:w-auto px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
           >
             Add Academic Year
           </button>
+
           <button
             onClick={saveAll}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+            className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
           >
             Save All Changes
           </button>
@@ -312,33 +358,130 @@ const YearSection = ({
   }, [yearStruct.classes.length]);
 
   return (
+    // <section className="border-2 border-purple-100 rounded-xl bg-white shadow-lg">
+    //   <div className="p-6 border-b border-purple-100 flex justify-between items-center bg-purple-50 rounded-t-xl">
+    //     <h2 className="text-2xl font-bold text-purple-800">
+    //       {yearStruct.year}
+    //     </h2>
+    //     <button
+    //       onClick={() => onDeleteYear(yearStruct.year)}
+    //       className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+    //     >
+    //       Delete Year
+    //     </button>
+    //   </div>
+
+    //   <div className="p-6 space-y-6" ref={containerRef}>
+    //     <AddClassForm year={yearStruct.year} onAdd={onAddClass} />
+    //     {yearStruct.classes.map((cls) => (
+    //       <div
+    //         key={cls.name}
+    //         className="border border-purple-50 rounded-lg bg-white p-6 shadow-sm"
+    //       >
+    //         <div className="flex justify-between items-center mb-4">
+    //           <h3 className="text-xl font-semibold text-purple-700">
+    //             {cls.name}
+    //           </h3>
+    //           <button
+    //             onClick={() => onDeleteClass(yearStruct.year, cls.name)}
+    //             className="text-red-500 hover:text-red-700"
+    //           >
+    //             Delete Class
+    //           </button>
+    //         </div>
+
+    //         <AddStudentTypeForm
+    //           year={yearStruct.year}
+    //           className={cls.name}
+    //           studentTypes={schoolSchema.studentType}
+    //           feeTypes={schoolSchema.feeType}
+    //           onAdd={onAddStudentType}
+    //         />
+
+    //         {cls.studentType.length > 0 && (
+    //           <div className="overflow-x-auto rounded-lg border border-purple-50 mt-4">
+    //             <table className="min-w-full divide-y divide-purple-100">
+    //               <thead className="bg-purple-50">
+    //                 <tr>
+    //                   <th className="px-4 py-3 text-left text-purple-700 font-semibold">
+    //                     Student Type
+    //                   </th>
+    //                   {schoolSchema.feeType.map((ft) => (
+    //                     <th
+    //                       key={ft}
+    //                       className="px-4 py-3 text-left text-purple-700 font-semibold"
+    //                     >
+    //                       {ft}
+    //                     </th>
+    //                   ))}
+    //                   <th className="px-4 py-3 text-purple-700 font-semibold">
+    //                     Actions
+    //                   </th>
+    //                 </tr>
+    //               </thead>
+    //               <tbody className="divide-y divide-purple-100">
+    //                 {cls.studentType.map((st) => (
+    //                   <tr
+    //                     key={st.name}
+    //                     className="hover:bg-purple-50 transition-colors"
+    //                   >
+    //                     <td className="px-4 py-3 font-medium">{st.name}</td>
+    //                     {schoolSchema.feeType.map((ft) => (
+    //                       <td key={ft} className="px-4 py-3">
+    //                         ₹{st.feeStructure[ft]?.toLocaleString() || 0}
+    //                       </td>
+    //                     ))}
+    //                     <td className="px-4 py-3 text-center">
+    //                       <button
+    //                         onClick={() =>
+    //                           onDeleteStudentType(
+    //                             yearStruct.year,
+    //                             cls.name,
+    //                             st.name
+    //                           )
+    //                         }
+    //                         className="text-red-500 hover:text-red-700 px-2"
+    //                       >
+    //                         Delete
+    //                       </button>
+    //                     </td>
+    //                   </tr>
+    //                 ))}
+    //               </tbody>
+    //             </table>
+    //           </div>
+    //         )}
+    //       </div>
+    //     ))}
+    //   </div>
+    // </section>
     <section className="border-2 border-purple-100 rounded-xl bg-white shadow-lg">
-      <div className="p-6 border-b border-purple-100 flex justify-between items-center bg-purple-50 rounded-t-xl">
-        <h2 className="text-2xl font-bold text-purple-800">
+      <div className="p-4 sm:p-6 border-b border-purple-100 flex flex-col sm:flex-row justify-between gap-4 sm:items-center bg-purple-50 rounded-t-xl">
+        <h2 className="text-xl sm:text-2xl font-bold text-purple-800">
           {yearStruct.year}
         </h2>
         <button
           onClick={() => onDeleteYear(yearStruct.year)}
-          className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+          className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm sm:text-base"
         >
           Delete Year
         </button>
       </div>
 
-      <div className="p-6 space-y-6" ref={containerRef}>
+      <div className="p-4 sm:p-6 space-y-6" ref={containerRef}>
         <AddClassForm year={yearStruct.year} onAdd={onAddClass} />
         {yearStruct.classes.map((cls) => (
           <div
             key={cls.name}
-            className="border border-purple-50 rounded-lg bg-white p-6 shadow-sm"
+            className="border border-purple-50 rounded-lg bg-white p-4 sm:p-6 shadow-sm"
           >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-purple-700">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+              <h3 className="text-lg sm:text-xl font-semibold text-purple-700">
                 {cls.name}
               </h3>
               <button
                 onClick={() => onDeleteClass(yearStruct.year, cls.name)}
-                className="text-red-500 hover:text-red-700"
+                className="text-red-500 hover:text-red-700 text-sm sm:text-base"
               >
                 Delete Class
               </button>
@@ -353,22 +496,22 @@ const YearSection = ({
             />
 
             {cls.studentType.length > 0 && (
-              <div className="overflow-x-auto rounded-lg border border-purple-50 mt-4">
-                <table className="min-w-full divide-y divide-purple-100">
+              <div className="overflow-x-auto mt-4 rounded-lg border border-purple-50">
+                <table className="min-w-full divide-y divide-purple-100 text-sm sm:text-base">
                   <thead className="bg-purple-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-purple-700 font-semibold">
+                      <th className="px-4 py-3 text-left text-purple-700 font-semibold whitespace-nowrap">
                         Student Type
                       </th>
                       {schoolSchema.feeType.map((ft) => (
                         <th
                           key={ft}
-                          className="px-4 py-3 text-left text-purple-700 font-semibold"
+                          className="px-4 py-3 text-left text-purple-700 font-semibold whitespace-nowrap"
                         >
                           {ft}
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-purple-700 font-semibold">
+                      <th className="px-4 py-3 text-purple-700 font-semibold text-center">
                         Actions
                       </th>
                     </tr>
@@ -379,13 +522,15 @@ const YearSection = ({
                         key={st.name}
                         className="hover:bg-purple-50 transition-colors"
                       >
-                        <td className="px-4 py-3 font-medium">{st.name}</td>
+                        <td className="px-4 py-3 font-medium whitespace-nowrap">
+                          {st.name}
+                        </td>
                         {schoolSchema.feeType.map((ft) => (
-                          <td key={ft} className="px-4 py-3">
+                          <td key={ft} className="px-4 py-3 whitespace-nowrap">
                             ₹{st.feeStructure[ft]?.toLocaleString() || 0}
                           </td>
                         ))}
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
                           <button
                             onClick={() =>
                               onDeleteStudentType(
@@ -394,7 +539,7 @@ const YearSection = ({
                                 st.name
                               )
                             }
-                            className="text-red-500 hover:text-red-700 px-2"
+                            className="text-red-500 hover:text-red-700 px-2 text-sm sm:text-base"
                           >
                             Delete
                           </button>
@@ -421,17 +566,32 @@ const AddClassForm = ({ year, onAdd }) => {
     }
   };
   return (
-    <div className="flex gap-4 items-center bg-purple-50 p-4 rounded-lg">
+    // <div className="flex gap-4 items-center bg-purple-50 p-4 rounded-lg">
+    //   <input
+    //     type="text"
+    //     placeholder={`Add class to ${year}`}
+    //     value={cls}
+    //     onChange={(e) => setCls(e.target.value)}
+    //     className="flex-1 p-2 border-2 border-purple-100 rounded focus:outline-none focus:border-purple-500"
+    //   />
+    //   <button
+    //     onClick={handleadd}
+    //     className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+    //   >
+    //     Add Class
+    //   </button>
+    // </div>
+    <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center bg-purple-50 p-4 rounded-lg">
       <input
         type="text"
         placeholder={`Add class to ${year}`}
         value={cls}
         onChange={(e) => setCls(e.target.value)}
-        className="flex-1 p-2 border-2 border-purple-100 rounded focus:outline-none focus:border-purple-500"
+        className="w-full sm:flex-1 p-2 border-2 border-purple-100 rounded focus:outline-none focus:border-purple-500"
       />
       <button
         onClick={handleadd}
-        className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+        className="w-full sm:w-auto px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
       >
         Add Class
       </button>
@@ -486,8 +646,48 @@ const AddStudentTypeForm = ({
   };
 
   return (
+    // <div className="bg-white p-4 flex flex-col rounded-lg border border-purple-100">
+    //   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    //     <div>
+    //       <label className="block text-sm font-medium text-purple-700 mb-2">
+    //         Student Type
+    //       </label>
+    //       <select
+    //         value={stName}
+    //         disabled
+    //         className="w-full p-2 border-2 border-purple-100 rounded bg-gray-100 text-gray-600 cursor-not-allowed"
+    //       >
+    //         <option value="DS">DS</option>
+    //       </select>
+    //     </div>
+
+    //     {feeTypes.map((ft) => (
+    //       <div key={ft}>
+    //         <label className="block text-sm font-medium text-purple-700 mb-2">
+    //           {ft}
+    //         </label>
+    //         <input
+    //           type="number"
+    //           placeholder={ft}
+    //           value={fees[ft]}
+    //           onChange={(e) => handleFeeChange(ft, e.target.value)}
+    //           className="w-full p-2 border-2 border-purple-100 rounded focus:outline-none focus:border-purple-500"
+    //         />
+    //       </div>
+    //     ))}
+    //   </div>
+
+    //   <div className="flex justify-end mt-4">
+    //     <button
+    //       onClick={handleSubmit}
+    //       className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+    //     >
+    //       Add Fees
+    //     </button>
+    //   </div>
+    // </div>
     <div className="bg-white p-4 flex flex-col rounded-lg border border-purple-100">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-purple-700 mb-2">
             Student Type
@@ -520,7 +720,7 @@ const AddStudentTypeForm = ({
       <div className="flex justify-end mt-4">
         <button
           onClick={handleSubmit}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+          className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
         >
           Add Fees
         </button>

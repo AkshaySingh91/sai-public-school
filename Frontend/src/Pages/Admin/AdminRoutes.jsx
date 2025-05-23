@@ -30,7 +30,7 @@ const AdminLayout = () => {
     <div className="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen overflow-hidden">
       <div className="">
         <AdminSidebar />
-        <div className="pr-5 pl-5 ml-20 lg:ml-64 h-screen overflow-y-auto w-auto">
+        <div className="pr-5 pl-5 ml-14 lg:ml-64 h-screen overflow-y-auto w-auto">
           <Outlet />
         </div>
       </div>
@@ -41,6 +41,7 @@ const AdminLayout = () => {
 
 const AdminIndex = () => {
 
+  
   return (
     <Routes>
       <Route element={<AdminLayout />}>
