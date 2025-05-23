@@ -106,7 +106,7 @@ export default function SchoolMetricsCards() {
         const s = docSnap.data();
         const all = s.allFee || {};
 
-        const isActive = s.status === "new" || s.status === "current";
+        const isActive = s.status?.toLowerCase() === "new" || s.status.toLowerCase() === "current";
 
         if (isActive) {
           metricsData.discountedAmount +=

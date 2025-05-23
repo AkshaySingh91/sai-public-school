@@ -164,19 +164,19 @@ const StudentList = () => {
         school?.class?.length > 0
           ? school.class
           : [
-              "Nursery",
-              "JRKG",
-              "SRKG",
-              "1st",
-              "2nd",
-              "3rd",
-              "4th",
-              "5th",
-              "6th",
-              "7th",
-              "8th",
-              "9th",
-            ];
+            "Nursery",
+            "JRKG",
+            "SRKG",
+            "1st",
+            "2nd",
+            "3rd",
+            "4th",
+            "5th",
+            "6th",
+            "7th",
+            "8th",
+            "9th",
+          ];
       // get all selected student
       const selected = students.filter((s) => selectedStudents.includes(s.id));
       // determine next academic year
@@ -204,11 +204,9 @@ const StudentList = () => {
         title: `Move ${total} students to ${nextYear}?`,
         html: `
         <div class="text-center">
-          <p class="text-xl">New students: ${
-            toMove.filter((s) => s.status === "new").length
+          <p class="text-xl">New students: ${toMove.filter((s) => s.status === "new").length
           }</p>
-          <p class="text-xl">Current students: ${
-            toMove.filter((s) => s.status === "current").length
+          <p class="text-xl">Current students: ${toMove.filter((s) => s.status === "current").length
           }</p>
           <p class="mt-2 text-sm text-gray-500">This operation cannot be undone.</p>
         </div>
@@ -246,9 +244,8 @@ const StudentList = () => {
           ).textContent = `${index + 1}/${total}`;
           Swal.getHtmlContainer().querySelector(
             ".current-student"
-          ).textContent = `Processing: ${student.fname} ${student.lname} (${
-            student.class
-          } → ${classOrder[classOrder.indexOf(student.class) + 1]})`;
+          ).textContent = `Processing: ${student.fname} ${student.lname} (${student.class
+            } → ${classOrder[classOrder.indexOf(student.class) + 1]})`;
 
           // replicate goToNextAcademicYear logic
           const idx = classOrder.indexOf(student.class);
@@ -372,10 +369,9 @@ const StudentList = () => {
 
       return {
         "S.No": index + 1,
-        "Name": fullName,
         "Class": student.class || "",
         "Div": student.div || "",
-        "Name": `${(student.fname || '')} ${(student.fatherName || "")} ${(student.lname || "")}`,
+        "Name": fullName,
         "Sex": student.gender || "",
         "DOB": student.dob || "",
         "Address": student.address || "",

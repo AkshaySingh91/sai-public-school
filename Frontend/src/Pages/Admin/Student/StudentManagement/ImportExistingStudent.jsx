@@ -500,7 +500,7 @@ export default function ImportExistingStudent() {
                 },
                 tuitionFeesDiscount: Number(studentData["TuitionFeesDiscount"]),
                 transportFee: Number(studentData["TransportFee"]),
-                transportFeeDiscount: Number(studentData["transportDiscount"]),
+                transportFeeDiscount: Number(studentData["TransportDiscount"]),
                 messFee: 0,
                 hostelFee: 0,
             },

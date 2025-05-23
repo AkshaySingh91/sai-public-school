@@ -24,6 +24,7 @@ import StudentStockAllocation from './Student/StudentStockAllocation';
 import StockFeeReceiptPage from './Student/StockFeeReceiptPage';
 import StockDailyBook from './Student/StockDailyBook';
 import ImportExistingStudent from './Student/StudentManagement/ImportExistingStudent';
+import EmployeeForm from './Employee/EmployeeForm';
 
 const AdminLayout = () => {
   return (
@@ -48,6 +49,7 @@ const AdminIndex = () => {
         <Route path="/" element={<AdminDashboard />} />
         <Route path="/employee" element={<EmployeeList />} />
         <Route path="/employee/:uid" element={<EmployeeDetail />} />
+        <Route path="/employee/add" element={<EmployeeForm/>} />
         <Route path="/school/payment-structure" element={<PaymentStructure />} />
         <Route path="/school/fee-structure" element={<FeeStructure />} />
         <Route path="/students" element={<StudentList />} />

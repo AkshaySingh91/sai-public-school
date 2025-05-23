@@ -7,7 +7,10 @@ import ProfileSettings from "./ProfileSettings/ProfileSettings";
 import SchoolSettings from "./SchoolSettings/SchoolSettings";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { auth } from "../../../config/firebase";
- 
+
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+
 const Settings = () => {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
@@ -23,16 +26,16 @@ const Settings = () => {
       if (!user) {
         throw new Error("User not authenticated");
       }
-
-      const userToken = await user.getIdToken();
-
+      console.log(user)
+      const userToken = await user.getIdToken(true); // ← force refresh
+      console.log(userToken)
       const [profileRes, schoolRes] = await Promise.all([
-        fetch("http://localhost:5000/admin/settings/profile", {
+        fetch(`${VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/profile` : "https://www.tuljabhavanibss.in/api/admin/settings/profile"}`, {
           headers: {
             Authorization: `Bearer ${userToken}`,
           },
         }),
-        fetch("http://localhost:5000/admin/settings/school", {
+        fetch(`${VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/school` : "https://www.tuljabhavanibss.in/api/admin/settings/school"}`, {
           headers: {
             Authorization: `Bearer ${userToken}`,
           },
@@ -87,34 +90,34 @@ const Settings = () => {
   };
 
   const handleImageUpload = async (file) => {
-      try {
-          setLoading(true);
-          const userToken = await auth.currentUser.getIdToken();
-          const formData = new FormData();
-          formData.append('image', file);
+    try {
+      setLoading(true);
+      const userToken = await auth.currentUser.getIdToken();
+      const formData = new FormData();
+      formData.append('image', file);
 
-          const response = await fetch('http://localhost:5000/admin/settings/upload-profile', {
-              method: 'POST',
-              headers: {
-                  'Authorization': `Bearer ${userToken}`
-              },
-              body: formData
-          });
+      const response = await fetch('http://localhost:5000/admin/settings/upload-profile', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userToken}`
+        },
+        body: formData
+      });
 
-          if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) throw new Error('Upload failed');
 
-          const data = await response.json();
-          setProfile(prev => ({ ...prev, profileImage: data.imageUrl }));
-      } catch (err) {
-          setError(err.message || 'Failed to upload image');
-          Swal.fire({
-              icon: 'error',
-              title: 'Upload Failed',
-              text: err.message
-          });
-      } finally {
-          setLoading(false);
-      }
+      const data = await response.json();
+      setProfile(prev => ({ ...prev, profileImage: data.imageUrl }));
+    } catch (err) {
+      setError(err.message || 'Failed to upload image');
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Failed',
+        text: err.message
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -161,11 +164,10 @@ const Settings = () => {
 const TabButton = ({ active, onClick, icon, label }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 flex items-center gap-2 transition-colors ${
-      active
-        ? "border-b-2 border-purple-600 text-purple-600"
-        : "text-gray-500 hover:text-purple-500"
-    }`}
+    className={`px-4 py-2 flex items-center gap-2 transition-colors ${active
+      ? "border-b-2 border-purple-600 text-purple-600"
+      : "text-gray-500 hover:text-purple-500"
+      }`}
   >
     {icon} {label}
   </button>

@@ -17,7 +17,6 @@ export default function AddStudent() {
   const { school } = useSchool();
   const [formData, setFormData] = useState({
     fname: '',
-    fatherName: '',
     lname: '',
     fatherName: '',
     motherName: '',

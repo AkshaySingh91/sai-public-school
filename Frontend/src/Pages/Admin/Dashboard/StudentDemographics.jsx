@@ -39,8 +39,8 @@ export default function StudentDemographics() {
                         const q = query(
                             collection(db, 'students'),
                             where('schoolCode', '==', userData.schoolCode),
-                            where('class', '==', cls),
-                            where('div', '==', div)
+                            where('class', '==', cls?.toLowerCase()),
+                            where('div', '==', div?.toLowerCase())
                         );
                         const snap = await getDocs(q);
                         return snap.size > 0 ? snap.size : '-';
