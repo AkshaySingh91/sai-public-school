@@ -36,7 +36,6 @@ function BusAllocation() {
             where("schoolCode", "==", users.schoolCode)
           );
           studentSnapshot = await getDocs(q);
-          console.log({ studentSnapshot });
         }
         const studentList = studentSnapshot.docs.map((doc) => ({
           id: doc.id,
@@ -105,7 +104,6 @@ function BusAllocation() {
       });
     }
 
-    console.log({ filtered });
     if (searchTerm.trim() !== "") {
       filtered = filtered.filter((student) => {
         const fullName = `${student.fname || ""} ${student.lname || ""
@@ -125,7 +123,6 @@ function BusAllocation() {
     }
 
     setFilteredStudents(filtered);
-    console.log("filteredStudents in serfbg", filtered);
     setCurrentPage(1);
   }, [
     students,

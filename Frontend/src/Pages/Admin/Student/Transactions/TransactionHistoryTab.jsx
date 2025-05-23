@@ -20,11 +20,9 @@ export default function TransactionHistory({ student, transactions, setTransacti
 
         try {
             const ref = doc(db, 'students', student.id);
-            console.log({ transactions })
             const newTrans = (transactions || []).filter(
                 (t) => (isCompleted ? t.receiptId : t.tempReceiptId) !== (isCompleted ? tx.receiptId : tx.tempReceiptId)
             );
-            console.log({ newTrans })
             // return
             await updateDoc(ref, { transactions: newTrans });
             setTransactions(newTrans)

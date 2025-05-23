@@ -62,7 +62,7 @@ function SummaryCard({ icon, title, value, isCurrency = false }) {
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl shadow-sm hover:shadow-md transition h-full flex items-center">
             <div className="p-2 bg-gray-100 rounded-lg mr-4">{icon}</div>
             <div>
-                <h3 className="text-sm font-medium text-gray-600">{title}</h3>
+                <h3 className="text-sm font-medium text-gray-600 ">{title}</h3>
                 <p className="text-2xl font-semibold text-gray-900">
                     {isCurrency && '₹'}{value.toLocaleString()}
                 </p>

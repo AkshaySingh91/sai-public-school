@@ -25,7 +25,6 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-console.log(process.env.storageBucket)
 
 // 1) Middleware to verify accountant role
 const verifyAccountant = async (req, res, next) => {
@@ -139,7 +138,6 @@ app.listen(5000, () => console.log('Backend listening on port 5000'));
 // });
 
 // const db = admin.firestore();
-// console.log(process.env.storageBucket)
 
 // // Middleware to verify accountant role
 // const verifyAccountant = async (req, res, next) => {

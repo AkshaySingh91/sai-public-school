@@ -27,39 +27,39 @@ export default function ImportExistingStudent() {
     const fileInputRef = useRef(null);
 
     const [inputData, setInputData] = useState({
-        fname: 'HIRANYESHWARI',
-        sname: 'KAMBALE',
-        fatherName: 'VIJAY',
+        fname: '',
+        sname: '',
+        fatherName: '',
         motherName: '',
-        DOB: '12-23-2004',
-        sex: 'M',
+        DOB: '',
+        sex: '',
         saral: '',
         aadhar: '',
-        feeID: '93',
-        fatherMobile: '1234567890',
+        feeID: '',
+        fatherMobile: '',
         motherMobile: '',
-        class: '3rd',
-        div: 'A',
+        class: '',
+        div: '',
         address: '',
         lastYearBalanceFee: 0,
         lastYearDiscount: 0,
-        tuitionFee: 15500,
+        tuitionFee: 0,
         tuitionFeesDiscount: 0,
-        tuitionPaidFee: 15500,
-        transportFee: 7000,
+        tuitionPaidFee: 0,
+        transportFee: 0,
         transportDiscount: 0,
-        transportFeePaid: 7000,
-        Ayear: '24-25',
-        busStop: 'MADHA BUS NO. 2',
-        busNoPlate: 'MH 12 KQ 8525',
-        status: 'Current',
+        transportFeePaid: 0,
+        Ayear: '',
+        busStop: '',
+        busNoPlate: '',
+        status: '',
         email: '',
         caste: '',
         subCaste: '',
         nationality: 'Indian',
         category: '',
         religion: '',
-        type: 'DS',
+        type: '',
         grNo: "",
         penNo: "",
     });
@@ -420,7 +420,6 @@ export default function ImportExistingStudent() {
         try {
             // Add Errors column to headers
             const csvHeaders = [...headers, 'Errors'];
-            console.log({ csvHeaders })
             const csvContent = [
                 csvHeaders.join(','), // Header row
                 ...failedStudents.map(student => {
@@ -456,7 +455,6 @@ export default function ImportExistingStudent() {
     // Generic Student Processor
     const processStudent = async (studentData) => {
         const transactions = [];
-        console.log({ studentData })
         if (studentData["TuitionPaidFee"] > 0) {
             transactions.push(createTransaction(
                 'SchoolFee',
@@ -465,7 +463,6 @@ export default function ImportExistingStudent() {
                 studentData["TuitionFee"] || 0
             ));
         }
-        console.log(transactions)
         if (studentData["TransportFeePaid"] > 0) {
             transactions.push(createTransaction(
                 'TransportFee',
@@ -531,8 +528,7 @@ export default function ImportExistingStudent() {
             // Transaction info
             transactions
         };
-        console.log({ studentDoc })
-        console.log(await addDoc(collection(db, 'students'), studentDoc));
+        await addDoc(collection(db, 'students'), studentDoc);
     };
 
     if (loading) return <TableLoader />

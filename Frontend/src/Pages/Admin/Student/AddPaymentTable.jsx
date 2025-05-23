@@ -26,7 +26,6 @@ const AddPaymentTable = ({
   const [accounts, setAccounts] = useState(school.accounts || []);
 
   useEffect(() => {
-    console.log("selectedItems", selectedItems);
     // Fetch available items based on the selectedItems prop
     const fetchStockItems = async () => {
       try {

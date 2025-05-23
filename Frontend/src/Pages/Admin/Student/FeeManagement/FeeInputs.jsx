@@ -4,7 +4,6 @@ const humanize = (str) =>
     str.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
 
 export const SchoolFeeInputs = ({ fees, onChange }) => {
-    console.log({ fees })
     return (<>
         <div className="mb-6">
             <h4 className="font-medium text-gray-700 mb-4">School Fees</h4>

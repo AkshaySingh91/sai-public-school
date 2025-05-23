@@ -30,9 +30,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
 
     // on mount / student changes, seed from student.allFee
     useEffect(() => {
-        console.log(student.allFee)
         if (student.allFee) {
-            console.log(student.allFee)
             setFees(student.allFee);
             setDirty(false);
         }
@@ -41,11 +39,9 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
     // whenever any contributing field changes, recompute school total and summary
     useEffect(() => {
         if (((fees.schoolFees?.total || 0) > 0) && (fees.messFee >= 0) && (fees.hostelFee >= 0) && (fees.transportFee >= 0)) {
-            console.log("formData", formData);
             const tuition = Number(fees.schoolFees?.tuitionFee) || 0;
             const academic = Number(fees.schoolFees?.AdmissionFee) || 0;
             const schoolTotal = tuition + academic;
-            console.log({ fees })
             const mess = Number(fees.messFee) || 0;
             const hostel = Number(fees.hostelFee) || 0;
             const transport = Number(fees.transportFee) || 0;

@@ -17,7 +17,6 @@ const ManageSchools = () => {
       const list = [];
       querySnapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
       setSchools(list);
-      console.log({ list });
     } catch (error) {
       console.error("Error fetching schools:", error);
     }

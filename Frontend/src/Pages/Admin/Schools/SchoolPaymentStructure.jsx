@@ -75,7 +75,7 @@ const PaymentStructure = () => {
             if (querySnapshot.empty) throw new Error("School not found");
             const schoolDoc = querySnapshot.docs[0];
             const updatedModes = paymentModes.filter(p => p.toUpperCase().trim() !== mode.toUpperCase().trim());
-            console.log({ updatedModes })
+            ({ updatedModes })
             await updateDoc(doc(db, 'schools', schoolDoc.id), {
                 paymentModes: updatedModes
             });
@@ -131,232 +131,442 @@ const PaymentStructure = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-purple-50 to-violet-50 p-6">
-            <div className="max-w-4xl mx-auto space-y-8">
-                {/* Payment Methods Section */}
-                <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
-                    <h2 className="text-3xl font-bold text-purple-800 mb-6">Payment Methods</h2>
+        // <div className="min-h-screen bg-gradient-to-b from-purple-50 to-violet-50 p-6">
+        //     <div className="max-w-4xl mx-auto space-y-8">
+        //         {/* Payment Methods Section */}
+        //         <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
+        //             <h2 className="text-3xl font-bold text-purple-800 mb-6">Payment Methods</h2>
 
-                    {loading ? <SkeletonLoader /> : (
-                        <>
-                            <div className="flex gap-2 mb-6">
-                                <input
-                                    type="text"
-                                    value={newMode}
-                                    onChange={(e) => setNewMode(e.target.value)}
-                                    placeholder="Add payment method (e.g. UPI)"
-                                    className="border-2 border-purple-200 focus:border-purple-500 rounded-xl p-3 flex-1 transition-colors"
-                                />
-                                <button
-                                    onClick={handleAddPaymentMode}
-                                    className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
-                                >
-                                    Add
-                                </button>
-                            </div>
+        //             {loading ? <SkeletonLoader /> : (
+        //                 <>
+        //                     <div className="flex gap-2 mb-6">
+        //                         <input
+        //                             type="text"
+        //                             value={newMode}
+        //                             onChange={(e) => setNewMode(e.target.value)}
+        //                             placeholder="Add payment method (e.g. UPI)"
+        //                             className="border-2 border-purple-200 focus:border-purple-500 rounded-xl p-3 flex-1 transition-colors"
+        //                         />
+        //                         <button
+        //                             onClick={handleAddPaymentMode}
+        //                             className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
+        //                         >
+        //                             Add
+        //                         </button>
+        //                     </div>
 
-                            <div className="space-y-3">
-                                {paymentModes.map(mode => (
-                                    <div key={mode} className="flex justify-between items-center bg-purple-50 p-4 rounded-lg">
-                                        <span className="font-medium text-purple-800">{mode}</span>
-                                        <button
-                                            onClick={() => handleDeleteMode(mode)}
-                                            className="text-red-500 hover:text-red-700 transition-colors"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                ))}
-                                {paymentModes.length === 0 && (
-                                    <p className="text-center text-purple-500 py-4">No payment methods added yet</p>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </div>
+        //                     <div className="space-y-3">
+        //                         {paymentModes.map(mode => (
+        //                             <div key={mode} className="flex justify-between items-center bg-purple-50 p-4 rounded-lg">
+        //                                 <span className="font-medium text-purple-800">{mode}</span>
+        //                                 <button
+        //                                     onClick={() => handleDeleteMode(mode)}
+        //                                     className="text-red-500 hover:text-red-700 transition-colors"
+        //                                 >
+        //                                     Delete
+        //                                 </button>
+        //                             </div>
+        //                         ))}
+        //                         {paymentModes.length === 0 && (
+        //                             <p className="text-center text-purple-500 py-4">No payment methods added yet</p>
+        //                         )}
+        //                     </div>
+        //                 </>
+        //             )}
+        //         </div>
 
-                {/* Bank Accounts Section */}
-                <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-3xl font-bold text-purple-800">Bank Accounts</h2>
-                        <button
-                            onClick={() => {
-                                setShowAddAccount(true);
-                                setEditingIndex(-1);
-                                setAccountDetails({ AccountNo: '', IFSC: '', BankName: '', Branch: '' });
-                            }}
-                            className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
-                        >
-                            Add Account
-                        </button>
-                    </div>
+        //         {/* Bank Accounts Section */}
+        //         <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
+        //             <div className="flex justify-between items-center mb-6">
+        //                 <h2 className="text-3xl font-bold text-purple-800">Bank Accounts</h2>
+        //                 <button
+        //                     onClick={() => {
+        //                         setShowAddAccount(true);
+        //                         setEditingIndex(-1);
+        //                         setAccountDetails({ AccountNo: '', IFSC: '', BankName: '', Branch: '' });
+        //                     }}
+        //                     className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
+        //                 >
+        //                     Add Account
+        //                 </button>
+        //             </div>
 
 
-                    {showAddAccount && (
-                        <div className="mb-6 p-6 bg-violet-50 rounded-xl border border-purple-200">
-                            <h3 className="text-xl font-semibold text-purple-800 mb-4">
-                                {editingIndex === -1 ? '➕ Add New Account' : '✏️ Edit Account'}
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-purple-700 mb-2">
-                                        Account Number/Cash
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter 'Cash' for cash payments"
-                                        value={accountDetails.AccountNo}
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            setAccountDetails(prev => ({
-                                                ...prev,
-                                                AccountNo: value,
-                                                ...(value === 'Cash' && { BankName: '', IFSC: '', Branch: '' })
-                                            }));
-                                        }}
-                                        className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
-                                    />
-                                </div>
+        //             {showAddAccount && (
+        //                 <div className="mb-6 p-6 bg-violet-50 rounded-xl border border-purple-200">
+        //                     <h3 className="text-xl font-semibold text-purple-800 mb-4">
+        //                         {editingIndex === -1 ? '➕ Add New Account' : '✏️ Edit Account'}
+        //                     </h3>
+        //                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        //                         <div>
+        //                             <label className="block text-sm font-medium text-purple-700 mb-2">
+        //                                 Account Number/Cash
+        //                             </label>
+        //                             <input
+        //                                 type="text"
+        //                                 placeholder="Enter 'Cash' for cash payments"
+        //                                 value={accountDetails.AccountNo}
+        //                                 onChange={(e) => {
+        //                                     const value = e.target.value;
+        //                                     setAccountDetails(prev => ({
+        //                                         ...prev,
+        //                                         AccountNo: value,
+        //                                         ...(value === 'Cash' && { BankName: '', IFSC: '', Branch: '' })
+        //                                     }));
+        //                                 }}
+        //                                 className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+        //                             />
+        //                         </div>
 
-                                {accountDetails.AccountNo !== 'Cash' && (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-medium text-purple-700 mb-2">
-                                                Bank Name
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Bank Name"
-                                                value={accountDetails.BankName}
-                                                onChange={(e) => setAccountDetails({ ...accountDetails, BankName: e.target.value })}
-                                                className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-purple-700 mb-2">
-                                                IFSC Code
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="IFSC Code"
-                                                value={accountDetails.IFSC}
-                                                onChange={(e) => setAccountDetails({ ...accountDetails, IFSC: e.target.value })}
-                                                className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-purple-700 mb-2">
-                                                Branch
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Branch"
-                                                value={accountDetails.Branch}
-                                                onChange={(e) => setAccountDetails({ ...accountDetails, Branch: e.target.value })}
-                                                className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
-                                            />
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            <div className="flex gap-3 justify-end">
-                                <button
-                                    onClick={handleSaveAccount}
-                                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                                >
-                                    {editingIndex === -1 ? 'Save Account' : 'Update Account'}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowAddAccount(false);
-                                        setEditingIndex(-1);
-                                        setAccountDetails({ AccountNo: '', IFSC: '', BankName: '', Branch: '' });
-                                    }}
-                                    className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    )}
+        //                         {accountDetails.AccountNo !== 'Cash' && (
+        //                             <>
+        //                                 <div>
+        //                                     <label className="block text-sm font-medium text-purple-700 mb-2">
+        //                                         Bank Name
+        //                                     </label>
+        //                                     <input
+        //                                         type="text"
+        //                                         placeholder="Bank Name"
+        //                                         value={accountDetails.BankName}
+        //                                         onChange={(e) => setAccountDetails({ ...accountDetails, BankName: e.target.value })}
+        //                                         className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+        //                                     />
+        //                                 </div>
+        //                                 <div>
+        //                                     <label className="block text-sm font-medium text-purple-700 mb-2">
+        //                                         IFSC Code
+        //                                     </label>
+        //                                     <input
+        //                                         type="text"
+        //                                         placeholder="IFSC Code"
+        //                                         value={accountDetails.IFSC}
+        //                                         onChange={(e) => setAccountDetails({ ...accountDetails, IFSC: e.target.value })}
+        //                                         className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+        //                                     />
+        //                                 </div>
+        //                                 <div>
+        //                                     <label className="block text-sm font-medium text-purple-700 mb-2">
+        //                                         Branch
+        //                                     </label>
+        //                                     <input
+        //                                         type="text"
+        //                                         placeholder="Branch"
+        //                                         value={accountDetails.Branch}
+        //                                         onChange={(e) => setAccountDetails({ ...accountDetails, Branch: e.target.value })}
+        //                                         className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+        //                                     />
+        //                                 </div>
+        //                             </>
+        //                         )}
+        //                     </div>
+        //                     <div className="flex gap-3 justify-end">
+        //                         <button
+        //                             onClick={handleSaveAccount}
+        //                             className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+        //                         >
+        //                             {editingIndex === -1 ? 'Save Account' : 'Update Account'}
+        //                         </button>
+        //                         <button
+        //                             onClick={() => {
+        //                                 setShowAddAccount(false);
+        //                                 setEditingIndex(-1);
+        //                                 setAccountDetails({ AccountNo: '', IFSC: '', BankName: '', Branch: '' });
+        //                             }}
+        //                             className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+        //                         >
+        //                             Cancel
+        //                         </button>
+        //                     </div>
+        //                 </div>
+        //             )}
 
-                    {loading ? (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-4 gap-4 px-4 py-2 border-b-2 border-purple-100">
-                                <div className="text-sm font-medium text-purple-700">Account No</div>
-                                <div className="text-sm font-medium text-purple-700">Bank</div>
-                                <div className="text-sm font-medium text-purple-700">IFSC</div>
-                                <div className="text-sm font-medium text-purple-700">Branch</div>
-                            </div>
-                            {[1, 2, 3].map((_, index) => (
-                                <div key={index} className="grid grid-cols-4 gap-4 px-4 py-3 animate-pulse">
-                                    <div className="h-4 bg-purple-100 rounded-full w-3/4"></div>
-                                    <div className="h-4 bg-purple-100 rounded-full"></div>
-                                    <div className="h-4 bg-purple-100 rounded-full w-1/2"></div>
-                                    <div className="h-4 bg-purple-100 rounded-full"></div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            <div className="grid grid-cols-4 gap-4 px-4 py-2 border-b-2 border-purple-100">
-                                <div className="text-sm font-medium text-purple-700">Account No</div>
-                                <div className="text-sm font-medium text-purple-700">Bank</div>
-                                <div className="text-sm font-medium text-purple-700">IFSC</div>
-                                <div className="text-sm font-medium text-purple-700">Branch</div>
-                            </div>
+        //             {loading ? (
+        //                 <div className="space-y-4">
+        //                     <div className="grid grid-cols-4 gap-4 px-4 py-2 border-b-2 border-purple-100">
+        //                         <div className="text-sm font-medium text-purple-700">Account No</div>
+        //                         <div className="text-sm font-medium text-purple-700">Bank</div>
+        //                         <div className="text-sm font-medium text-purple-700">IFSC</div>
+        //                         <div className="text-sm font-medium text-purple-700">Branch</div>
+        //                     </div>
+        //                     {[1, 2, 3].map((_, index) => (
+        //                         <div key={index} className="grid grid-cols-4 gap-4 px-4 py-3 animate-pulse">
+        //                             <div className="h-4 bg-purple-100 rounded-full w-3/4"></div>
+        //                             <div className="h-4 bg-purple-100 rounded-full"></div>
+        //                             <div className="h-4 bg-purple-100 rounded-full w-1/2"></div>
+        //                             <div className="h-4 bg-purple-100 rounded-full"></div>
+        //                         </div>
+        //                     ))}
+        //                 </div>
+        //             ) : (
+        //                 <div className="space-y-2">
+        //                     <div className="grid grid-cols-4 gap-4 px-4 py-2 border-b-2 border-purple-100">
+        //                         <div className="text-sm font-medium text-purple-700">Account No</div>
+        //                         <div className="text-sm font-medium text-purple-700">Bank</div>
+        //                         <div className="text-sm font-medium text-purple-700">IFSC</div>
+        //                         <div className="text-sm font-medium text-purple-700">Branch</div>
+        //                     </div>
 
-                            {accounts.length === 0 && !showAddAccount && (
-                                <div className="text-center text-purple-500 py-4">
-                                    No bank accounts found. Add your first account!
-                                </div>
-                            )}
+        //                     {accounts.length === 0 && !showAddAccount && (
+        //                         <div className="text-center text-purple-500 py-4">
+        //                             No bank accounts found. Add your first account!
+        //                         </div>
+        //                     )}
 
-                            {accounts.map((acc, index) => (
-                                <div key={index} className="grid grid-cols-4 gap-4 px-4 py-3 hover:bg-purple-50 rounded-lg group">
-                                    <div className="flex items-center">
-                                        {acc.AccountNo === 'Cash' ? (
-                                            <span className="text-purple-800 font-medium">💰 Cash</span>
-                                        ) : (
-                                            <span className="text-purple-800 font-medium">{acc.AccountNo}</span>
-                                        )}
-                                    </div>
-                                    <div className="text-purple-600">
-                                        {acc.BankName || <span className="text-gray-400">-</span>}
-                                    </div>
-                                    <div className="text-purple-600">
-                                        {acc.IFSC || <span className="text-gray-400">-</span>}
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-purple-600">
-                                            {acc.Branch || <span className="text-gray-400">-</span>}
-                                        </span>
-                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => {
-                                                    setAccountDetails(acc);
-                                                    setEditingIndex(index);
-                                                    setShowAddAccount(true);
-                                                }}
-                                                className="text-purple-600 hover:text-purple-800 transition-colors"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteAccount(index)}
-                                                className="text-red-500 hover:text-red-700 transition-colors"
-                                            >
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+        //                     {accounts.map((acc, index) => (
+        //                         <div key={index} className="grid grid-cols-4 gap-4 px-4 py-3 hover:bg-purple-50 rounded-lg group">
+        //                             <div className="flex items-center">
+        //                                 {acc.AccountNo === 'Cash' ? (
+        //                                     <span className="text-purple-800 font-medium">💰 Cash</span>
+        //                                 ) : (
+        //                                     <span className="text-purple-800 font-medium">{acc.AccountNo}</span>
+        //                                 )}
+        //                             </div>
+        //                             <div className="text-purple-600">
+        //                                 {acc.BankName || <span className="text-gray-400">-</span>}
+        //                             </div>
+        //                             <div className="text-purple-600">
+        //                                 {acc.IFSC || <span className="text-gray-400">-</span>}
+        //                             </div>
+        //                             <div className="flex items-center justify-between">
+        //                                 <span className="text-purple-600">
+        //                                     {acc.Branch || <span className="text-gray-400">-</span>}
+        //                                 </span>
+        //                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        //                                     <button
+        //                                         onClick={() => {
+        //                                             setAccountDetails(acc);
+        //                                             setEditingIndex(index);
+        //                                             setShowAddAccount(true);
+        //                                         }}
+        //                                         className="text-purple-600 hover:text-purple-800 transition-colors"
+        //                                     >
+        //                                         Edit
+        //                                     </button>
+        //                                     <button
+        //                                         onClick={() => handleDeleteAccount(index)}
+        //                                         className="text-red-500 hover:text-red-700 transition-colors"
+        //                                     >
+        //                                         Delete
+        //                                     </button>
+        //                                 </div>
+        //                             </div>
+        //                         </div>
+        //                     ))}
+        //                 </div>
+        //             )}
+        //         </div>
+        //     </div>
+        // </div>
+        <div className="min-h-screen bg-gradient-to-b from-purple-50 to-violet-50 p-4 sm:p-6">
+  <div className="max-w-4xl mx-auto space-y-8">
+    
+    {/* Payment Methods Section */}
+    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-purple-100">
+      <h2 className="text-2xl sm:text-3xl font-bold text-purple-800 mb-4 sm:mb-6">Payment Methods</h2>
+
+      {loading ? <SkeletonLoader /> : (
+        <>
+          <div className="flex flex-col sm:flex-row gap-2 mb-6">
+            <input
+              type="text"
+              value={newMode}
+              onChange={(e) => setNewMode(e.target.value)}
+              placeholder="Add payment method (e.g. UPI)"
+              className="border-2 border-purple-200 focus:border-purple-500 rounded-xl p-3 w-full transition-colors"
+            />
+            <button
+              onClick={handleAddPaymentMode}
+              className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
+            >
+              Add
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {paymentModes.map(mode => (
+              <div key={mode} className="flex justify-between items-center bg-purple-50 p-4 rounded-lg">
+                <span className="font-medium text-purple-800">{mode}</span>
+                <button
+                  onClick={() => handleDeleteMode(mode)}
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+            {paymentModes.length === 0 && (
+              <p className="text-center text-purple-500 py-4">No payment methods added yet</p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+
+    {/* Bank Accounts Section */}
+    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-purple-100">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold text-purple-800">Bank Accounts</h2>
+        <button
+          onClick={() => {
+            setShowAddAccount(true);
+            setEditingIndex(-1);
+            setAccountDetails({ AccountNo: '', IFSC: '', BankName: '', Branch: '' });
+          }}
+          className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
+        >
+          Add Account
+        </button>
+      </div>
+
+      {/* Add/Edit Form */}
+      {showAddAccount && (
+        <div className="mb-6 p-4 sm:p-6 bg-violet-50 rounded-xl border border-purple-200">
+          <h3 className="text-lg sm:text-xl font-semibold text-purple-800 mb-4">
+            {editingIndex === -1 ? '➕ Add New Account' : '✏️ Edit Account'}
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-purple-700 mb-2">Account Number/Cash</label>
+              <input
+                type="text"
+                placeholder="Enter 'Cash' for cash payments"
+                value={accountDetails.AccountNo}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setAccountDetails(prev => ({
+                    ...prev,
+                    AccountNo: value,
+                    ...(value === 'Cash' && { BankName: '', IFSC: '', Branch: '' })
+                  }));
+                }}
+                className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+              />
             </div>
+
+            {accountDetails.AccountNo !== 'Cash' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-purple-700 mb-2">Bank Name</label>
+                  <input
+                    type="text"
+                    value={accountDetails.BankName}
+                    onChange={(e) => setAccountDetails({ ...accountDetails, BankName: e.target.value })}
+                    className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-purple-700 mb-2">IFSC Code</label>
+                  <input
+                    type="text"
+                    value={accountDetails.IFSC}
+                    onChange={(e) => setAccountDetails({ ...accountDetails, IFSC: e.target.value })}
+                    className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-purple-700 mb-2">Branch</label>
+                  <input
+                    type="text"
+                    value={accountDetails.Branch}
+                    onChange={(e) => setAccountDetails({ ...accountDetails, Branch: e.target.value })}
+                    className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3 justify-end">
+            <button
+              onClick={handleSaveAccount}
+              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              {editingIndex === -1 ? 'Save Account' : 'Update Account'}
+            </button>
+            <button
+              onClick={() => {
+                setShowAddAccount(false);
+                setEditingIndex(-1);
+                setAccountDetails({ AccountNo: '', IFSC: '', BankName: '', Branch: '' });
+              }}
+              className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Table */}
+      {loading ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-4 py-2 border-b-2 border-purple-100">
+            <div className="text-sm font-medium text-purple-700">Account No</div>
+            <div className="text-sm font-medium text-purple-700">Bank</div>
+            <div className="text-sm font-medium text-purple-700">IFSC</div>
+            <div className="text-sm font-medium text-purple-700">Branch</div>
+          </div>
+          {[1, 2, 3].map((_, index) => (
+            <div key={index} className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-4 py-3 animate-pulse">
+              <div className="h-4 bg-purple-100 rounded-full w-3/4"></div>
+              <div className="h-4 bg-purple-100 rounded-full"></div>
+              <div className="h-4 bg-purple-100 rounded-full w-1/2"></div>
+              <div className="h-4 bg-purple-100 rounded-full"></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-4 py-2 border-b-2 border-purple-100">
+            <div className="text-sm font-medium text-purple-700">Account No</div>
+            <div className="text-sm font-medium text-purple-700">Bank</div>
+            <div className="text-sm font-medium text-purple-700">IFSC</div>
+            <div className="text-sm font-medium text-purple-700">Branch</div>
+          </div>
+
+          {accounts.length === 0 && !showAddAccount && (
+            <div className="text-center text-purple-500 py-4">
+              No bank accounts found. Add your first account!
+            </div>
+          )}
+
+          {accounts.map((acc, index) => (
+            <div key={index} className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-4 py-3 hover:bg-purple-50 rounded-lg group">
+              <div className="flex items-center text-purple-800 font-medium">
+                {acc.AccountNo === 'Cash' ? '💰 Cash' : acc.AccountNo}
+              </div>
+              <div className="text-purple-600">{acc.BankName || <span className="text-gray-400">-</span>}</div>
+              <div className="text-purple-600">{acc.IFSC || <span className="text-gray-400">-</span>}</div>
+              <div className="flex items-center justify-between">
+                <span className="text-purple-600">{acc.Branch || <span className="text-gray-400">-</span>}</span>
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => {
+                      setAccountDetails(acc);
+                      setEditingIndex(index);
+                      setShowAddAccount(true);
+                    }}
+                    className="text-purple-600 hover:text-purple-800 transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAccount(index)}
+                    className="text-red-500 hover:text-red-700 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+
     );
 };
 

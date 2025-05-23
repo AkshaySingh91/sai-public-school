@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
 import { db } from "../../../../config/firebase";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -15,15 +22,15 @@ import {
   ChevronRight,
   SettingsIcon,
 } from "lucide-react";
-import TableLoader from "../../../../components/TableLoader"
-import { useSchool } from "../../../../contexts/SchoolContext"
-import { getNewClassFees } from "./StudentDetail"
+import TableLoader from "../../../../components/TableLoader";
+import { useSchool } from "../../../../contexts/SchoolContext";
+import { getNewClassFees } from "./StudentDetail";
 import Swal from "sweetalert2";
-import { motion } from "framer-motion"
+import { motion } from "framer-motion";
 
 const StudentList = () => {
   const { userData } = useAuth();
-  const { school } = useSchool()
+  const { school } = useSchool();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState([]);
@@ -49,7 +56,7 @@ const StudentList = () => {
   }, [userData]);
 
   const fetchStudents = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const q = query(
         collection(db, "students"),
@@ -141,11 +148,11 @@ const StudentList = () => {
 
   // selection
   const toggleSelectAll = (e) => {
-    setSelectedStudents(e.target.checked ? currentItems.map(s => s.id) : []);
+    setSelectedStudents(e.target.checked ? currentItems.map((s) => s.id) : []);
   };
   const toggleSelectStudent = (id) => {
-    setSelectedStudents(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    setSelectedStudents((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
@@ -153,32 +160,38 @@ const StudentList = () => {
   const handleBatchMove = async () => {
     try {
       // classOrder should always have increasing order of class
-      const classOrder = school?.class?.length > 0 ? school.class : [
-        "Nursery",
-        "JRKG",
-        "SRKG",
-        "1st",
-        "2nd",
-        "3rd",
-        "4th",
-        "5th",
-        "6th",
-        "7th",
-        "8th",
-        "9th",
-      ];
+      const classOrder =
+        school?.class?.length > 0
+          ? school.class
+          : [
+              "Nursery",
+              "JRKG",
+              "SRKG",
+              "1st",
+              "2nd",
+              "3rd",
+              "4th",
+              "5th",
+              "6th",
+              "7th",
+              "8th",
+              "9th",
+            ];
       // get all selected student
-      const selected = students.filter(s => selectedStudents.includes(s.id));
+      const selected = students.filter((s) => selectedStudents.includes(s.id));
       // determine next academic year
-      const [curStart, curEnd] = school?.academicYear.split('-').map(n => parseInt(n));
+      const [curStart, curEnd] = school?.academicYear
+        .split("-")
+        .map((n) => parseInt(n));
       const nextYear = `${curStart + 1}-${curEnd + 1}`;
 
       // filter valid students, remove inactive student & those who is in last class
-      const toMove = selected.filter(s => {
+      const toMove = selected.filter((s) => {
         const idx = classOrder.indexOf(s.class);
         return (
-          idx >= 0 && idx < classOrder.length - 1 &&
-          (s?.status || "").toLowerCase() !== 'inactive'
+          idx >= 0 &&
+          idx < classOrder.length - 1 &&
+          (s?.status || "").toLowerCase() !== "inactive"
         );
       });
       // Progress tracking
@@ -191,21 +204,25 @@ const StudentList = () => {
         title: `Move ${total} students to ${nextYear}?`,
         html: `
         <div class="text-center">
-          <p class="text-xl">New students: ${toMove.filter(s => s.status === 'new').length}</p>
-          <p class="text-xl">Current students: ${toMove.filter(s => s.status === 'current').length}</p>
+          <p class="text-xl">New students: ${
+            toMove.filter((s) => s.status === "new").length
+          }</p>
+          <p class="text-xl">Current students: ${
+            toMove.filter((s) => s.status === "current").length
+          }</p>
           <p class="mt-2 text-sm text-gray-500">This operation cannot be undone.</p>
         </div>
       `,
-        icon: 'question',
+        icon: "question",
         showCancelButton: true,
-        confirmButtonText: 'Begin Migration',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: "Begin Migration",
+        cancelButtonText: "Cancel",
         showLoaderOnConfirm: true,
       });
       if (!isConfirmed) return;
 
       Swal.fire({
-        title: 'Processing Students...',
+        title: "Processing Students...",
         html: `
         <div class="progress-container">
           <div class="progress-bar" style="width: 0%"></div>
@@ -221,11 +238,17 @@ const StudentList = () => {
       for (const [index, student] of toMove.entries()) {
         try {
           const progress = Math.floor((index / total) * 100);
-          Swal.getHtmlContainer().querySelector('.progress-bar').style.width = `${progress}%`;
-          Swal.getHtmlContainer().querySelector('.progress-text').textContent =
-            `${index + 1}/${total}`;
-          Swal.getHtmlContainer().querySelector('.current-student').textContent =
-            `Processing: ${student.fname} ${student.lname} (${student.class} → ${classOrder[classOrder.indexOf(student.class) + 1]})`;
+          Swal.getHtmlContainer().querySelector(
+            ".progress-bar"
+          ).style.width = `${progress}%`;
+          Swal.getHtmlContainer().querySelector(
+            ".progress-text"
+          ).textContent = `${index + 1}/${total}`;
+          Swal.getHtmlContainer().querySelector(
+            ".current-student"
+          ).textContent = `Processing: ${student.fname} ${student.lname} (${
+            student.class
+          } → ${classOrder[classOrder.indexOf(student.class) + 1]})`;
 
           // replicate goToNextAcademicYear logic
           const idx = classOrder.indexOf(student.class);
@@ -235,18 +258,37 @@ const StudentList = () => {
           const txs = student.transactions || [];
           const allFee = student.allFee || {};
           const unpaid = (key) => {
-            const due = key === 'schoolFee' ? allFee.schoolFees?.total || 0 : allFee[key] || 0;
-            const paid = txs.filter(t => {
-              return t.academicYear === student.academicYear && t?.feeType?.toLowerCase() === key.toLowerCase() && t.status === "completed"
-            })
+            const due =
+              key === "schoolFee"
+                ? allFee.schoolFees?.total || 0
+                : allFee[key] || 0;
+            const paid = txs
+              .filter((t) => {
+                return (
+                  t.academicYear === student.academicYear &&
+                  t?.feeType?.toLowerCase() === key.toLowerCase() &&
+                  t.status === "completed"
+                );
+              })
               .reduce((a, t) => a + t.amount, 0);
             return Math.max(due - paid, 0);
           };
-          const lastBal = (allFee.lastYearBalanceFee || 0) + unpaid('hostelFee') + unpaid('messFee') + unpaid('schoolFee');
-          const lastTrans = (allFee.lastYearTransportFee || 0) + unpaid('transportFee');
+          const lastBal =
+            (allFee.lastYearBalanceFee || 0) +
+            unpaid("hostelFee") +
+            unpaid("messFee") +
+            unpaid("schoolFee");
+          const lastTrans =
+            (allFee.lastYearTransportFee || 0) + unpaid("transportFee");
 
-          const newStatus = student.status === 'new' ? 'current' : student.status;
-          const rawFees = await getNewClassFees(userData.schoolCode, nextClass, nextYear, student);
+          const newStatus =
+            student.status === "new" ? "current" : student.status;
+          const rawFees = await getNewClassFees(
+            userData.schoolCode,
+            nextClass,
+            nextYear,
+            student
+          );
           // this is add fee & tut fee of next class of that stu type
           const admission = newStatus === 'current' ? 0 : rawFees.studentFees.AdmissionFee;
           const tuition = rawFees.studentFees.tuitionFee;
@@ -254,7 +296,8 @@ const StudentList = () => {
           const originalAdmissionFee = newStatus === "current" ? 0 : rawFees.originalFees.AdmissionFee;
           const originalTutuionFee = rawFees.originalFees.tuitionFee;
 
-          const tuitionDiscount = (originalAdmissionFee + originalTutuionFee) - (admission + tuition);
+          const tuitionDiscount =
+            originalAdmissionFee + originalTutuionFee - (admission + tuition);
 
           const updatedAllFee = {
             ...allFee,
@@ -276,16 +319,15 @@ const StudentList = () => {
             status: newStatus,
             allFee: updatedAllFee,
           };
-          console.log({ updated })
-          await updateDoc(doc(db, 'students', student.id), updated);
+          await updateDoc(doc(db, "students", student.id), updated);
           processed++;
           // Add slight delay for UI updates and rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100))
+          await new Promise((resolve) => setTimeout(resolve, 100));
         } catch (error) {
           console.error(`Error processing ${student.name}:`, error);
           errors.push({
             student: student.name,
-            error: error.message
+            error: error.message,
           });
         }
       }
@@ -294,31 +336,31 @@ const StudentList = () => {
       setSelectedStudents([]);
       if (errors.length === 0) {
         await Swal.fire({
-          title: 'Migration Complete!',
+          title: "Migration Complete!",
           html: `<p>Successfully moved ${processed} students.</p>`,
-          icon: 'success',
-          timer: 2000
+          icon: "success",
+          timer: 2000,
         });
       } else {
         await Swal.fire({
-          title: 'Partial Completion',
+          title: "Partial Completion",
           html: `
           <p>Moved ${processed} students successfully.</p>
           <p class="text-red-600">${errors.length} errors occurred.</p>
           <ul class="text-sm text-left mt-2">
-            ${errors.map(e => `<li>${e.student}: ${e.error}</li>`).join('')}
+            ${errors.map((e) => `<li>${e.student}: ${e.error}</li>`).join("")}
           </ul>
         `,
-          icon: 'warning',
-          confirmButtonText: 'Okay'
+          icon: "warning",
+          confirmButtonText: "Okay",
         });
       }
     } catch (error) {
-      console.error('Batch move failed:', error);
+      console.error("Batch move failed:", error);
       Swal.fire({
-        title: 'Operation Failed',
+        title: "Operation Failed",
         html: `<p class="text-red-600">${error.message}</p>`,
-        icon: 'error'
+        icon: "error",
       });
     }
   };
@@ -339,18 +381,18 @@ const StudentList = () => {
         "Address": student.address || "",
         "Mob Father": student.fatherMobile || "",
         "Mob Mother": student.motherMobile || "",
-        "Email": student.email || "",
-        "Caste": student.category || student.caste || "",
-        "Subcaste": student.subcaste || "",
-        "Nationality": student.nationality || "",
+        Email: student.email || "",
+        Caste: student.category || student.caste || "",
+        Subcaste: student.subcaste || "",
+        Nationality: student.nationality || "",
         "S Category": student.scategory || student.category || "",
-        "Religion": student.religion || "",
-        "Aadhar": student.aadhar || "",
+        Religion: student.religion || "",
+        Aadhar: student.aadhar || "",
         "Saral ID": student.saralId || student.saral || "",
-        "Mobile": student.mobile || "",
+        Mobile: student.mobile || "",
         "Bus Transport": student.busStop ? "Y" : "N",
         "Bus Destination": student.busStop || "",
-        "Bus No": student.busNoPlate || ""
+        "Bus No": student.busNoPlate || "",
       };
     });
 
@@ -733,7 +775,5 @@ const StudentList = () => {
     </>
   );
 };
-
-
 
 export default StudentList;

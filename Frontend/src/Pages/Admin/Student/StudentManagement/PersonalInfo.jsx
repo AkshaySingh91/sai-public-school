@@ -55,7 +55,6 @@ export default function PersonalInfo({
           ...doc.data(),
         }));
         setDestinationOptions(destinations);
-        console.log("destinationOptions", destinationOptions);
       } catch (err) {
         console.error("Error fetching destinations:", err);
       }

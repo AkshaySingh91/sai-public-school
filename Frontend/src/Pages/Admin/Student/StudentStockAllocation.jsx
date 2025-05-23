@@ -332,8 +332,9 @@ const StudentStockAllocation = () => {
                         className="space-y-6"
                     >
                         {selectedItems.length ? (
-                            <div className="bg-white rounded-xl border border-purple-100 shadow-lg overflow-hidden">
-                                <table className="w-full">
+                            <div className="overflow-hidden">
+                                <div className="bg-white rounded-xl border border-purple-100 shadow-lg overflow-x-auto">
+                                <table className="w-full ">
                                     <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
                                         <tr>
                                             {["Select", "Item Name", "Unit Price", "Available Qty", "Order Qty"].map((header, idx) => (
@@ -384,6 +385,7 @@ const StudentStockAllocation = () => {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
                             </div>
                         ) : (
                             <div className="bg-purple-50 rounded-xl p-6 animate-pulse flex flex-col items-center">

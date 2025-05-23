@@ -21,7 +21,6 @@ const storage = multer.diskStorage({
         // e.g. "PuneTaluka.png"
         const ext = path.extname(file.originalname).toLowerCase();
         const taluka = req?.school?.location?.taluka ? req.school.location.taluka.replace(/\s+/g, "_") : "schoolLogo" + Math.floor((Math.random() * 1000));
-        console.log(ext, taluka)
         cb(null, taluka + "-school-logo" + ext);
     },
 });

@@ -36,7 +36,6 @@ export default function AddStudent() {
   const [submitting, setSubmitting] = useState(false);
   // Fetch school data
 
-  console.log({ school })
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -160,7 +159,6 @@ export default function AddStudent() {
         transactions: [],
         createdAt: new Date()
       };
-      console.log(studentData)
       // Save to Firestore
       await addDoc(collection(db, 'students'), studentData);
 

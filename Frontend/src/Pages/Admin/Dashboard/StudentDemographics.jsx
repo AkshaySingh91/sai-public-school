@@ -51,7 +51,7 @@ export default function StudentDemographics() {
 
                     return { class: cls, divisions: divisionCounts, total };
                 }));
-                console.log({ strengthData })
+                ({ strengthData })
                 setClassStrength(strengthData);
             } catch (error) {
                 console.error("Error fetching data:", error);

@@ -20,7 +20,6 @@ const Settings = () => {
     try {
       // Get the authenticated user
       const user = auth.currentUser;
-      console.log({ user });
       if (!user) {
         throw new Error("User not authenticated");
       }

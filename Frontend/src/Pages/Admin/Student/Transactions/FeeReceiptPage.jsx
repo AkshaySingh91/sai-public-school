@@ -25,7 +25,6 @@ export default function FeeReceiptPage() {
 
                 // Find the specific transaction
                 const tx = (studentData.transactions || []).find(t => t.receiptId == receiptId);
-                console.log({ tx }, studentData.transactions, receiptId, tx.status)
                 if (!tx) return;
 
                 // Verify transaction has historical snapshot

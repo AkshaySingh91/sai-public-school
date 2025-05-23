@@ -70,7 +70,6 @@ const AdminDashboard = () => {
             let totalEarnings = 0;
             studentSnap.forEach(docSnap => {
                 const student = docSnap.data();
-                console.log({ student })
                 const txs = Array.isArray(student.transactions) ? student.transactions : [];
                 txs.forEach(t => {
                     if (t.academicYear === currentYear & t.status == "completed") {

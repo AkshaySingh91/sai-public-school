@@ -65,8 +65,6 @@ export default function DayHourLineChart() {
 
       const studentsSnap = await getDocs(studentsQuery);
       const daysData = last7Days.map(day => ({ ...day }));
-      console.log({ last7Days })
-      console.log({ daysData })
       studentsSnap.forEach(studentDoc => {
         const student = studentDoc.data();
         (student.transactions || []).forEach(tx => {
@@ -101,7 +99,6 @@ export default function DayHourLineChart() {
 
   const getSelectedDayData = () => {
     const selectedDay = chartData.find(d => d.date === selectedDate);
-    console.log({ chartData })
     if (!selectedDay) return [];
 
     return BIN_DEFS.map(bin => ({

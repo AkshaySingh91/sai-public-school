@@ -31,7 +31,6 @@ export default function StudentProfile({
     try {
       const studentRef = doc(db, "students", student.id);
       await updateDoc(studentRef, { status: newStatus });
-      console.log("Toggled status to:", newStatus);
     } catch (err) {
       console.error("Error updating toggled status:", err);
     }
@@ -64,7 +63,6 @@ export default function StudentProfile({
       const studentRef = doc(db, "students", student.id);
       await updateDoc(studentRef, updatedData);
       setFormData(updatedData);
-      console.log("Updated student with status:", status);
     } catch (err) {
       console.error("Error updating student:", err);
     }
