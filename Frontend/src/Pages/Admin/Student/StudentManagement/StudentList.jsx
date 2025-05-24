@@ -5,6 +5,7 @@ import {
   where,
   getDocs,
   updateDoc,
+  deleteDoc,
   doc,
 } from "firebase/firestore";
 import { db } from "../../../../config/firebase";
@@ -245,7 +246,7 @@ const StudentList = () => {
           Swal.getHtmlContainer().querySelector(
             ".current-student"
           ).textContent = `Processing: ${student.fname} ${student.lname} (${student.class
-            } → ${classOrder[classOrder.indexOf(student.class) + 1]})`;
+          } → ${classOrder[classOrder.indexOf(student.class) + 1]})`;
 
           // replicate goToNextAcademicYear logic
           const idx = classOrder.indexOf(student.class);
@@ -361,7 +362,114 @@ const StudentList = () => {
       });
     }
   };
+  const handleBatchDelete = async () => {
+    try {
+      const selected = students.filter((s) =>
+        selectedStudents.includes(s.id) &&
+        s.schoolCode === userData.schoolCode // Initial filter
+      );
 
+      // Confirm deletion
+      const { isConfirmed } = await Swal.fire({
+        title: `Delete ${selected.length} students?`,
+        html: `
+        <div class="text-center">
+          <p class="text-xl">Students to delete: ${selected.length}</p>
+          <p class="mt-2 text-sm text-red-600">This will permanently remove students from your school!</p>
+        </div>
+      `,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Delete Permanently",
+        cancelButtonText: "Cancel",
+        showLoaderOnConfirm: true,
+      });
+
+      if (!isConfirmed) return;
+
+      // Show progress dialog
+      Swal.fire({
+        title: "Deleting Students...",
+        html: `
+        <div class="progress-container">
+          <div class="progress-bar bg-red-500 h-2 rounded" style="width: 0%"></div>
+          <div class="progress-text mt-2">0/${selected.length}</div>
+          <div class="current-student mt-2 text-sm text-gray-600"></div>
+        </div>
+      `,
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      let processed = 0;
+      const total = selected.length;
+      const errors = [];
+
+      for (const [index, student] of selected.entries()) {
+        try {
+          // Double-check school code and ID
+          if (student.schoolCode !== userData.schoolCode || !selectedStudents.includes(student.id)) {
+            throw new Error("Unauthorized deletion attempt blocked");
+          }
+
+          // Update progress
+          const progress = Math.floor((index / total) * 100);
+          Swal.getHtmlContainer().querySelector(".progress-bar").style.width = `${progress}%`;
+          Swal.getHtmlContainer().querySelector(".progress-text").textContent = `${index + 1}/${total}`;
+          Swal.getHtmlContainer().querySelector(".current-student").textContent =
+            `Deleting: ${student.fname} ${student.lname} (${student.class})`;
+
+          // Perform deletion
+          await deleteDoc(doc(db, "students", student.id));
+          processed++;
+
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`Error deleting ${student.name}:`, error);
+          errors.push({
+            student: `${student.fname} ${student.lname}`,
+            error: error.message
+          });
+        }
+      }
+
+      // Final updates
+      await fetchStudents();
+      setSelectedStudents([]);
+
+      if (errors.length === 0) {
+        await Swal.fire({
+          title: "Deletion Complete!",
+          html: `<p>Successfully deleted ${processed} students.</p>`,
+          icon: "success",
+          timer: 2000,
+        });
+      } else {
+        await Swal.fire({
+          title: "Partial Deletion",
+          html: `
+          <p>Deleted ${processed} students successfully.</p>
+          <p class="text-red-600">${errors.length} errors occurred.</p>
+          <ul class="text-sm text-left mt-2">
+            ${errors.map((e) => `<li>${e.student}: ${e.error}</li>`).join("")}
+          </ul>
+        `,
+          icon: "warning",
+          confirmButtonText: "Okay",
+        });
+      }
+    } catch (error) {
+      console.error("Batch delete failed:", error);
+      Swal.fire({
+        title: "Deletion Failed",
+        html: `<p class="text-red-600">${error.message}</p>`,
+        icon: "error",
+      });
+    }
+  };
   // Export handlers
   const exportToExcel = () => {
     const formattedData = filteredStudents.map((student, index) => {
@@ -544,7 +652,15 @@ const StudentList = () => {
                 disabled={selectedStudents.length === 0}
                 className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
               >
-                Move Selected to Next Year
+                Move to Next Year
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={handleBatchDelete}
+                disabled={selectedStudents.length === 0}
+                className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
+              >
+                Delete Student
               </motion.button>
             </div>
           </div>

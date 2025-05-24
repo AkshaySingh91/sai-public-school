@@ -142,7 +142,7 @@ function BusAllocation() {
       "Bus Stop": destinationData.find(dest => dest.id === student.transportDetails?.destinationId)?.name || "-",
       "Bus Number": busData[student.transportDetails?.busId] || "-",
       "Total Fee": student.allFee?.busFee || 0,
-      "Discount": student.allFee?.transportFeeDiscount || 0,
+      "Discount": student.allFee?.busFeeDiscount || 0,
       "Outstanding": calculateOutstandingFee(student)
     })));
 
@@ -253,7 +253,7 @@ function BusAllocation() {
                   const busId = student.transportDetails?.busId || "-";
                   const destinationId = student.transportDetails?.destinationId || null;
                   const busFee = student.allFee?.busFee || 0;
-                  const discountFee = student.allFee?.transportFeeDiscount || 0;
+                  const discountFee = student.allFee?.busFeeDiscount || 0;
                   const outstandingFee = calculateOutstandingFee(student);
                   const paidFee = 0;
                   const numberPlate = busData[busId] || "-";
