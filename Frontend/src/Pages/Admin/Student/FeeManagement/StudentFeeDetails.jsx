@@ -93,22 +93,22 @@ const StudentFeeDetails = ({
         Division: student.div,
         // updated fee data this will show all fee informaion in excel
         "Last Year Pending":
-          (student?.lastYearSchoolBalance || 0) +
-          (student?.lastYearTransportBalance || 0),
+          (student?.lastYearTuitionBalance || 0) +
+          (student?.lastYearBusFee || 0),
         "Tution Fee": student?.tutionFeeNet || 0,
         "TutionFee Paid": student?.tutionFeePaid || 0,
         "Pending TutionFee ":
           (student?.tutionFeeNet || 0) - (student?.tutionFeePaid || 0),
         TotalTransportFee: student?.totalTransportFee || 0,
-        NetTransportFee: student?.transportFeeNet || 0,
-        "TransportFee paid": student?.transportFeePaid || 0,
-        "Pending TransportFee ":
-          student?.transportFeeNet - (student?.transportFeePaid || 0),
+        NetTransportFee: student?.busFeeNet || 0,
+        "busFee paid": student?.busFeePaid || 0,
+        "Pending busFee ":
+          student?.busFeeNet - (student?.busFeePaid || 0),
         "Total paid":
-          (student?.tutionFeePaid || 0) + (student?.transportFeePaid || 0),
+          (student?.tutionFeePaid || 0) + (student?.busFeePaid || 0),
         Outstanding:
-          ((student?.transportFeeNet || 0) + student?.tutionFeeNet || 0) -
-          ((student?.transportFeePaid || 0) + (student?.tutionFeePaid || 0)),
+          ((student?.busFeeNet || 0) + student?.tutionFeeNet || 0) -
+          ((student?.busFeePaid || 0) + (student?.tutionFeePaid || 0)),
       };
     });
 
@@ -371,8 +371,8 @@ const StudentFeeDetails = ({
                   </td>
                   <td className="px-3 py-2.5">
                     {formatCurrency(
-                      (student?.lastYearSchoolBalance || 0) +
-                        (student?.lastYearTransportBalance || 0)
+                      (student?.lastYearTuitionBalance || 0) +
+                        (student?.lastYearBusFee || 0)
                     )}
                   </td>
                   <td className="px-3 py-2.5">
@@ -412,19 +412,19 @@ const StudentFeeDetails = ({
                             <div className="flex gap-4">
                               <PieChart
                                 title="School Balance"
-                                paid={student.lastYearSchoolPaid}
+                                paid={student.lastYearBusPaid}
                                 total={
-                                  student.lastYearSchoolBalance +
-                                  student.lastYearSchoolPaid
+                                  student.lastYearTuitionBalance +
+                                  student.lastYearTuitionPaid
                                 }
                                 color="#7e22ce"
                               />
                               <PieChart
-                                title="Transport Balance"
-                                paid={student.lastYearTransportPaid}
+                                title="Bus Balance"
+                                paid={student.lastYearBusPaid}
                                 total={
-                                  student.lastYearTransportBalance +
-                                  student.lastYearTransportPaid
+                                  student.lastYearBusBalance +
+                                  student.lastYearBusPaid
                                 }
                                 color="#3b82f6"
                               />
@@ -438,13 +438,13 @@ const StudentFeeDetails = ({
                             </h3>
                             <FeeBar
                               label="School Fees"
-                              paid={student.currentYearPaid.SchoolFee}
-                              total={student.currentYearTotals.SchoolFee}
+                              paid={student.currentYearPaid.tuitionFee}
+                              total={student.currentYearTotals.tuitionFee}
                             />
                             <FeeBar
-                              label="Transport Fees"
-                              paid={student.currentYearPaid.TransportFee}
-                              total={student.currentYearTotals.TransportFee}
+                              label="Bus Fees"
+                              paid={student.currentYearPaid.busFee}
+                              total={student.currentYearTotals.busFee}
                             />
                             {student.currentYearTotals.MessFee > 0 && (
                               <FeeBar

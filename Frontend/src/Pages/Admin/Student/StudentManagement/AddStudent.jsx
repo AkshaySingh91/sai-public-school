@@ -113,7 +113,7 @@ export default function AddStudent() {
       } else {
         tuitionFee = Number(feeStructure.TuitionFee) || 0;
       }
-      const schoolFees = {
+      const tuitionFees = {
         AdmissionFee: AdmissionFee,
         tuitionFee: tuitionFee,
         total: AdmissionFee + tuitionFee,
@@ -134,7 +134,7 @@ export default function AddStudent() {
           // tuition
           dsTotal = dsStructure?.feeStructure?.tuitionFee || 0;
         }
-        const dssTotal = schoolFees.total;
+        const dssTotal = tuitionFees.total;
         tuitionFeesDiscount = Math.max(dsTotal - dssTotal, 0);
       }
 
@@ -146,12 +146,12 @@ export default function AddStudent() {
         allFee: {
           lastYearBalanceFee: 0,
           lastYearDiscount: 0,
-          lastYearTransportFee: 0,
-          lastYearTransportFeeDiscount: 0,
-          schoolFees,
+          lastYearBusFee: 0,
+          lastYearBusFeeDiscount: 0,
+          tuitionFees,
           tuitionFeesDiscount,
-          transportFee: 0,
-          transportFeeDiscount: 0,
+          busFee: 0,
+          busFeeDiscount: 0,
           messFee: 0,
           hostelFee: 0,
         },

@@ -69,40 +69,40 @@ export default function FeeReportsContainer() {
     });
     // consider only completed payment "t.status === "completed""
     const lastYearSchoolPaid = lastYearTransactions
-      .filter((t) => t.feeType === "SchoolFee" && t.status === "completed")
+      .filter((t) => t?.feeType?.toLowerCase() === "SchoolFee" && t?.status?.toLowerCase() === "completed")
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-    const lastYearTransportPaid = lastYearTransactions
-      .filter((t) => t.feeType === "TransportFee" && t.status === "completed")
+    const lastYearBusPaid = lastYearTransactions
+      .filter((t) => t?.feeType?.toLowerCase() === "busFee" && t?.status?.toLowerCase() === "completed")
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
     // console.log({ lastYearSchoolPaid })
-    // console.log({ lastYearTransportPaid })
+    // console.log({ lastYearBusPaid })
 
     const currentYearTransactions = transactions.filter(
       (t) => t.academicYear === student.academicYear
     );
 
-    const schoolFeeNet = fees.schoolFees?.total || 0;
-    const transportFeeNet = fees.transportFee || 0;
+    const tuitionFeeNet = fees.tuitionFees?.total || 0;
+    const busFeeNet = fees.busFee || 0;
 
     const currentYearPaid = {
       SchoolFee: currentYearTransactions
-        .filter((t) => t.feeType === "SchoolFee" && t.status === "completed")
+        .filter((t) => t?.feeType?.toLowerCase() === "tuitionfee" && t?.status?.toLowerCase() === "completed")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-      TransportFee: currentYearTransactions
-        .filter((t) => t.feeType === "TransportFee" && t.status === "completed")
+      busFee: currentYearTransactions
+        .filter((t) => t?.feeType?.toLowerCase() === "busfee" && t?.status?.toLowerCase() === "completed")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
       MessFee: currentYearTransactions
-        .filter((t) => t.feeType === "MessFee" && t.status === "completed")
+        .filter((t) => t?.feeType?.toLowerCase() === "messfee" && t?.status?.toLowerCase() === "completed")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
       HostelFee: currentYearTransactions
-        .filter((t) => t.feeType === "HostelFee" && t.status === "completed")
+        .filter((t) => t?.feeType?.toLowerCase() === "hostelfee" && t?.status?.toLowerCase() === "completed")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
     };
     const totalFees =
-      schoolFeeNet +
-      transportFeeNet +
+      tuitionFeeNet +
+      busFeeNet +
       (fees.messFee || 0) +
       (fees.hostelFee || 0);
 
@@ -111,21 +111,21 @@ export default function FeeReportsContainer() {
       0
     );
     const totalDiscount =
-      (fees.tutionFeesDiscount || 0) + (fees.transportFeeDiscount || 0);
+      (fees.tutionFeesDiscount || 0) + (fees.busFeeDiscount || 0);
 
-    const transportFeePaid = currentYearTransactions
-      .filter((t) => t.feeType === "TransportFee" && t.status === "completed")
+    const busFeePaid = currentYearTransactions
+      .filter((t) => t?.feeType?.toLowerCase() === "busfee" && t?.status?.toLowerCase() === "completed")
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const tutionFeePaid = totalPaid - transportFeePaid;
+    const tutionFeePaid = totalPaid - busFeePaid;
 
     return {
       ...student,
-      lastYearSchoolBalance: fees.lastYearBalanceFee || 0,
-      lastYearTransportBalance: fees.lastYearTransportFee || 0,
+      lastYearTuitionBalance: fees.lastYearBalanceFee || 0,
+      lastYearBusFee: fees.lastYearBusFee || 0,
       currentYearPaid,
       currentYearTotals: {
-        SchoolFee: schoolFeeNet,
-        TransportFee: transportFeeNet,
+        SchoolFee: tuitionFeeNet,
+        busFee: busFeeNet,
         MessFee: fees.messFee || 0,
         HostelFee: fees.hostelFee || 0,
       },
@@ -135,12 +135,12 @@ export default function FeeReportsContainer() {
       paid: totalPaid,
       outstanding: totalFees - totalPaid,
       lastYearSchoolPaid, //use to visulize chart
-      lastYearTransportPaid, //use to visulize chart
-      tutionFeeNet: totalFees - transportFeeNet, // use in excel total tution fee it inc mess, hostel also
-      tutionFeePaid, // use in excel it is total tution paid fee ic hostel, mess
-      totalTransportFee: transportFeeNet + (fees?.transportFeeDiscount || 0), // use in excel it is transport with discount
-      transportFeeNet, // use in excel it is transport without discount
-      transportFeePaid, // use in excel it is transport fee paid by stu
+      lastYearBusPaid, //use to visulize chart
+      tutionFeeNet: totalFees - busFeeNet, // use in excel total tuition fee it inc mess, hostel also
+      tutionFeePaid, // use in excel it is total tuition paid fee ic hostel, mess
+      totalTransportFee: busFeeNet + (fees?.busFeeDiscount || 0), // use in excel it is bus with discount
+      busFeeNet, // use in excel it is bus without discount
+      busFeePaid, // use in excel it is bus fee paid by stu
     };
   };
 
@@ -161,18 +161,18 @@ export default function FeeReportsContainer() {
           const fees = student.allFee || {};
 
           existing.lastYear +=
-            (fees.lastYearTransportFee || 0) + (fees.lastYearBalanceFee || 0);
+            (fees.lastYearBusFee || 0) + (fees.lastYearBalanceFee || 0);
 
           existing.original +=
-            (fees.schoolFees?.total || 0) +
-            (fees.transportFee || 0) +
+            (fees.tuitionFees?.total || 0) +
+            (fees.busFee || 0) +
             (fees.messFee || 0) +
             (fees.hostelFee || 0) +
-            (fees.transportFeeDiscount || 0) +
+            (fees.busFeeDiscount || 0) +
             (fees.tutionFeesDiscount || 0);
 
           existing.discount +=
-            (fees.tutionFeesDiscount || 0) + (fees.transportFeeDiscount || 0);
+            (fees.tutionFeesDiscount || 0) + (fees.busFeeDiscount || 0);
           //    if payment is completed ie  t.status === "completed")
           const paid = (student.transactions || [])
             .filter(

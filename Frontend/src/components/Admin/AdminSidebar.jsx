@@ -44,8 +44,8 @@
 //     { icon: FiBook, text: "Employee", path: "/employee" },
 //     {
 //         icon: TbBus,
-//         text: "Transport",
-//         path: "/transport",
+//         text: "Bus",
+//         path: "/bus",
 //         subItems: [
 //             { text: "Bus List", path: "/buslist" },
 //             { text: "Bus Destination", path: "/busdest" },
@@ -266,8 +266,8 @@ const menuItems = [
   { icon: FiBook, text: "Employee", path: "/employee" },
   {
     icon: TbBus,
-    text: "Transport",
-    path: "/transport",
+    text: "Bus",
+    path: "/bus",
     subItems: [
       { text: "Bus List", path: "/buslist" },
       { text: "Bus Destination", path: "/busdest" },

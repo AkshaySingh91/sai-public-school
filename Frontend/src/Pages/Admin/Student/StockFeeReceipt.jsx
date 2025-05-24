@@ -73,7 +73,7 @@ function StockFeeReceipt({ student, school, transaction }) {
             <div className="text-center mb-6 border-b pb-4 border-slate-200">
               <p className="mt-2 text-purple-600 font-medium">{copy}</p>
               <h1 className="text-md font-bold text-blue-600">
-                {school.transportReceiptHeader ? school.transportReceiptHeader : `${school.schoolName} , ${school?.location?.taluka || ""}`}
+                {school.busReceiptHeader ? school.busReceiptHeader : `${school.schoolName} , ${school?.location?.taluka || ""}`}
               </h1>
             </div>
 

@@ -110,14 +110,14 @@ export default function SchoolMetricsCards() {
 
         if (isActive) {
           metricsData.discountedAmount +=
-            (all.transportFeeDiscount || 0) + (all.tutionFeesDiscount || 0);
+            (all.busFeeDiscount || 0) + (all.tutionFeesDiscount || 0);
           metricsData.expectedCollection +=
-            (all.schoolFees?.total || 0) +
-            (all.transportFee || 0) +
+            (all.tuitionFees?.total || 0) +
+            (all.busFee || 0) +
             (all.messFee || 0) +
             (all.hostelFee || 0);
           metricsData.lastYearBalance +=
-            (all.lastYearBalanceFee || 0) + (all.lastYearTransportFee || 0);
+            (all.lastYearBalanceFee || 0) + (all.lastYearBusFee || 0);
 
           (s.transactions || []).forEach((tx) => {
             const amt = Number(tx.amount) || 0;

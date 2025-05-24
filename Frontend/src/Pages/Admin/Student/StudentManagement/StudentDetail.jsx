@@ -313,7 +313,7 @@ export function StudentDetail() {
     }
 
     // Validate fee type from available options
-    const validFeeTypes = ["SchoolFee", "MessFee", "HostelFee", "TransportFee"];
+    const validFeeTypes = ["TuitionFee", "MessFee", "HostelFee", "BusFee"];
     if (!validFeeTypes.includes(newTransaction.feeType)) {
       Swal.fire("Validation Error", "Please select a valid Fee Type", "error");
       return;
@@ -346,22 +346,23 @@ export function StudentDetail() {
 
       if (isCurrentYear) {
         // as this is fee from student.allfee is unchangable this adding previousPayments not required  
-        switch (feeType) {
-          case 'SchoolFee':
-            initialFee = (student.allFee.schoolFees?.total || 0) + (student.allFee.tuitionFeesDiscount || 0);
+        const fee = feeType.toLowerCase();
+        switch (fee) {
+          case 'tuitionfee':
+            initialFee = (student.allFee.tuitionFees?.total || 0) + (student.allFee.tuitionFeesDiscount || 0);
             applicableDiscount = student.allFee.tuitionFeesDiscount || 0;
             currentBalance = initialFee - applicableDiscount;
             break;
-          case 'TransportFee':
-            initialFee = (student.allFee.transportFee || 0) + (student.allFee.transportFeeDiscount || 0);
-            applicableDiscount = student.allFee.transportFeeDiscount || 0;
+          case 'busfee':
+            initialFee = (student.allFee.busFee || 0) + (student.allFee.busFeeDiscount || 0);
+            applicableDiscount = student.allFee.busFeeDiscount || 0;
             currentBalance = initialFee - applicableDiscount;
             break;
-          case 'MessFee':
+          case 'messfee':
             initialFee = student.allFee.messFee || 0;
             currentBalance = initialFee;
             break;
-          case 'HostelFee':
+          case 'hostelfee':
             initialFee = student.allFee.hostelFee || 0;
             currentBalance = initialFee;
             break;
@@ -369,14 +370,14 @@ export function StudentDetail() {
       } else if (isPrevAcademicYear) {
         switch (feeType) {
           // last year fees input field change thus to know what is initial we have to add previousPayments
-          case 'SchoolFee':
+          case 'tuitionfee':
             initialFee = previousPayments + (student.allFee.lastYearBalanceFee || 0) + (student.allFee.lastYearDiscount || 0);
             applicableDiscount = student.allFee.lastYearDiscount || 0;
             currentBalance = initialFee - applicableDiscount;
             break;
-          case 'TransportFee':
-            initialFee = previousPayments + (student.allFee.lastYearTransportFee || 0) + (student.allFee.lastYearTransportFeeDiscount || 0);
-            applicableDiscount = (student.allFee.lastYearTransportFeeDiscount || 0);
+          case 'busfee':
+            initialFee = previousPayments + (student.allFee.lastYearBusFee || 0) + (student.allFee.lastYearBusFeeDiscount || 0);
+            applicableDiscount = (student.allFee.lastYearBusFeeDiscount || 0);
             currentBalance = initialFee - applicableDiscount;
             break;
           default:
@@ -405,7 +406,7 @@ export function StudentDetail() {
         remainingBefore,
         remainingAfter,
         transactionDate: transactionDate.toISOString(),
-        feeCategory: feeType.replace('Fee', '') // School/Transport/Mess/Hostel
+        feeCategory: feeType.replace('Fee', '') // School/Bus/Mess/Hostel
       };
 
       // 5. Create transaction object
@@ -429,7 +430,7 @@ export function StudentDetail() {
       // 6. Update student's fee balance (only if transaction is completed)
       const updatedFees = { ...student.allFee };
       if (transaction.status === 'completed') {
-        if (isPrevAcademicYear && (feeType === 'SchoolFee' || feeType === 'TransportFee')) {
+        if (isPrevAcademicYear && (feeType === 'SchoolFee' || feeType === 'busFee')) {
           switch (feeType) {
             case 'SchoolFee':
               updatedFees.lastYearBalanceFee = Math.max(
@@ -437,9 +438,9 @@ export function StudentDetail() {
                 0
               );
               break;
-            case 'TransportFee':
-              updatedFees.lastYearTransportFee = Math.max(
-                updatedFees.lastYearTransportFee - paymentAmount,
+            case 'busFee':
+              updatedFees.lastYearBusFee = Math.max(
+                updatedFees.lastYearBusFee - paymentAmount,
                 0
               );
               break;
@@ -450,7 +451,7 @@ export function StudentDetail() {
               );
           }
         } else if (isPrevAcademicYear) {
-          Swal.fire("Invalid Feetype", `For previous year fee type should be either "SchoolFee" or "TransportFee"`, "error");
+          Swal.fire("Invalid Feetype", `For previous year fee type should be either "SchoolFee" or "busFee"`, "error");
           return;
         }
       }
@@ -542,9 +543,9 @@ export function StudentDetail() {
                 0
               );
               break;
-            case "TransportFee":
-              updatedFees.lastYearTransportFee = Math.max(
-                (updatedFees.lastYearTransportFee || 0) - amount,
+            case "busFee":
+              updatedFees.lastYearBusFee = Math.max(
+                (updatedFees.lastYearBusFee || 0) - amount,
                 0
               );
               break;
@@ -580,10 +581,9 @@ export function StudentDetail() {
   };
 
   const goToNextAcademicYear = async () => {
-
     const result = await Swal.fire({
       title: 'Are you sure?',
-      text: "Student Fee will rollerover lastYearBalance = pending (mess + hostel + tuition) & lastYearTransport = pending(transport) , next class tuition fee will assign",
+      text: "Student Fee will rollerover lastYearBalance = pending (mess + hostel + tuition) & lastYearTransport = pending(bus) , next class tuition fee will assign",
       type: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -632,7 +632,7 @@ export function StudentDetail() {
 
         // 3) Compute unpaid for current year from transactions
         const unpaidOf = (key) => {
-          const due = key === 'schoolFee' ? currentFees.schoolFees?.total || 0 : currentFees[key] || 0;
+          const due = key === 'tuitionFee' ? currentFees.tuitionFees?.total || 0 : currentFees[key] || 0;
           const paid = transactions.filter(t => {
             return t.academicYear === student.academicYear && t?.feeType?.toLowerCase() === key.toLowerCase() && t.status === "completed"
           })
@@ -641,8 +641,8 @@ export function StudentDetail() {
         };
 
         // 4) Roll those into last‐year balances 
-        const newLastYearBalance = (currentFees.lastYearBalanceFee || 0) + unpaidOf('hostelFee') + unpaidOf('messFee') + unpaidOf('schoolFee');
-        const newLastYearTransport = (currentFees.lastYearTransportFee || 0) + unpaidOf('transportFee');
+        const newLastYearBalance = (currentFees.lastYearBalanceFee || 0) + unpaidOf('hostelFee') + unpaidOf('messFee') + unpaidOf('tuitionFee');
+        const newLastYearTransport = (currentFees.lastYearBusFee || 0) + unpaidOf('busFee');
         // 5) If status was "new", flip to "current"
         const newStatus = student.status === "new" ? "current" : student.status;
 
@@ -657,24 +657,24 @@ export function StudentDetail() {
 
         const newTuitionFeeDiscount = (originalAdmissionFee + originalTutuionFee) - (admissionFee + tuitionFee);
 
-        // leave transport and its discount untouched:
-        const transportFee = currentFees.transportFee || 0;
-        const transportDiscount = currentFees.transportFeeDiscount || 0;
+        // leave bus and its discount untouched:
+        const busFee = currentFees.busFee || 0;
+        const busDiscount = currentFees.busFeeDiscount || 0;
 
         // 7) Build the updated fee object
         const updatedAllFee = {
           ...currentFees,
           lastYearBalanceFee: newLastYearBalance,
-          lastYearTransportFee: newLastYearTransport,
-          lastYearTransportFeeDiscount: transportDiscount,
+          lastYearBusFee: newLastYearTransport,
+          lastYearBusFeeDiscount: busDiscount,
           lastYearDiscount: currentFees.tuitionFeesDiscount || 0,
           // reset current‐year paid amounts
           hostelFee: 0,
           messFee: 0,
-          transportFee,
-          transportFeeDiscount: transportDiscount,
-          // set the new schoolFees and discounts
-          schoolFees: {
+          busFee,
+          busFeeDiscount: busDiscount,
+          // set the new tuitionFees and discounts
+          tuitionFees: {
             AdmissionFee: admissionFee,
             tuitionFee: tuitionFee,
             total: admissionFee + tuitionFee,

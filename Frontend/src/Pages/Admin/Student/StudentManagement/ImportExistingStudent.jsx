@@ -46,9 +46,9 @@ export default function ImportExistingStudent() {
         tuitionFee: 0,
         tuitionFeesDiscount: 0,
         tuitionPaidFee: 0,
-        transportFee: 0,
-        transportDiscount: 0,
-        transportFeePaid: 0,
+        busFee: 0,
+        busFeeDiscount: 0,
+        busFeePaid: 0,
         Ayear: '',
         busStop: '',
         busNoPlate: '',
@@ -84,13 +84,13 @@ export default function ImportExistingStudent() {
             "Class", "Division", "Ayear", "Type",
             "FeeID", "Status",
             "TuitionFee", "TuitionPaidFee",
-            "TransportFee", "TransportFeePaid"
+            "BusFee", "BusFeePaid"
         ];
 
         // Add validation for numeric fields
         const numericFields = [
             "TuitionFee", "TuitionFeesDiscount", "TuitionPaidFee",
-            "TransportFee", "TransportDiscount", "TransportFeePaid",
+            "BusFee", "BusDiscount", "BusFeePaid",
             "LastYearBalanceFee"
         ];
 
@@ -108,32 +108,11 @@ export default function ImportExistingStudent() {
 
         return errs;
     };
-
-    // Utility function to normalize string fields to lowercase
-    const normalizeStringFields = (obj, fieldsToNormalize = []) => {
-        const normalized = { ...obj };
-        // If no specific fields provided, normalize all string fields
-        if (fieldsToNormalize.length === 0) {
-            Object.keys(normalized).forEach(key => {
-                if (typeof normalized[key] === 'string') {
-                    normalized[key] = normalized[key].toLowerCase();
-                }
-            });
-        } else {
-            // Normalize only specified fields
-            fieldsToNormalize.forEach(field => {
-                if (normalized[field] && typeof normalized[field] === 'string') {
-                    normalized[field] = normalized[field].toLowerCase();
-                }
-            });
-        }
-        return normalized;
-    };
-    const createTransaction = (feeType, paid, discount, feeAmount) => {
+    const createTransaction = (feeType, paid, discount, feeAmount, Ayear) => {
         const accounts = school.accounts || [];
 
         return {
-            academicYear: inputData.Ayear,
+            academicYear: Ayear,
             account: accounts.length > 0 ? `${accounts[0].AccountNo} (${accounts[0].Branch})` : 'Cash',
             amount: Number(paid),
             date: new Date().toISOString().split('T')[0],
@@ -181,16 +160,18 @@ export default function ImportExistingStudent() {
                     'TutionFee',
                     inputData.tuitionPaidFee || 0,
                     inputData.tuitionFeesDiscount || 0,
-                    inputData.tuitionFee || 0
+                    inputData.tuitionFee || 0,
+                    inputData.Ayear || "24-25"
                 ));
             }
 
-            if (inputData.transportFeePaid > 0) {
+            if (inputData.busFeePaid > 0) {
                 transactions.push(createTransaction(
-                    'TransportFee',
-                    inputData.transportFeePaid || 0,
-                    inputData.transportDiscount || 0,
-                    inputData.transportFee || 0
+                    'BusFee',
+                    inputData.busFeePaid || 0,
+                    inputData.busFeeDiscount || 0,
+                    inputData.busFee || 0,
+                    inputData.Ayear || "24-25"
                 ));
             }
 
@@ -218,18 +199,18 @@ export default function ImportExistingStudent() {
                 feeId: inputData.feeID,
                 allFee: {
                     lastYearBalanceFee: Number(inputData.lastYearBalanceFee),
-                    lastYearTransportFee: 0,
+                    lastYearBusFee: 0,
                     lastYearDiscount: 0,
-                    lastYearTransportFeeDiscount: 0,
+                    lastYearBusFeeDiscount: 0,
                     // this year 
-                    schoolFees: {
+                    tuitionFees: {
                         AdmissionFee: 1000,
                         tuitionFee: Number(inputData.tuitionFee) >= 1000 ? Number(inputData.tuitionFee) - 1000 : 0,
                         total: (Number(inputData.tuitionFee) || 0)
                     },
                     tuitionFeesDiscount: Number(inputData.tuitionFeesDiscount),
-                    transportFee: Number(inputData.transportFee),
-                    transportFeeDiscount: Number(inputData.transportDiscount),
+                    busFee: Number(inputData.busFee),
+                    busFeeDiscount: Number(inputData.busFeeDiscount),
                     messFee: 0,
                     hostelFee: 0,
                 },
@@ -280,8 +261,8 @@ export default function ImportExistingStudent() {
     // Update handleBulkUpload function
     const handleBulkUpload = async (e) => {
         const file = e.target.files[0];
+        console.log(file)
         if (!file) return;
-
         setProcessing(true);
         setImportResults(null);
         setProgress(0);
@@ -457,18 +438,20 @@ export default function ImportExistingStudent() {
         const transactions = [];
         if (studentData["TuitionPaidFee"] > 0) {
             transactions.push(createTransaction(
-                'SchoolFee',
+                'TuitionFee',
                 studentData["TuitionPaidFee"] || 0,
                 studentData["TuitionFeesDiscount"] || 0,
-                studentData["TuitionFee"] || 0
+                studentData["TuitionFee"] || 0,
+                studentData["Ayear"] || "24-25",
             ));
         }
-        if (studentData["TransportFeePaid"] > 0) {
+        if (studentData["BusFeePaid"] > 0) {
             transactions.push(createTransaction(
-                'TransportFee',
-                studentData["TransportFeePaid"] || 0,
-                studentData["TransportDiscount"] || 0,
-                studentData["TransportFee"] || 0
+                'BusFee',
+                studentData["BusFeePaid"] || 0,
+                studentData["BusDiscount"] || 0,
+                studentData["BusFee"] || 0,
+                studentData["Ayear"] || "24-25",
             ));
         }
         const studentDoc = {
@@ -489,9 +472,9 @@ export default function ImportExistingStudent() {
             allFee: {
                 lastYearBalanceFee: Number(studentData["LastYearBalanceFee"]),
                 lastYearDiscount: 0,
-                lastYearTransportFee: 0,
-                lastYearTransportFeeDiscount: 0,
-                schoolFees: {
+                lastYearBusFee: 0,
+                lastYearBusFeeDiscount: 0,
+                tuitionFees: {
                     AdmissionFee: 1000,
                     tuitionFee: Number(studentData["TuitionFee"]) >= 1000
                         ? Number(studentData["TuitionFee"]) - 1000
@@ -499,8 +482,8 @@ export default function ImportExistingStudent() {
                     total: Number(studentData["TuitionFee"])
                 },
                 tuitionFeesDiscount: Number(studentData["TuitionFeesDiscount"]),
-                transportFee: Number(studentData["TransportFee"]),
-                transportFeeDiscount: Number(studentData["TransportDiscount"]),
+                busFee: Number(studentData["BusFee"]),
+                busFeeDiscount: Number(studentData["BusFeeDiscount"]),
                 messFee: 0,
                 hostelFee: 0,
             },
@@ -649,9 +632,9 @@ export default function ImportExistingStudent() {
                             <InputField label="Tuition Fee *" type="number" value={inputData.tuitionFee} onChange={e => setInputData({ ...inputData, tuitionFee: e.target.value })} />
                             <InputField label="Tuition Discount" type="number" value={inputData.tuitionFeesDiscount} onChange={e => setInputData({ ...inputData, tuitionFeesDiscount: e.target.value })} />
                             <InputField label="Paid Tuition *" type="number" value={inputData.tuitionPaidFee} onChange={e => setInputData({ ...inputData, tuitionPaidFee: e.target.value })} />
-                            <InputField label="Transport Fee *" type="number" value={inputData.transportFee} onChange={e => setInputData({ ...inputData, transportFee: e.target.value })} />
-                            <InputField label="Transport Discount" type="number" value={inputData.transportDiscount} onChange={e => setInputData({ ...inputData, transportDiscount: e.target.value })} />
-                            <InputField label="Paid Transport *" type="number" value={inputData.transportFeePaid} onChange={e => setInputData({ ...inputData, transportFeePaid: e.target.value })} />
+                            <InputField label="Bus Fee *" type="number" value={inputData.busFee} onChange={e => setInputData({ ...inputData, busFee: e.target.value })} />
+                            <InputField label="Bus Discount" type="number" value={inputData.busFeeDiscount} onChange={e => setInputData({ ...inputData, busDiscount: e.target.value })} />
+                            <InputField label="Paid Bus *" type="number" value={inputData.busFeePaid} onChange={e => setInputData({ ...inputData, busFeePaid: e.target.value })} />
                             <InputField label="Last Year Discount" type="number" value={inputData.lastYearDiscount} onChange={e => setInputData({ ...inputData, lastYearDiscount: e.target.value })} />
                         </div>
                     </div>}
@@ -702,31 +685,31 @@ export default function ImportExistingStudent() {
                             <table className="min-w-full border-collapse">
                                 <tbody>
                                     {[
-                                        ["*fname", "John"],
-                                        ["*sname", "Doe"],
-                                        ["*fatherName", "Alix"],
+                                        ["*Fname", "John"],
+                                        ["*Sname", "Doe"],
+                                        ["*FatherName", "Alix"],
                                         ["*DOB", "2008-05-10"],
-                                        ["*sex", "Male"],
-                                        ["*feeID", "123"],
-                                        ["*fatherMobile", "9876543210"],
-                                        ["*class", "10"],
-                                        ["*div", "A"],
-                                        ["saral", "SRL123456"],
-                                        ["motherName", "Tina"],
-                                        ["aadhar", "1234 5678 9012"],
-                                        ["motherMobile", "8765432109"],
-                                        ["address", "123 Main St, City"],
-                                        ["lastYearBalanceFee", "1500"],
-                                        ["lastYearDiscount", "500"],
-                                        ["*tuitionFee", "18000"],
-                                        ["*tuitionFeesDiscount", "2000"],
-                                        ["*tuitionPaidFee", "16000"],
-                                        ["*transportFee", "3000"],
-                                        ["*transportDiscount", "500"],
-                                        ["*transportFeePaid", "2500"],
+                                        ["*Sex", "Male"],
+                                        ["*FeeID", "123"],
+                                        ["*FatherMobile", "9876543210"],
+                                        ["*Class", "10"],
+                                        ["*Div", "A"],
+                                        ["Saral", "SRL123456"],
+                                        ["MotherName", "Tina"],
+                                        ["Aadhar", "1234 5678 9012"],
+                                        ["MotherMobile", "8765432109"],
+                                        ["Address", "123 Main St, City"],
+                                        ["LastYearBalanceFee", "1500"],
+                                        ["LastYearDiscount", "500"],
+                                        ["*TuitionFee", "18000"],
+                                        ["*TuitionFeesDiscount", "2000"],
+                                        ["*TuitionPaidFee", "16000"],
+                                        ["*BusFee", "3000"],
+                                        ["*BusDiscount", "500"],
+                                        ["*BusFeePaid", "2500"],
                                         ["*Ayear", "2024-25"],
-                                        ["*status", "Active"],
-                                        ["*type", "DS"],
+                                        ["*Status", "Active"],
+                                        ["*Type", "DS"],
                                         ["busStop", "Green Park"],
                                         ["busNoPlate", "MH12AB1234"],
                                         ["email", "john.doe@email.com"],
@@ -738,11 +721,11 @@ export default function ImportExistingStudent() {
                                         ["grNo", "GR1023"],
                                         ["penNo", "PN56789"],
                                     ].map(([col, value]) => (
-                                        <tr key={col} className="even:bg-purple-50 text-lg">
+                                        <tr key={col} className="even:bg-purple-50 hover:bg-purple-100 transition-colors text-lg">
                                             <td className="px-4 py-2 font-bold tracking-wider text-purple-700 border border-purple-100 w-48">
                                                 {col}
                                             </td>
-                                            <td className="px-4 py-2 border border-purple-100">{value}</td>
+                                            <td className="px-4 py-2 border border-purple-100 text-gray-800">{value}</td>
                                         </tr>
                                     ))}
                                 </tbody>

@@ -89,6 +89,7 @@ const EmployeeForm = ({ onEmployeeAdded, onClose }) => {
     setLoading(false);
   };
 
+
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8">
       <div className="flex justify-between items-center border-b border-gray-200 pb-4 mb-6">
@@ -198,5 +199,6 @@ const EmployeeForm = ({ onEmployeeAdded, onClose }) => {
     </div>
   );
 };
+
 
 export default EmployeeForm;

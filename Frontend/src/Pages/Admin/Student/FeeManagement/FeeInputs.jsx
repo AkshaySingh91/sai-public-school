@@ -8,7 +8,7 @@ export const SchoolFeeInputs = ({ fees, onChange }) => {
         <div className="mb-6">
             <h4 className="font-medium text-gray-700 mb-4">School Fees</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(fees.schoolFees || {}).map(([key, val]) => (
+                {Object.entries(fees.tuitionFees || {}).map(([key, val]) => (
                     <motion.div
                         key={key}
                         whileHover={{ scale: key === 'total' ? 1 : 1.02 }}
@@ -28,7 +28,7 @@ export const SchoolFeeInputs = ({ fees, onChange }) => {
                                     type="number"
                                     className="w-24 p-1 border border-purple-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     value={val}
-                                    onChange={e => onChange(`schoolFees.${key}`, e.target.value)}
+                                    onChange={e => onChange(`tuitionFees.${key}`, e.target.value)}
                                 />
                             )}
                         </div>
@@ -42,7 +42,7 @@ export const SchoolFeeInputs = ({ fees, onChange }) => {
 export const OtherFeeInputs = ({ fees, onChange }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {Object.entries(fees)
-            .filter(([k]) => k !== 'schoolFees')
+            .filter(([k]) => k !== 'tuitionFees')
             .map(([key, val]) => (
                 <motion.div
                     key={key}

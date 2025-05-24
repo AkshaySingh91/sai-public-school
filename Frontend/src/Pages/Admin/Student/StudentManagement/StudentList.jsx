@@ -256,8 +256,8 @@ const StudentList = () => {
           const allFee = student.allFee || {};
           const unpaid = (key) => {
             const due =
-              key === "schoolFee"
-                ? allFee.schoolFees?.total || 0
+              key === "tuitionFee"
+                ? allFee.tuitionFees?.total || 0
                 : allFee[key] || 0;
             const paid = txs
               .filter((t) => {
@@ -274,9 +274,9 @@ const StudentList = () => {
             (allFee.lastYearBalanceFee || 0) +
             unpaid("hostelFee") +
             unpaid("messFee") +
-            unpaid("schoolFee");
+            unpaid("tuitionFee");
           const lastTrans =
-            (allFee.lastYearTransportFee || 0) + unpaid("transportFee");
+            (allFee.lastYearBusFee || 0) + unpaid("busFee");
 
           const newStatus =
             student.status === "new" ? "current" : student.status;
@@ -300,12 +300,12 @@ const StudentList = () => {
             ...allFee,
             lastYearDiscount: allFee.tuitionFeesDiscount,
             lastYearBalanceFee: lastBal,
-            lastYearTransportFee: lastTrans,
+            lastYearBusFee: lastTrans,
             hostelFee: 0,
             messFee: 0,
-            transportFee: allFee.transportFee,
-            transportFeeDiscount: allFee.transportFeeDiscount,
-            schoolFees: { AdmissionFee: admission, tuitionFee: tuition, total: admission + tuition },
+            busFee: allFee.busFee,
+            busFeeDiscount: allFee.busFeeDiscount,
+            tuitionFees: { AdmissionFee: admission, tuitionFee: tuition, total: admission + tuition },
             tuitionFeesDiscount: tuitionDiscount,
           };
 
@@ -386,7 +386,7 @@ const StudentList = () => {
         Aadhar: student.aadhar || "",
         "Saral ID": student.saralId || student.saral || "",
         Mobile: student.mobile || "",
-        "Bus Transport": student.busStop ? "Y" : "N",
+        "Bus Bus": student.busStop ? "Y" : "N",
         "Bus Destination": student.busStop || "",
         "Bus No": student.busNoPlate || "",
       };

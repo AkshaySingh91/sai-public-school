@@ -532,5 +532,4 @@ const EmployeeDetail = () => {
     </motion.div>
   );
 };
-
 export default EmployeeDetail;

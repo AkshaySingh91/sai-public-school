@@ -147,12 +147,18 @@ const EmployeeList = () => {
   };
 
   return (
-    <div className="w-full bg-white rounded-lg shadow-sm">
-      {/* Filters and Actions */}
+    <div className="w-full sm:bg-white rounded-lg shadow-sm p-4">
       <div className="p-4 border-b flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 gap-2">
+          <button
+            onClick={() => setShowModal(true)}
+            className="p-2 text-white bg-purple-600 border rounded-md  font-semibold hover:bg-purple-700 hover:transition-all"
+          >
+            Add Employee
+          </button>
+
           <select
-            className="px-4 py-2 text-sm border rounded-md w-full sm:w-auto  bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-4 py-2 text-sm border rounded-md sm:bg-white bg-purple-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={filters.designation}
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, designation: e.target.value }))
@@ -167,7 +173,7 @@ const EmployeeList = () => {
           </select>
 
           <select
-            className="px-4 py-2 text-sm border rounded-md bg-white w-full sm:w-auto text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-4 py-2 text-sm border rounded-md sm:bg-white bg-purple-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={filters.type}
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, type: e.target.value }))
@@ -177,13 +183,6 @@ const EmployeeList = () => {
             <option value="teaching">Teaching</option>
             <option value="non-teaching">Non-Teaching</option>
           </select>
-
-          <button
-            onClick={() => setShowModal(true)}
-            className="inline-block p-2 text-gray-600 border rounded-md hover:bg-gray-50"
-          >
-            Add Employee
-          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -205,15 +204,15 @@ const EmployeeList = () => {
           <div className="flex w-full sm:w-auto gap-2">
             <button
               onClick={exportToPDF}
-              className="flex items-center w-1/2 sm:w-auto px-3 py-2 text-sm border rounded-md bg-white text-gray-700 hover:bg-gray-50"
+              className="flex items-center w-1/2 sm:w-auto px-3 py-2 text-sm border rounded-md bg-purple-600 font-semibold  text-white hover:bg-purple-700"
             >
               <FileText size={16} className="mr-2" />
-              <span>Export PDF</span>
+              <span >Export PDF</span>
             </button>
 
             <button
               onClick={exportToExcel}
-              className="flex items-center px-3 w-1/2 sm:w-auto py-2 text-sm border rounded-md bg-white text-gray-700 hover:bg-gray-50"
+              className="flex items-center px-3 w-1/2 sm:w-auto py-2 font-semibold text-sm border rounded-md bg-purple-600 text-white hover:bg-purple-700"
             >
               <FileSpreadsheet size={16} className="mr-2" />
               <span>Export Excel</span>
@@ -221,7 +220,6 @@ const EmployeeList = () => {
           </div>
         </div>
       </div>
-
       {/* Employee Table */}
       <div className="overflow-x-auto">
         <table className="min-w-[1000px] w-full divide-y divide-gray-200">

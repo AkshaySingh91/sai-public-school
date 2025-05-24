@@ -1,26 +1,16 @@
-import React, { useState, useEffect } from "react";
+// Settings.js (Parent Component)
+import { useState, useEffect } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
-import { User, Loader, School, RefreshCw, AlertCircle } from 'lucide-react';
+import { User, School, Upload, Trash2, Loader } from "lucide-react";
 import Swal from "sweetalert2";
 import ProfileSettings from "./ProfileSettings/ProfileSettings";
 import SchoolSettings from "./SchoolSettings/SchoolSettings";
-import { auth, db, storage } from "../../../config/firebase";
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  query,
-  collection,
-  where,
-  getDocs
-} from "firebase/firestore";
-import {
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-  updatePassword,
-  updateProfile
-} from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { auth } from "../../../config/firebase";
+
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const Settings = () => {
   const { currentUser } = useAuth();
@@ -32,80 +22,72 @@ const Settings = () => {
 
   const fetchData = async () => {
     try {
-      if (!currentUser) throw new Error("User not authenticated");
-      setLoading(true);
-
-      // Fetch user profile
-      const userRef = doc(db, "Users", currentUser.uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) throw new Error("User profile not found");
-      const userData = userSnap.data();
-      setProfile(userData);
-
-      // Fetch school data
-      if (userData.schoolCode) {
-        const schoolsRef = collection(db, "schools");
-        const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
-        const schoolSnap = await getDocs(q);
-
-        if (!schoolSnap.empty) {
-          const docData = schoolSnap.docs[0].data();
-          setSchool({ id: schoolSnap.docs[0].id, ...docData });
-        }
+      // Get the authenticated user
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("User not authenticated");
       }
+
+      const userToken = await user.getIdToken();
+
+      const [profileRes, schoolRes] = await Promise.all([
+        fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/profile` : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`,
+          {
+            headers: {
+              Authorization: `Bearer ${userToken}`,
+            },
+          }),
+        fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/school` : `${VITE_DOMAIN_PROD}/api/admin/settings/school`, {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }),
+      ]);
+      if (!profileRes.ok || !schoolRes.ok) {
+        const errorText = await profileRes
+          .text()
+          .catch(() => "Failed to fetch profile");
+        throw new Error(errorText || "Failed to fetch data");
+      }
+
+      const [profileData, schoolData] = await Promise.all([
+        profileRes.json(),
+        schoolRes.json(),
+      ]);
+      setProfile(profileData);
+      setSchool(schoolData);
+      setError(null);
     } catch (err) {
-      setError(err.message);
+      console.error("Fetch error:", err);
+      setError(err.message || "Failed to load settings");
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchData();
-  }, [currentUser]);
-
-  const handleProfileUpdate = async (updatedData) => {
+  }, []);
+  const handleProfileUpdate = async () => {
     try {
-      const userRef = doc(db, "Users", currentUser.uid);
-      await updateDoc(userRef, {
-        ...updatedData,
-        updatedAt: new Date().toISOString()
-      });
-      setProfile(prev => ({ ...prev, ...updatedData }));
-      Swal.fire({ icon: 'success', title: 'Profile updated', timer: 1500 });
-    } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Update failed', text: err.message });
-    }
-  };
-
-  const handlePasswordChange = async (currentPassword, newPassword) => {
-    try {
-      const credential = EmailAuthProvider.credential(
-        currentUser.email,
-        currentPassword
+      const userToken = await auth.currentUser.getIdToken();
+      const response = await fetch(
+        "http://localhost:5000/admin/settings/profile",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify(profile),
+        }
       );
 
-      await reauthenticateWithCredential(currentUser, credential);
-      await updatePassword(currentUser, newPassword);
-      Swal.fire({ icon: 'success', title: 'Password updated', timer: 1500 });
-      return true;
+      if (!response.ok) {
+        throw new Error("Failed to update profile");
+      }
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Password change failed', text: err.message });
-      return false;
-    }
-  };
-
-  const handleSchoolUpdate = async (updatedData) => {
-    try {
-      const schoolRef = doc(db, "schools", school.id);
-      await updateDoc(schoolRef, {
-        ...updatedData,
-        updatedAt: new Date().toISOString()
-      });
-      setSchool(prev => ({ ...prev, ...updatedData }));
-      Swal.fire({ icon: 'success', title: 'School updated', timer: 1500 });
-    } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Update failed', text: err.message });
+      console.log(err);
+      setError("Failed to update profile");
     }
   };
 
@@ -113,231 +95,167 @@ const Settings = () => {
     try {
       setLoading(true);
 
-      // Delete old image if exists
-      if (profile?.profileImage) {
-        const oldImageRef = ref(storage, profile.profileImage);
-        await deleteObject(oldImageRef);
+      const userToken = await auth.currentUser.getIdToken();
+      const formData = new FormData();
+      console.log("file", file);
+      formData.append("image", file); // Key should match backend field name
+      console.log("formData", formData);
+      console.log("usertoken", userToken);
+      const response = await fetch("http://localhost:5000/admin/settings/upload-profile", {
+        method: "PODT",
+        body: {
+          formData
+        },
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+          "Content-Type": "multipart/form-data",
+        },
       }
+      );
+      console.log("response", response);
 
-      // Upload new image
-      const filePath = `profile-images/${currentUser.uid}/${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, filePath);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // Update profile
-      const userRef = doc(db, "Users", currentUser.uid);
-      await updateDoc(userRef, {
-        profileImage: downloadURL,
-        updatedAt: new Date().toISOString()
-      });
-
-      setProfile(prev => ({ ...prev, profileImage: downloadURL }));
-      Swal.fire({ icon: 'success', title: 'Image uploaded', timer: 1500 });
+      // Update profile with new image URL
+      setProfile((prev) => ({
+        ...prev,
+        profileImage: response.data.imageUrl,
+      }));
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Upload failed', text: err.message });
+      setError(err.message || "Failed to upload image");
+      Swal.fire({
+        icon: "error",
+        title: "Upload Failed",
+        text: err.message || "Something went wrong during upload",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteImage = async () => {
-    try {
-      if (!profile?.profileImage) return;
 
-      const imageRef = ref(storage, profile.profileImage);
-      await deleteObject(imageRef);
 
-      const userRef = doc(db, "Users", currentUser.uid);
-      await updateDoc(userRef, {
-        profileImage: null,
-        updatedAt: new Date().toISOString()
-      });
-
-      setProfile(prev => ({ ...prev, profileImage: null }));
-      Swal.fire({ icon: 'success', title: 'Image removed', timer: 1500 });
-    } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Removal failed', text: err.message });
-    }
-  };
-
-  if (loading) return <div className="p-6"><Loader className="animate-spin" /></div>;
-  if (error) return (
-    <div className="p-6 text-red-500">
-      <AlertCircle className="inline mr-2" />
-      {error}
-      <button onClick={fetchData} className="ml-4 text-blue-500">
-        <RefreshCw size={16} className="inline" /> Retry
-      </button>
-    </div>
-  );
+  if (loading) return <SkeletonLoader type="settings" />;
+  if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex gap-4 mb-8 border-b border-gray-200">
-        <button
+        <TabButton
+          active={activeTab === "profile"}
           onClick={() => setActiveTab("profile")}
-          className={`pb-2 px-4 ${activeTab === 'profile' ? 'border-b-2 border-blue-500' : ''}`}
-        >
-          <User size={18} className="inline mr-2" />
-          Profile Settings
-        </button>
-        <button
+          icon={<User size={18} />}
+          label="Profile Settings"
+        />
+        <TabButton
+          active={activeTab === "school"}
           onClick={() => setActiveTab("school")}
-          className={`pb-2 px-4 ${activeTab === 'school' ? 'border-b-2 border-blue-500' : ''}`}
-        >
-          <School size={18} className="inline mr-2" />
-          School Settings
-        </button>
+          icon={<School size={18} />}
+          label="School Settings"
+        />
       </div>
 
       {activeTab === "profile" ? (
         <ProfileSettings
           profile={profile}
-          onUpdate={handleProfileUpdate}
-          onPasswordChange={handlePasswordChange}
+          setProfile={setProfile}
+          handleProfileUpdate={handleProfileUpdate}
           onImageUpload={handleImageUpload}
-          onDeleteImage={handleDeleteImage}
           loading={loading}
         />
       ) : (
         <SchoolSettings
           school={school}
           setSchool={setSchool}
-          onUpdate={handleSchoolUpdate} // Add this prop
+          currentUser={currentUser}
         />
       )}
     </div>
   );
 };
 
-export default Settings
-// ProfileSettings Component
-// const ProfileSettings = ({ profile, onUpdate, onPasswordChange, onImageUpload, onDeleteImage, loading }) => {
-//   const [formData, setFormData] = useState({ name: '', phone: '' });
-//   const [passwordData, setPasswordData] = useState({ current: '', new: '' });
+const TabButton = ({ active, onClick, icon, label }) => (
+  <button
+    onClick={onClick}
+    className={`px-4 py-2 flex items-center gap-2 transition-colors ${active
+      ? "border-b-2 border-purple-600 text-purple-600"
+      : "text-gray-500 hover:text-purple-500"
+      }`}
+  >
+    {icon} {label}
+  </button>
+);
 
-//   useEffect(() => {
-//     if (profile) {
-//       setFormData({
-//         name: profile.name || '',
-//         phone: profile.phone || ''
-//       });
-//     }
-//   }, [profile]);
+// SkeletonLoader.jsx
+const SkeletonLoader = ({ type = "default" }) => {
+  const skeletonSettings = {
+    settings: (
+      <div className="max-w-4xl mx-auto p-6 animate-pulse">
+        {/* Tabs Skeleton */}
+        <div className="flex gap-4 mb-8">
+          <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+          <div className="h-10 w-36 bg-gray-200 rounded-lg"></div>
+        </div>
 
-//   const handleSubmit = (e) => {
-//     e.preventDefault();
-//     onUpdate(formData);
-//   };
+        {/* Content Area */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Image Section */}
+            <div className="w-full md:w-1/3">
+              <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto"></div>
+              <div className="flex gap-2 justify-center mt-4">
+                <div className="h-10 w-24 bg-gray-200 rounded-lg"></div>
+              </div>
+            </div>
 
-//   const handlePasswordSubmit = async (e) => {
-//     e.preventDefault();
-//     const success = await onPasswordChange(passwordData.current, passwordData.new);
-//     if (success) setPasswordData({ current: '', new: '' });
-//   };
+            {/* Form Section */}
+            <div className="flex-1 space-y-4">
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 w-1/4 rounded"></div>
+                <div className="h-10 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 w-1/4 rounded"></div>
+                <div className="h-10 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="h-10 bg-purple-200 w-32 rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+    default: (
+      <div className="p-6 space-y-4 animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+        <div className="h-4 bg-gray-200 rounded w-full"></div>
+        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+      </div>
+    ),
+  };
 
-//   const handleFileChange = async (e) => {
-//     const file = e.target.files[0];
-//     if (file) {
-//       if (!file.type.startsWith('image/')) {
-//         Swal.fire({ icon: 'error', title: 'Invalid file type', text: 'Please upload an image file' });
-//         return;
-//       }
-//       await onImageUpload(file);
-//     }
-//   };
+  return skeletonSettings[type] || skeletonSettings.default;
+};
+const ErrorDisplay = ({ message, onRetry }) => {
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-red-50 rounded-xl p-6 text-center">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-600" />
+          <h3 className="text-lg font-medium text-red-800">
+            Something went wrong
+          </h3>
+          <p className="text-red-700 text-sm">{message}</p>
 
-//   return (
-//     <div className="space-y-6">
-//       <div className="flex items-center gap-6">
-//         <div className="relative">
-//           <img
-//             src={profile?.profileImage || "/default-avatar.png"}
-//             className="w-24 h-24 rounded-full object-cover"
-//             alt="Profile"
-//           />
-//           <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full shadow-sm cursor-pointer">
-//             <input type="file" className="hidden" onChange={handleFileChange} />
-//             <RefreshCw size={18} />
-//           </label>
-//           {profile?.profileImage && (
-//             <button
-//               onClick={onDeleteImage}
-//               className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full shadow-sm"
-//             >
-//               ×
-//             </button>
-//           )}
-//         </div>
-//         <div>
-//           <h2 className="text-xl font-semibold">{profile?.name}</h2>
-//           <p className="text-gray-600">{profile?.email}</p>
-//         </div>
-//       </div>
-
-//       <form onSubmit={handleSubmit} className="space-y-4">
-//         <div>
-//           <label className="block text-sm font-medium mb-1">Full Name</label>
-//           <input
-//             type="text"
-//             value={formData.name}
-//             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-//             className="w-full p-2 border rounded"
-//             required
-//           />
-//         </div>
-//         <div>
-//           <label className="block text-sm font-medium mb-1">Phone Number</label>
-//           <input
-//             type="tel"
-//             value={formData.phone}
-//             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-//             className="w-full p-2 border rounded"
-//           />
-//         </div>
-//         <button
-//           type="submit"
-//           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-//           disabled={loading}
-//         >
-//           {loading ? 'Saving...' : 'Save Changes'}
-//         </button>
-//       </form>
-
-//       <div className="pt-6">
-//         <h3 className="text-lg font-semibold mb-4">Change Password</h3>
-//         <form onSubmit={handlePasswordSubmit} className="space-y-4">
-//           <div>
-//             <label className="block text-sm font-medium mb-1">Current Password</label>
-//             <input
-//               type="password"
-//               value={passwordData.current}
-//               onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
-//               className="w-full p-2 border rounded"
-//               required
-//             />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium mb-1">New Password</label>
-//             <input
-//               type="password"
-//               value={passwordData.new}
-//               onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
-//               className="w-full p-2 border rounded"
-//               required
-//               minLength="6"
-//             />
-//           </div>
-//           <button
-//             type="submit"
-//             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-//             disabled={loading}
-//           >
-//             {loading ? 'Updating...' : 'Change Password'}
-//           </button>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+            >
+              <RefreshCw size={16} />
+              Try Again
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+export default Settings;

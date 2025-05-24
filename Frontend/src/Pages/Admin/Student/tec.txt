@@ -109,17 +109,17 @@ student.allFees = {
   "hostelFee": 0,
   "lastYearBalanceFee": 20,
   "lastYearDiscount": 16,
-  "lastYearTransportFee": 0,
-  "lastYearTransportFeeDiscount": 2,
+  "lastYearBusFee": 0,
+  "lastYearBusFeeDiscount": 2,
   "messFee": 0,
-  "schoolFees": {
+  "tuitionFees": {
     "AdmissionFee": 3323,
     "tuitionFee": 0,
     "total": 0
   },
   "tuitionFeesDiscount": 13,
-  "transportFee": 0,
-  "transportFeeDiscount": 0
+  "busFee": 0,
+  "busFeeDiscount": 0
 }
 transaction schema inside student.transactions array 
 {
@@ -176,11 +176,11 @@ i have to create a dashboard where i will show different statistic some of like:
 
 2. on left show different card: 
     A. Todays Collection (eg; 12,300) it is sum of amount of transaction happend in past 24hrs
-    B. Discounted amount: it is sum of allFee.transportFeeDiscount + allFee.tuitionFeesDiscount of all student whose academicYear(eg; "24-25") equal to school.academicYear & student status = "active"
-    C. Expected Collection (eg; 1,12,300): it is sum of allFee.schoolFee.total + allFee.hostelFee + allFee.transportFee + allFee.messFee for all student of academicYear = school.academicYear   
+    B. Discounted amount: it is sum of allFee.busFeeDiscount + allFee.tuitionFeesDiscount of all student whose academicYear(eg; "24-25") equal to school.academicYear & student status = "active"
+    C. Expected Collection (eg; 1,12,300): it is sum of allFee.tuitionFee.total + allFee.hostelFee + allFee.busFee + allFee.messFee for all student of academicYear = school.academicYear   
     D. Collected Fee Till date: sum of all transacti.academion  for all student whose transaction academic = schoolcYear
     E. pending Fee: Expected - Collected fee Till date
-    F. lastYearBalanceFee: it is sum of allfee.lastYearBalanceFee + allFee.lastYearTransportFee for all student
+    F. lastYearBalanceFee: it is sum of allfee.lastYearBalanceFee + allFee.lastYearBusFee for all student
 3. Card showing beautiful pie Charts showing total no of  girsl & Boys in school & there count , we can get it from schoolSchema whose Code = userData.schoolCode using student.Gender & only inc  student whose status = "active"
 give complete & beautiful dashboard with best UI use as many line of code as you wont you can also include other analytic also based on provided data & schema & give complete code
 
@@ -196,17 +196,17 @@ give complete & beautiful dashboard with best UI use as many line of code as you
       "hostelFee": 0,
   "lastYearBalanceFee": 20,
   "lastYearDiscount": 16,
-  "lastYearTransportFee": 0,
-  "lastYearTransportFeeDiscount": 2,
+  "lastYearBusFee": 0,
+  "lastYearBusFeeDiscount": 2,
   "messFee": 0,
-  "schoolFees": {
+  "tuitionFees": {
     "AdmissionFee": 3323,
     "tuitionFee": 0,
     "total": 0
   },
   "tuitionFeesDiscount": 13,
-  "transportFee": 0,
-  "transportFeeDiscount": 0
+  "busFee": 0,
+  "busFeeDiscount": 0
   }
   "createdAt": "14 May 2025 at 18:12:55 UTC+5:30",
   "div": "B",
@@ -249,12 +249,12 @@ give complete & beautiful dashboard with best UI use as many line of code as you
       "timestamp": "2025-05-17T20:25:06.578Z"
     }
   ],
-  "transportDetails": "transportDetails": {
+  "busDetails": "busDetails": {
     "busId": "K2GsT919fDgMcEWCO0Yr",
     "destinationId": "7ikV9BPNGK3ZpJPz07v1",
     "discount": 0,
     "finalTransportFee": 14500,
-    "transportFee": 14500
+    "busFee": 14500
   },
   "type": "DS"
 }
@@ -280,14 +280,14 @@ give complete & beautiful dashboard with best UI use as many line of code as you
   "MotherName": "ANKITA",
   "lastYearBalanceFee": 0,
   "tuitionFeesDiscount": 0,
-  "lastYearTransportFee": 0,
+  "lastYearBusFee": 0,
   "tuitionFee": 0,
   "tuitionPaidFee": 0,
   "tuitionPendingFee": 0,
-  "transportFee": 0,
-  "transportFeeDiscount": 0,
-  "transportFeePaid": 0,
-  "transportFeePending": 0,
+  "busFee": 0,
+  "busFeeDiscount": 0,
+  "busFeePaid": 0,
+  "busFeePending": 0,
   "Total Pending": 0,
   "Ayear": "24-25",
   "busStop": "NO BUS",
@@ -303,7 +303,7 @@ give complete & beautiful dashboard with best UI use as many line of code as you
 i have excel sheet , for visulation i give you json some cell my be empty. 
 suppose we need to add 500+ student that are on prev school mangement website but we shift to other we have to add excel upload feature. see what i want : 
 1. from excel data that can easly added in student data will assign as it is like Fname, Sname, DOB, fatherName, DOB etc below i have given excat schema of student you can match field from excel & schema to add it.
-2. taking about student.allFee from excel  lastYearBalanceFee, lastYearTransportFee, tuitionFeesDiscount, transportFeeDiscount assign to student.allFee. for tuitionPaidFee(excel) we need to add one transaction in student.transactions, transactions detail will be
+2. taking about student.allFee from excel  lastYearBalanceFee, lastYearBusFee, tuitionFeesDiscount, busFeeDiscount assign to student.allFee. for tuitionPaidFee(excel) we need to add one transaction in student.transactions, transactions detail will be
 {
       "academicYear": "24-25",//school.academicYear
       "account": "123456790 (Noida)"// school.accounts[0]
@@ -325,8 +325,8 @@ suppose we need to add 500+ student that are on prev school mangement website bu
       "status": "completed",
       "timestamp": "2025-05-17T20:25:06.578Z"
     }
-this is because how much student has paid schoolFees, hostelFee, transportFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(schoolFee, transportFee) for each student. similar to this we need to create one transaction for transportFee we can use transportFeePaid(excel) , transportFeeDiscount(excel) to create transaction. we dont have to to anything with  tuitionPendingFee(excel), transportFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
-3. messFee, hostelFee, lastYearDiscount, lastYearTransportFeeDiscount will default 0. this is how all student data will be added from excel sheet. first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (schoolFee, transportFee) & for amount we will use "tuitionPaidFee", "transportFeePaid" from excel as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from excel.
+this is because how much student has paid tuitionFees, hostelFee, busFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(tuitionFee, busFee) for each student. similar to this we need to create one transaction for busFee we can use busFeePaid(excel) , busFeeDiscount(excel) to create transaction. we dont have to to anything with  tuitionPendingFee(excel), busFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
+3. messFee, hostelFee, lastYearDiscount, lastYearBusFeeDiscount will default 0. this is how all student data will be added from excel sheet. first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (tuitionFee, busFee) & for amount we will use "tuitionPaidFee", "busFeePaid" from excel as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from excel.
 {
   "busStop": "MADHA BUS NO. 5",
   "caste": "asdfasdf",
@@ -336,17 +336,17 @@ this is because how much student has paid schoolFees, hostelFee, transportFee et
       "hostelFee": 0,
   "lastYearBalanceFee": 20,
   "lastYearDiscount": 16,
-  "lastYearTransportFee": 0,
-  "lastYearTransportFeeDiscount": 2,
+  "lastYearBusFee": 0,
+  "lastYearBusFeeDiscount": 2,
   "messFee": 0,
-  "schoolFees": {
+  "tuitionFees": {
     "AdmissionFee": 3323,
     "tuitionFee": 0,
     "total": 0
   },
   "tuitionFeesDiscount": 13,
-  "transportFee": 0,
-  "transportFeeDiscount": 0
+  "busFee": 0,
+  "busFeeDiscount": 0
   }
   "createdAt": "14 May 2025 at 18:12:55 UTC+5:30",
   "div": "B",
@@ -389,12 +389,12 @@ this is because how much student has paid schoolFees, hostelFee, transportFee et
       "timestamp": "2025-05-17T20:25:06.578Z"
     }
   ],
-  "transportDetails": "transportDetails": {
+  "busDetails": "busDetails": {
     "busId": "K2GsT919fDgMcEWCO0Yr",
     "destinationId": "7ikV9BPNGK3ZpJPz07v1",
     "discount": 0,
     "finalTransportFee": 14500,
-    "transportFee": 14500
+    "busFee": 14500
   },
   "type": "DS"
 }
@@ -419,14 +419,14 @@ this is required data that are available
   "MotherName": "ANKITA",
   "lastYearBalanceFee": 0,
   "tuitionFeesDiscount": 0,
-  "lastYearTransportFee": 0,
+  "lastYearBusFee": 0,
   "tuitionFee": 0,
   "tuitionPaidFee": 0,
   "tuitionPendingFee": 0,
-  "transportFee": 0,
-  "transportFeePaid": 0,
-  "transportDiscount": 0,
-  "transportFeePending": 0,
+  "busFee": 0,
+  "busFeePaid": 0,
+  "busDiscount": 0,
+  "busFeePending": 0,
   "Total Pending": 0,
   "Ayear": "24-25",
   "busStop": "NO BUS",
@@ -446,7 +446,7 @@ CONTEXT : we have have to create a component where we can add existing student (
 
 1. from first data we will create a input field, all that data like name, div,class,type,FeeId are assign my maping with student schema & changin its format based on field available in studentschema
 
-2. taking about student.allFee from data  lastYearBalanceFee, lastYearTransportFee, tuitionFeesDiscount, transportFeeDiscount assign to student.allFee, but for tuitionPaidFee we need to add one transaction in student.transactions, transactions detail will be
+2. taking about student.allFee from data  lastYearBalanceFee, lastYearBusFee, tuitionFeesDiscount, busFeeDiscount assign to student.allFee, but for tuitionPaidFee we need to add one transaction in student.transactions, transactions detail will be
 {
       "academicYear": "24-25",//school.academicYear
       "account": "123456790 (Noida)"// school.accounts[0]
@@ -468,8 +468,8 @@ CONTEXT : we have have to create a component where we can add existing student (
       "status": "completed",
       "timestamp": "2025-05-17T20:25:06.578Z"
     }
-this is because how much student has paid schoolFees, hostelFee, transportFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(schoolFee, transportFee) for each student. similar to this we need to create one transaction for transportFee we can use transportFeePaid(excel) , transportFeeDiscount(excel) to create transaction. we dont have to to anything with  tuitionPendingFee(excel), transportFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
-3. messFee, hostelFee, lastYearDiscount, lastYearTransportFeeDiscount will default 0. this is how all student data will be added from input field (first object that i provide). first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (schoolFee, transportFee) & for amount we will use "tuitionPaidFee", "transportFeePaid" from input as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from input.
+this is because how much student has paid tuitionFees, hostelFee, busFee etc we calculate using sum of transaction but because student is adding from external source we need to add transaction(tuitionFee, busFee) for each student. similar to this we need to create one transaction for busFee we can use busFeePaid(excel) , busFeeDiscount(excel) to create transaction. we dont have to to anything with  tuitionPendingFee(excel), busFeePending(excel) because we calculate pending using student.allFee[feeType] - sum of transaction of type feeType.
+3. messFee, hostelFee, lastYearDiscount, lastYearBusFeeDiscount will default 0. this is how all student data will be added from input field (first object that i provide). first we will directly add those detail which are common like category, name, busStop, etc after that we will create 2 transaction (tuitionFee, busFee) & for amount we will use "tuitionPaidFee", "busFeePaid" from input as i tell about each field of transaction before. below are student detail schema which you can match with excel sheet to add student detail. give a complete code to add student from input.
 this is detail schema of student : 
 {
   "busStop": "MADHA BUS NO. 5",
@@ -480,17 +480,17 @@ this is detail schema of student :
       "hostelFee": 0,
   "lastYearBalanceFee": 20,
   "lastYearDiscount": 16,
-  "lastYearTransportFee": 0,
-  "lastYearTransportFeeDiscount": 2,
+  "lastYearBusFee": 0,
+  "lastYearBusFeeDiscount": 2,
   "messFee": 0,
-  "schoolFees": {
+  "tuitionFees": {
     "AdmissionFee": 3323,
     "tuitionFee": 0,
     "total": 0
   },
   "tuitionFeesDiscount": 13,
-  "transportFee": 0,
-  "transportFeeDiscount": 0
+  "busFee": 0,
+  "busFeeDiscount": 0
   }
   "createdAt": "14 May 2025 at 18:12:55 UTC+5:30",
   "div": "B",
@@ -533,12 +533,12 @@ this is detail schema of student :
       "timestamp": "2025-05-17T20:25:06.578Z"
     }
   ],
-  "transportDetails": "transportDetails": {
+  "busDetails": "busDetails": {
     "busId": "K2GsT919fDgMcEWCO0Yr",
     "destinationId": "7ikV9BPNGK3ZpJPz07v1",
     "discount": 0,
     "finalTransportFee": 14500,
-    "transportFee": 14500
+    "busFee": 14500
   },
   "type": "DS"
 }
@@ -679,7 +679,7 @@ const ExcelTemplateModal = ({ onClose }) => (
                     ['Class', '5th', 'Yes'],
                     ['FeeID', '123', 'Yes'],
                     ['TutionFee', '15000', 'Yes'],
-                    ['TransportFee', '7000', 'No'],
+                    ['busFee', '7000', 'No'],
                     ['Aadhar', '123412341234', 'No'],
                 ]}
                 className="max-h-[60vh] overflow-auto"
@@ -738,9 +738,9 @@ function BulkStudentImport() {
         'TutionFee': 'tuitionFee',
         'TutionFeesDiscount': 'tuitionFeesDiscount',
         'TutionPaidFee': 'tuitionPaidFee',
-        'TransportFee': 'transportFee',
-        'TransportDiscount': 'transportDiscount',
-        'TransportFeePaid': 'transportFeePaid',
+        'busFee': 'busFee',
+        'busDiscount': 'busDiscount',
+        'busFeePaid': 'busFeePaid',
         'Ayear': 'Ayear',
         'BusStop': 'busStop',
         'BusNoPlate': 'busNoPlate',
@@ -805,11 +805,11 @@ function BulkStudentImport() {
             });
         }
 
-        if (student.TransportFeePaid > 0) {
+        if (student.busFeePaid > 0) {
             transactions.push({
                 academicYear: student.Ayear,
-                amount: Number(student.TransportFeePaid),
-                feeType: 'TransportFee',
+                amount: Number(student.busFeePaid),
+                feeType: 'busFee',
                 // Add full transaction details
             });
         }
@@ -978,9 +978,9 @@ export default function ImportExistingStudent() {
         tuitionFee: 15500,
         tuitionFeesDiscount: 0,
         tuitionPaidFee: 15500,
-        transportFee: 7000,
-        transportDiscount: 0,
-        transportFeePaid: 7000,
+        busFee: 7000,
+        busDiscount: 0,
+        busFeePaid: 7000,
         Ayear: '24-25',
         busStop: 'MADHA BUS NO. 2',
         busNoPlate: 'MH 12 KQ 8525',
@@ -1068,7 +1068,7 @@ export default function ImportExistingStudent() {
             "class", "div", "Ayear", "type",
             "feeID", "status",
             "tuitionFee", "tuitionPaidFee",
-            "transportFee", "transportFeePaid"
+            "busFee", "busFeePaid"
         ];
         required.forEach((field) => {
             if (!data[field]?.toString().trim()) {
@@ -1093,7 +1093,7 @@ export default function ImportExistingStudent() {
         // --- numeric >=0 checks for fee fields (all required above) ---
         [
             "tuitionFee", "tuitionFeesDiscount", "tuitionPaidFee",
-            "transportFee", "transportDiscount", "transportFeePaid",
+            "busFee", "busDiscount", "busFeePaid",
             "lastYearDiscount"
         ].forEach((field) => {
             // allow zero, but disallow negative or NaN
@@ -1160,12 +1160,12 @@ export default function ImportExistingStudent() {
                 ));
             }
 
-            if (inputData.transportFeePaid > 0) {
+            if (inputData.busFeePaid > 0) {
                 transactions.push(createTransaction(
-                    'TransportFee',
-                    inputData.transportFeePaid,
-                    inputData.transportDiscount,
-                    inputData.transportFee
+                    'busFee',
+                    inputData.busFeePaid,
+                    inputData.busDiscount,
+                    inputData.busFee
                 ));
             }
 
@@ -1194,18 +1194,18 @@ export default function ImportExistingStudent() {
                 feeId: `FEE- ${nanoid(6).toUpperCase()} `,
                 allFee: {
                     lastYearBalanceFee: Number(inputData.lastYearBalanceFee),
-                    lastYearTransportFee: 0,
+                    lastYearBusFee: 0,
                     lastYearDiscount: 0,
-                    lastYearTransportFeeDiscount: 0,
+                    lastYearBusFeeDiscount: 0,
                     // this year 
-                    schoolFees: {
+                    tuitionFees: {
                         AdmissionFee: 1000,
                         tuitionFee: Number(inputData.tuitionFee) >= 1000 ? Number(inputData.tuitionFee) - 1000 : 0,// Only tuition 
                         total: (Number(inputData.tuitionFee) || 0)
                     },
                     tuitionFeesDiscount: Number(inputData.tuitionFeesDiscount),
-                    transportFee: Number(inputData.transportFee),
-                    transportFeeDiscount: Number(inputData.transportDiscount),
+                    busFee: Number(inputData.busFee),
+                    busFeeDiscount: Number(inputData.busDiscount),
                     messFee: 0,
                     hostelFee: 0,
                 },
@@ -1399,9 +1399,9 @@ export default function ImportExistingStudent() {
                                         <InputField label="Tuition Fee *" type="number" value={inputData.tuitionFee} onChange={e => setInputData({ ...inputData, tuitionFee: e.target.value })} />
                                         <InputField label="Tuition Discount" type="number" value={inputData.tuitionFeesDiscount} onChange={e => setInputData({ ...inputData, tuitionFeesDiscount: e.target.value })} />
                                         <InputField label="Paid Tuition *" type="number" value={inputData.tuitionPaidFee} onChange={e => setInputData({ ...inputData, tuitionPaidFee: e.target.value })} />
-                                        <InputField label="Transport Fee *" type="number" value={inputData.transportFee} onChange={e => setInputData({ ...inputData, transportFee: e.target.value })} />
-                                        <InputField label="Transport Discount" type="number" value={inputData.transportDiscount} onChange={e => setInputData({ ...inputData, transportDiscount: e.target.value })} />
-                                        <InputField label="Paid Transport *" type="number" value={inputData.transportFeePaid} onChange={e => setInputData({ ...inputData, transportFeePaid: e.target.value })} />
+                                        <InputField label="Bus Fee *" type="number" value={inputData.busFee} onChange={e => setInputData({ ...inputData, busFee: e.target.value })} />
+                                        <InputField label="Bus Discount" type="number" value={inputData.busDiscount} onChange={e => setInputData({ ...inputData, busDiscount: e.target.value })} />
+                                        <InputField label="Paid Bus *" type="number" value={inputData.busFeePaid} onChange={e => setInputData({ ...inputData, busFeePaid: e.target.value })} />
                                         <InputField label="Last Year Discount" type="number" value={inputData.lastYearDiscount} onChange={e => setInputData({ ...inputData, lastYearDiscount: e.target.value })} />
                                     </div>
                                 </div>}

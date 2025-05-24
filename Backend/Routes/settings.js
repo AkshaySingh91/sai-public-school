@@ -161,7 +161,7 @@ router.put('/school', async (req, res) => {
             location,
             academicYear,
             schoolReceiptHeader,
-            transportReceiptHeader,
+            busReceiptHeader,
             stockReceiptHeader,
             schoolLocation,
             feeIdCount,
@@ -179,7 +179,7 @@ router.put('/school', async (req, res) => {
             location,
             academicYear,
             schoolReceiptHeader,
-            transportReceiptHeader,
+            busReceiptHeader,
             stockReceiptHeader,
             // if academic year change than set receipt count to 0
             ...(academicYear !== schoolDoc.docs[0].data().academicYear ? { receiptCount: 0 } : {}),

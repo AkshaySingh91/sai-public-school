@@ -92,13 +92,13 @@ const AdminDashboard = () => {
 
 
     return (
-        <div className="bg-gradient-to-br from-gray-50 to-purple-50 min-h-screen space-y-6 p-6">
+        <div className="bg-gradient-to-br from-gray-50 to-purple-50 min-h-screen space-y-6 p-2">
             <div className="bg-gradient-to-r from-slate-50 to-indigo-50 px-6 py-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     {/* Left Section */}
-                    <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex  items-center gap-4 flex-wrap">
                         <img
-                            className="w-14 h-14 animate-wiggle"
+                            className=" w-14 h-14 animate-wiggle"
                             src={handWave}
                             alt="Welcome"
                         />
@@ -114,8 +114,8 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Right Section */}
-                    <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm">
-                        {/* Profile Image with Fallback */}
+                    <div className="flex items-center gap-4 z-2 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm">
+                        {/* Profile Image with Fallback */} 
                         <div className="relative">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold">
                                 {userData.avatar || (

@@ -17,7 +17,8 @@ import {
   MapPin,
   IndianRupee,
   BadgePercent,
-  CheckCircle
+  CheckCircle,
+  FileTextIcon
 } from "lucide-react";
 import { InputField } from "../InputField";
 import { SelectField } from "../SelectField";
@@ -38,14 +39,15 @@ export default function PersonalInfo({
   // State variables
   const [destinationOptions, setDestinationOptions] = useState([]);
   const [busOptions, setBusOptions] = useState([]);
-  const [selectedBus, setSelectedBus] = useState(null);
-  const [transportDiscount, setTransportDiscount] = useState(0);
-  const [transportFee, setTransportFee] = useState(0);
-  const [showTransportSection, setShowTransportSection] = useState(
+  const [selectedBus, setSelectedBus] = useState(formData.busNoPlate || "");
+  const [busDiscount, setBusDiscount] = useState(formData?.allFee?.busFeeDiscount || 0);
+  const [busFee, setBusFee] = useState(0);
+  const [showBusSection, setShowBusSection] = useState(
     formData.busStop && formData.busStop !== "Not Preferred"
   );
-
+  const [busDiscountRemark, setBusDiscountRemark] = useState(formData.busDiscountRemark || "")
   // Fetch destinations
+  console.log(formData)
   useEffect(() => {
     const fetchDestinations = async () => {
       try {
@@ -61,17 +63,17 @@ export default function PersonalInfo({
     };
     fetchDestinations();
   }, []);
-  // Handle transport preference change
+  // Handle bus preference change
   const handleTransportPreference = async (value) => {
     const isTransportPreferred = value !== "Not Preferred";
-    setShowTransportSection(isTransportPreferred);
+    setShowBusSection(isTransportPreferred);
 
     if (!isTransportPreferred) {
       await updateStudentTransport({
         busStop: "",
         busNoPlate: "",
-        transportFee: 0,
-        transportDiscount: 0
+        busFee: 0,
+        busDiscount: 0
       });
     }
   };
@@ -83,8 +85,8 @@ export default function PersonalInfo({
     try {
       // Reset related fields
       setSelectedBus(null);
-      setTransportFee(0);
-      setTransportDiscount(0);
+      setBusFee(0);
+      setBusDiscount(0);
 
       // Fetch buses for selected destination
       const busSnapshot = await getDocs(collection(db, "allBuses"));
@@ -118,13 +120,13 @@ export default function PersonalInfo({
       const destination = bus.destinations.find(d => d.name === formData.busStop);
       if (destination) {
         const fee = destination.fee || 0;
-        setTransportFee(fee);
+        setBusFee(fee);
 
         // Update fees immediately
         const updatedFees = {
           ...formData.allFee,
-          transportFee: fee - transportDiscount,
-          transportFeeDiscount: transportDiscount
+          busFee: fee - busDiscount,
+          busFeeDiscount: busDiscount
         };
 
         setFormData({ ...formData, allFee: updatedFees });
@@ -132,13 +134,13 @@ export default function PersonalInfo({
         // Update student document
         await updateStudentTransport({
           busNoPlate: bus.numberPlate,
-          transportFee: fee,
-          transportDiscount
+          busFee: fee,
+          busDiscount
         });
       }
     }
   };
-  // Update transport details in Firestore
+  // Update bus details in Firestore
   const updateStudentTransport = async (data) => {
     if (!studentId) return;
 
@@ -149,50 +151,51 @@ export default function PersonalInfo({
         busNoPlate: data.busNoPlate || "",
         allFee: {
           ...formData.allFee,
-          transportFee: data.transportFee - data.transportDiscount,
-          transportFeeDiscount: data.transportDiscount
-        }
+          busFee: data.busFee - data.busDiscount,
+          busFeeDiscount: data.busDiscount
+        },
+        busDiscountRemark
       });
     } catch (err) {
-      console.error("Error updating transport details:", err);
+      console.error("Error updating bus details:", err);
     }
   };
 
   // Handle discount change
   const handleDiscountChange = (value) => {
-    const discount = Math.min(Math.max(0, value), transportFee);
-    setTransportDiscount(discount);
+    const discount = Math.min(Math.max(0, value), busFee);
+    setBusDiscount(discount);
 
     const updatedFees = {
       ...formData.allFee,
-      transportFee: transportFee - discount,
-      transportFeeDiscount: discount
+      busFee: busFee - discount,
+      busFeeDiscount: discount
     };
 
     setFormData({ ...formData, allFee: updatedFees });
   };
 
-  // Submit transport details
+  // Submit bus details
   const submitTransportDetails = async () => {
     if (!selectedBus || !formData.busStop) return;
 
     try {
       await updateStudentTransport({
         busNoPlate: selectedBus.numberPlate,
-        transportFee,
-        transportDiscount
+        busFee,
+        busDiscount
       });
 
       Swal.fire({
         title: 'Success!',
-        text: 'Transport details updated successfully',
+        text: 'Bus details updated successfully',
         icon: 'success',
         confirmButtonColor: '#2563eb'
       });
     } catch (err) {
       Swal.fire({
         title: 'Error!',
-        text: 'Failed to update transport details',
+        text: 'Failed to update bus details',
         icon: 'error',
         confirmButtonColor: '#2563eb'
       });
@@ -423,14 +426,12 @@ export default function PersonalInfo({
               onChange={(e) => setFormData({ ...formData, couponCode: e.target.value })}
             />
             {/* Custom Row Layout for Bus Stop, Bus Selection, and Discount */}
-
-
             <fieldset className="border-2 border-blue-100 rounded-xl p-4 bg-blue-50/30">
-              <legend className="text-blue-600 font-medium px-2">Transport Information</legend>
+              <legend className="text-blue-600 font-medium px-2">Bus Information</legend>
               <div className="space-y-4">
                 <SelectField
                   icon={<Bus />}
-                  label="Transport Preference"
+                  label="Bus Preference"
                   options={['Not Preferred', ...destinationOptions.map(d => d.name)]}
                   value={formData.busStop || 'Not Preferred'}
                   onChange={(e) => {
@@ -439,9 +440,9 @@ export default function PersonalInfo({
                   }}
                 />
 
-                {showTransportSection && (
+                {showBusSection && (
                   <div className="grid gap-4">
-                    {/* Current Transport Display */}
+                    {/* Current Bus Display */}
                     {formData.busNoPlate && (
                       <div className="bg-blue-100 p-3 rounded-lg">
                         <p className="text-sm font-medium text-blue-800">
@@ -482,33 +483,45 @@ export default function PersonalInfo({
                     </div>
 
                     {selectedBus && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <InputField
-                          icon={<IndianRupee />}
-                          label="Transport Fee"
-                          value={transportFee}
-                          readOnly
-                          className="bg-gray-50"
-                        />
-
-                        <div className="space-y-2">
+                      <div className="flex flex-col gap-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <InputField
+                            icon={<IndianRupee />}
+                            label="Bus Fee"
+                            value={busFee}
+                            readOnly
+                            className="bg-gray-50"
+                          />
                           <InputField
                             icon={<BadgePercent />}
                             label="Apply Discount"
                             type="number"
-                            value={transportDiscount}
+                            value={busDiscount}
                             onChange={(e) => handleDiscountChange(Number(e.target.value))}
                             min="0"
-                            max={transportFee}
+                            max={busFee}
                           />
-                          <button
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                            onClick={submitTransportDetails}
-                          >
-                            <CheckCircle className="w-5 h-5" />
-                            Update Transport Details
-                          </button>
                         </div>
+                        <div className="remar">
+                          <InputField
+                            icon={<FileTextIcon />}
+                            label="Remark"
+                            type="text"
+                            value={busDiscountRemark}
+                            onChange={(e) => {
+                              setBusDiscountRemark(e.target.value)
+                            }}
+                            min="0"
+                            max={busFee}
+                          />
+                        </div>
+                        <button
+                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                          onClick={submitTransportDetails}
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                          Update Bus Details
+                        </button>
                       </div>
                     )}
                   </div>

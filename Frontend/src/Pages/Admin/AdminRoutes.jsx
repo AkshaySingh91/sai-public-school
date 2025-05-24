@@ -26,12 +26,14 @@ import StockDailyBook from './Student/StockDailyBook';
 import ImportExistingStudent from './Student/StudentManagement/ImportExistingStudent';
 import EmployeeForm from './Employee/EmployeeForm';
 
+
+
 const AdminLayout = () => {
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen overflow-hidden">
-      <div className="">
-        <AdminSidebar />
-        <div className="pr-5 pl-5 ml-14 lg:ml-64 h-screen overflow-y-auto w-auto">
+    <div className="bg-gradient-to-br from-purple-50 to-blue-50 sm:min-h-screen w-full overflow-hidden">
+      <div className="w-full">
+        <AdminSidebar />    
+        <div className=" lg:ml-64  min-h-screen overflow-y-auto w-auto">
           <Outlet />
         </div>
       </div>

@@ -141,7 +141,7 @@ function BusAllocation() {
       "Fee ID": student.feeId,
       "Bus Stop": destinationData.find(dest => dest.id === student.transportDetails?.destinationId)?.name || "-",
       "Bus Number": busData[student.transportDetails?.busId] || "-",
-      "Total Fee": student.allFee?.transportFee || 0,
+      "Total Fee": student.allFee?.busFee || 0,
       "Discount": student.allFee?.transportFeeDiscount || 0,
       "Outstanding": calculateOutstandingFee(student)
     })));
@@ -176,7 +176,6 @@ function BusAllocation() {
     {currentStudents.length ?
       <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
-
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-white p-6 rounded-2xl shadow-xl border border-purple-100">
             {[
@@ -253,7 +252,7 @@ function BusAllocation() {
                   const fullName = `${student.fname || ""} ${student.lname || ""}`;
                   const busId = student.transportDetails?.busId || "-";
                   const destinationId = student.transportDetails?.destinationId || null;
-                  const busFee = student.allFee?.transportFee || 0;
+                  const busFee = student.allFee?.busFee || 0;
                   const discountFee = student.allFee?.transportFeeDiscount || 0;
                   const outstandingFee = calculateOutstandingFee(student);
                   const paidFee = 0;
@@ -326,11 +325,11 @@ function BusAllocation() {
 }
 
 function calculateOutstandingFee(student) {
-  const schoolFeesTotal = student.schoolFees?.total || 0;
-  const transportFee = student.transportDetails?.finalTransportFee || 0;
+  const tuitionFeesTotal = student.tuitionFees?.total || 0;
+  const busFee = student.transportDetails?.finalTransportFee || 0;
   const hostelFee = student.hostelFee || 0;
   const paidFee = student.currentPaidFee || 0;
-  const total = schoolFeesTotal + transportFee + hostelFee;
+  const total = tuitionFeesTotal + busFee + hostelFee;
   return total - paidFee;
 }
 
