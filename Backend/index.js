@@ -1,3 +1,4 @@
+// index.jsx
 import express from 'express';
 import admin from 'firebase-admin';
 import cors from 'cors';
@@ -5,119 +6,108 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
-config();
+import StudentDocUpload from './Routes/StudentDocUpload.js';
+import settingsRouter from './Routes/settings.js';
 
+config();
 const app = express();
+
+// __dirname replacement in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Get environment settings
+// Environment
 const isProduction = process.env.NODE_ENV === 'Production';
-const clientOrigin = isProduction ? process.env.DOMAIN_PROD : process.env.DOMAIN_DEV;
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 1000;
 
-// CORS
-app.use(cors({ origin: [clientOrigin] }));
+// CORS setup
+const corsOptions = {
+    origin: (origin, callback) => {
+        const allowedOrigins = isProduction
+            ? [
+                'https://tuljabhavanibss.in',
+                'https://www.tuljabhavanibss.in'
+            ]
+            : ["http://localhost:5173"];
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
+    credentials: true,
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
-// Firebase Admin Initialization
-const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
-const serviceAccountRaw = await fs.readFile(serviceAccountPath, 'utf-8');
-const serviceAccount = JSON.parse(serviceAccountRaw);
-
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-});
-
-const db = admin.firestore();
-const verifyAccountant = async (req, res, next) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            if (!isProduction) console.warn("Missing auth in dev mode");
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        const token = authHeader.split(' ')[1];
-        console.log({ token })
-        const decodedToken = await admin.auth().verifyIdToken(token);
-        const userDoc = await admin.firestore().collection('Users').doc(decodedToken.uid).get();
-        console.log(userDoc)
-        if (userDoc.data().role !== 'accountant') {
-            return res.status(403).json({ error: "Forbidden" });
-        }
-
-        req.user = userDoc.data();
-        req.user.uid = decodedToken.uid;
-        next();
-    } catch (error) {
-        console.error("Token verification error:", error.message);
-        res.status(401).json({ error: "Invalid token", message: error.message });
-    }
-
-};
+// Debug logging
 app.use((req, res, next) => {
-    console.log(`[CORS Check] Origin: ${req.headers.origin}`);
+    console.log(`[Request] ${req.method} ${req.url}`);
+    console.log(`[Headers]`, req.headers);
     next();
 });
-import StudentDocUpload from "./Routes/StudentDocUpload.js"
-app.use("/api/admin/student", verifyAccountant, fetchSchool, StudentDocUpload);
 
-import settingsRouter from './Routes/settings.js';
-app.use('/api/admin/settings', verifyAccountant, fetchSchool, settingsRouter);
+// Firebase Admin init inside async fn
+async function initFirebase() {
+    const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+    const raw = await fs.readFile(serviceAccountPath, 'utf-8');
+    const cred = JSON.parse(raw);
 
-
-// 2) Middleware to fetch the school and attach it to req.school
-async function fetchSchool(req, res, next) {
-    try {
-        const snap = await admin
-            .firestore()
-            .collection("schools")
-            .where("Code", "==", req.user.schoolCode)
-            .limit(1)
-            .get();
-
-        if (snap.empty) {
-            return res.status(404).json({ error: "School not found" });
-        }
-
-        req.school = snap.docs[0].data();
-        next();
-    } catch (err) {
-        next(err);
-    }
-}
-
-
+    admin.initializeApp({
+        credential: admin.credential.cert(cred)
+    });
+    console.log('✅ Firebase Admin initialized');
+} 
+// Routes
 app.post('/api/superadmin/schools/create-accountant', async (req, res) => {
     const { name, email, password, phone, schoolCode } = req.body;
-
     if (!name || !email || !password || !schoolCode) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
     try {
-        // from here we will create user in firebase authentication & we get object where uid is present
-        const userRecord = await admin.auth().createUser({
-            email,
-            password,
-            displayName: name,
+        const userRec = await admin.auth().createUser({
+            email, password, displayName: name,
             phoneNumber: phone || undefined,
         });
-        // based on that uid we will create document in firestore, so that when user loggend in based on uid is will easy to find he exist in users schema of not
-        await db.collection('Users').doc(userRecord.uid).set({
-            name,
-            email,
-            phone: phone || null,
-            schoolCode,
-            role: 'accountant',
+        await admin.firestore().collection('Users').doc(userRec.uid).set({
+            name, email, phone: phone || null,
+            schoolCode, role: 'accountant',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-
-        res.status(200).json({ uid: userRecord.uid, message: 'Accountant created successfully' });
+        res.json({ uid: userRec.uid, message: 'Accountant created successfully' });
     } catch (err) {
-        console.error('Error creating accountant:', err);
+        console.error('[Create Accountant Error]', err);
         res.status(500).json({ error: err.message });
     }
 });
 
+// Mount protected admin routes
+app.use(
+    '/api/admin/student',
+    StudentDocUpload
+);
+app.use(
+    '/api/admin/settings',
+    settingsRouter
+);
 
-app.listen(PORT, () => console.log(`Backend listening on port ${PORT}`));
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('[Server Error]', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+});
+
+// Start
+initFirebase()
+    .then(() => {
+        app.listen(PORT, () =>
+            console.log(`🚀 Backend listening on port ${PORT}`)
+        );
+    })
+    .catch(err => {
+        console.error('[Startup Error]', err);
+        process.exit(1);
+    });

@@ -56,10 +56,6 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate, onImageUplo
             setLocalLoading(false);
         }
     };
-
-    
-
-
     const handlePasswordVerify = async () => {
         try {
             setLocalLoading(true);

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { School, Upload, Loader, Instagram } from 'lucide-react';
 import Swal from "sweetalert2";
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../../config/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, storage } from '../../../../config/firebase';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { auth } from '../../../../config/firebase';
 
 const SchoolSettings = ({ school, setSchool }) => {
     const { userData } = useAuth();
+    const [loading, setLoading] = useState(false);
 
     const [schoolName, setSchoolName] = useState(school.schoolName || "");
     const [academicYear, setAcademicYear] = useState(school.academicYear || "");
@@ -83,134 +84,114 @@ const SchoolSettings = ({ school, setSchool }) => {
     }
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        const validPattern = /^(\s*[^,\s][^,]*\s*)(,\s*[^,\s][^,]*\s*)*$/;
-        const academicYearPattern = /^\d{2}-\d{2}$/;
-        if (div.trim() !== '' && !validPattern.test(div)) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Invalid input',
-                text: 'Please enter comma-separated values like: A, B, C, etc.'
-            });
-        }
-        if (classes.trim() !== '' && !validPattern.test(classes)) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Invalid input',
-                text: 'Please enter comma-separated values like: Nursery, JRKG, 1st, 2nd, 3rd, etc.'
-            });
-        }
-        if (academicYear.trim() !== '' && !academicYearPattern.test(academicYear)) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Invalid input',
-                text: 'Please enter valid academic year: 24-25,25-26, etc.'
-            });
-        }
-
-        const divisionArr = div
-            .split(',')
-            .filter(s => s.trim())
-            .map(s => s.trim());
-        const classArr = classes
-            .split(',')
-            .filter(s => s.trim())
-            .map(s => s.trim());
-
-        const results = await Promise.all(
-            classArr.map(c => checkIfClassFeeStructurePresent(c))
-        );
-        const isClassPresentInFeeStructure = results.every(result => result === true);
-        if (!isClassPresentInFeeStructure) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Class not present in fee structure. Please add class in fee structure first.'
-            });
-        }
-        const updatedSchool = {
-            ...school,
-            divisions: divisionArr,
-            class: classArr,
-            schoolName,
-            academicYear,
-            schoolLocation,
-            feeIdCount,
-            schoolReceiptHeader,
-            transportReceiptHeader,
-            stockReceiptHeader,
-            tuitionReceiptCount,
-            busReceiptCount,
-            stockReceiptCount,
-        };
-
-        let userToken;
+        setLoading(true);
         try {
-            userToken = await auth.currentUser.getIdToken();
-        } catch (err) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Authentication Error',
-                text: 'Could not get user token. Please log in again.'
-            });
-        }
-        Swal.fire({
-            title: 'Saving school details…',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-        try {
-            // 1) Update the school details
-            const resDetails = await fetch('http://localhost:5000/admin/settings/school', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${userToken}`
-                },
-                body: JSON.stringify(updatedSchool)
-            });
-
-            if (!resDetails.ok) {
-                const errorData = await resDetails.json();
-                throw new Error(errorData.error || 'Failed to update school details');
-            }
-
-            // 2) If there's a new logo, upload it
-            if (logoFile) {
-                const formData = new FormData();
-                formData.append('logo', logoFile);
-
-                const resLogo = await fetch('http://localhost:5000/admin/settings/school/logo', {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${userToken}`
-                    },
-                    body: formData
+            const validPattern = /^(\s*[^,\s][^,]*\s*)(,\s*[^,\s][^,]*\s*)*$/;
+            const academicYearPattern = /^\d{2}-\d{2}$/;
+            if (div.trim() !== '' && !validPattern.test(div)) {
+                return Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid input',
+                    text: 'Please enter comma-separated values like: A, B, C, etc.'
                 });
-
-                if (!resLogo.ok) {
-                    const errorData = await resLogo.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Failed to upload logo');
-                }
+            }
+            if (classes.trim() !== '' && !validPattern.test(classes)) {
+                return Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid input',
+                    text: 'Please enter comma-separated values like: Nursery, JRKG, 1st, 2nd, 3rd, etc.'
+                });
+            }
+            if (academicYear.trim() !== '' && !academicYearPattern.test(academicYear)) {
+                return Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid input',
+                    text: 'Please enter valid academic year: 24-25,25-26, etc.'
+                });
             }
 
-            // If we reach here, everything succeeded
+            const divisionArr = div
+                .split(',')
+                .filter(s => s.trim())
+                .map(s => s.trim());
+            const classArr = classes
+                .split(',')
+                .filter(s => s.trim())
+                .map(s => s.trim());
+
+            const results = await Promise.all(
+                classArr.map(c => checkIfClassFeeStructurePresent(c))
+            );
+            const isClassPresentInFeeStructure = results.every(result => result === true);
+            if (!isClassPresentInFeeStructure) {
+                return Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Class not present in fee structure. Please add class in fee structure first.'
+                });
+            }
+            // Update school document directly
+            const schoolRef = doc(db, 'schools', school.id);
+            const updatedData = {
+                divisions: divisionArr,
+                class: classArr,
+                schoolName,
+                academicYear,
+                location: schoolLocation,
+                feeIdCount,
+                schoolReceiptHeader,
+                transportReceiptHeader,
+                stockReceiptHeader,
+                tuitionReceiptCount,
+                busReceiptCount,
+                stockReceiptCount,
+                updatedAt: new Date().toISOString()
+            };
+
+            await updateDoc(schoolRef, updatedData);
+
+            // Handle logo upload to Firebase Storage
+            if (logoFile) {
+                const storageRef = ref(storage, `school-logos/${school.id}/${Date.now()}_${logoFile.name}`);
+
+                // Delete old logo if exists
+                if (school.logoPath) {
+                    const oldRef = ref(storage, school.logoPath);
+                    await deleteObject(oldRef).catch(() => { });
+                }
+
+                // Upload new logo
+                const snapshot = await uploadBytes(storageRef, logoFile);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+
+                // Update school with new logo URL and path
+                await updateDoc(schoolRef, {
+                    logoUrl: downloadURL,
+                    logoPath: storageRef.fullPath
+                });
+            }
+
+            // Update local state
+            setSchool(prev => ({
+                ...prev,
+                ...updatedData,
+                logoUrl: logoFile ? downloadURL : prev.logoUrl,
+                logoPath: logoFile ? storageRef.fullPath : prev.logoPath
+            }));
+
             Swal.fire({
                 icon: 'success',
                 title: 'Saved!',
-                text: 'School details have been updated successfully.'
+                text: 'School details updated successfully'
             });
-
-        } catch (err) {
-            // Replace the loading modal with an error modal
+        } catch (error) {
             Swal.fire({
                 icon: 'error',
-                title: 'Save Failed',
-                text: err.message
+                title: 'Error',
+                text: error.message
             });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -228,6 +209,16 @@ const SchoolSettings = ({ school, setSchool }) => {
     }
     const handleLogoUpload = (e) => {
         const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            Swal.fire('Error', 'Only image files allowed', 'error');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            Swal.fire('Error', 'File size must be less than 2MB', 'error');
+            return;
+        } 
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -534,3 +525,14 @@ const SchoolSettings = ({ school, setSchool }) => {
 };
 
 export default SchoolSettings
+
+// add remark for student transport who gave him discount
+// receipt 
+// bonafide
+// transport remark & remark for other discount
+// semi fee stur
+// receipt id  in no in stock
+// accountant sign on each receipt
+// metric of dashboard 
+// update academinc from setting
+// change School Receipt to tution Receipt
