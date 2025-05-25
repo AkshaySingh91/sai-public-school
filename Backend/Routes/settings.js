@@ -4,9 +4,8 @@ import admin from 'firebase-admin';
 import path from "path"
 import { getStorageBucket } from '../utils/firebase.js';
 const bucket = getStorageBucket();
-
-
 const router = express.Router();
+import { v4 as uuidv4 } from "uuid"
 // Helper function to delete old files
 const deleteOldFile = async (fileUrl) => {
     if (!fileUrl) return;
@@ -19,56 +18,120 @@ const deleteOldFile = async (fileUrl) => {
         console.error('Error deleting old file:', error);
     }
 };
+// router.post('/upload-profile', async (req, res) => {
+//     try {
+//         if (!req.files?.profileImage) {
+//             return res.status(400).json({ error: 'No image uploaded' });
+//         }
+//         const user = req.user;
+//         const file = req.files.profileImage;
+
+//         // Delete old image first
+//         const userDoc = await admin.firestore().collection('Users').doc(user.uid).get();
+//         await deleteOldFile(userDoc.data()?.profileUrl);
+
+//         // Upload new image
+//         const fileName = `profile/${user.uid}-${Date.now()}${path.extname(file.name)}`;
+//         const fileRef = bucket.file(fileName);
+
+//         await new Promise((resolve, reject) => {
+//             const stream = fileRef.createWriteStream({
+//                 metadata: {
+//                     contentType: file.mimetype,
+//                     metadata: {
+//                         uploadedBy: user.uid,
+//                         type: 'profile'
+//                     }
+//                 }
+//             });
+
+//             stream.on('error', reject);
+//             stream.on('finish', resolve);
+//             stream.end(file.data);
+//         });
+
+//         // Get public URL
+//         const [url] = await fileRef.getSignedUrl({
+//             action: 'read',
+//             expires: '03-09-2491'
+//         });
+
+//         // Update Firestore
+//         await admin.firestore().collection('Users').doc(user.uid).update({
+//             profileUrl: url
+//         });
+
+//         res.json({ imageUrl: url });
+//     } catch (error) {
+//         console.log(error.message)
+//         res.status(500).json({ error: error.message });
+//     }
+// });
+// Get user profile
+
 router.post('/upload-profile', async (req, res) => {
     try {
-        if (!req.files?.profileImage) {
-            return res.status(400).json({ error: 'No image uploaded' });
+        // 1. Check file in request
+        if (!req.files || !req.files.profileImage) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        const file = req.files.profileImage;
+        const uid = req.user.uid;               // from verifyAccountant
+        const bucket = getStorageBucket();       // admin.storage().bucket()
+
+        // 2. Load the user doc to find any existing image
+        const userRef = admin.firestore().collection('Users').doc(uid);
+        const userSnap = await userRef.get();
+        if (!userSnap.exists) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const { profileImagePath } = userSnap.data() || {};
+
+        // 3. Delete old image if it exists
+        if (profileImagePath) {
+            try {
+                await bucket.file(profileImagePath).delete();
+            } catch (deleteErr) {
+                console.warn('Could not delete old image:', deleteErr.message);
+                // not fatal—continue to upload new one
+            }
         }
 
-        const user = req.user;
-        const file = req.files.profileImage;
+        // 4. Upload new file
+        // e.g. store under `profiles/<uid>/<timestamp>_<originalname>`
+        const timestamp = Date.now();
+        const newPath = `profiles/${uid}/${timestamp}_${file.name}`;
+        const blob = bucket.file(newPath);
 
-        // Delete old image first
-        const userDoc = await admin.firestore().collection('Users').doc(user.uid).get();
-        await deleteOldFile(userDoc.data()?.profileUrl);
-
-        // Upload new image
-        const fileName = `profile/${user.uid}-${Date.now()}${path.extname(file.name)}`;
-        const fileRef = bucket.file(fileName);
-
-        await new Promise((resolve, reject) => {
-            const stream = fileRef.createWriteStream({
-                metadata: {
-                    contentType: file.mimetype,
-                    metadata: {
-                        uploadedBy: user.uid,
-                        type: 'profile'
-                    }
-                }
-            });
-
-            stream.on('error', reject);
-            stream.on('finish', resolve);
-            stream.end(file.data);
+        await blob.save(file.data, {
+            metadata: {
+                contentType: file.mimetype,
+                firebaseStorageDownloadTokens: uuidv4(),  // so we can form a public URL
+            },
+            public: false,  // keep it private; we’ll generate a token-based URL
         });
 
-        // Get public URL
-        const [url] = await fileRef.getSignedUrl({
-            action: 'read',
-            expires: '03-09-2491'
+        // 5. Construct a download URL
+        const token = blob.metadata.metadata.firebaseStorageDownloadTokens;
+        const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name
+            }/o/${encodeURIComponent(newPath)}?alt=media&token=${token}`;
+
+        // 6. Save new URL & path in Firestore
+        await userRef.update({
+            profileImage: imageUrl,
+            profileImagePath: newPath,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        // Update Firestore
-        await admin.firestore().collection('Users').doc(user.uid).update({
-            profileUrl: url
-        });
+        // 7. Return success
+        res.json({ imageUrl });
 
-        res.json({ imageUrl: url });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    } catch (err) {
+        console.error('[Upload Error]', err);
+        res.status(500).json({ error: err.message });
     }
 });
-// Get user profile
+
 router.get('/profile', async (req, res) => {
     try {
         const userDoc = await admin.firestore().collection('Users').doc(req.user.uid).get();

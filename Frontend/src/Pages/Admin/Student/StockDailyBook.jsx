@@ -301,7 +301,7 @@ export default function StockDailyBook() {
                         <td className="px-4 py-3 text-gray-700 break-words font-medium">
                           {new Date(t.date).toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-violet-900">
+                        <td className="px-4 py-3 font-semibold text-violet-900 capitalize">
                           {t.studentName}
                         </td>
                         <td className="px-4 py-3 text-gray-600">{t.class}</td>

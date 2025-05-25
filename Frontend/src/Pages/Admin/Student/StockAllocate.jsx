@@ -31,19 +31,19 @@ function StockAllocate() {
   const classOptions = school.class?.length
     ? school.class
     : [
-        "Nursery",
-        "JRKG",
-        "SRKG",
-        "1st",
-        "2nd",
-        "3rd",
-        "4th",
-        "5th",
-        "6th",
-        "7th",
-        "8th",
-        "9th",
-      ];
+      "Nursery",
+      "JRKG",
+      "SRKG",
+      "1st",
+      "2nd",
+      "3rd",
+      "4th",
+      "5th",
+      "6th",
+      "7th",
+      "8th",
+      "9th",
+    ];
   const divOptions = school.divisions?.length
     ? school.divisions
     : ["A", "B", "C", "D", "SEMI"];
@@ -82,8 +82,8 @@ function StockAllocate() {
         (newFilters.gender ? student.gender === newFilters.gender : true) &&
         (newFilters.search
           ? student.fname
-              .toLowerCase()
-              .includes(newFilters.search.toLowerCase())
+            .toLowerCase()
+            .includes(newFilters.search.toLowerCase())
           : true)
     );
     setFilteredStudents(filtered);
@@ -269,57 +269,12 @@ function StockAllocate() {
             </select>
           </div>
 
-          {/* Students Table */}
-          {/* <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-purple-100">
-             <div className="bg-white rounded-xl shadow-lg overflow-x-auto border border-purple-100">
-            <table className="w-full table-fixed overflow-x-auto">
-              <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-xs">
-                <tr>
-                  {["Name", "Class", "Division", "Gender", "Actions"].map((header) => (
-                    <th
-                      key={header}
-                      className="px-4 py-3 text-left font-semibold tracking-wide whitespace-normal break-words border-r border-purple-500/30 last:border-r-0"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-purple-100 text-xs">
-                {currentStudents.map((student, index) => (
-                  <motion.tr
-                    key={student.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
-                  >
-                    <td className="px-6 py-4 text-sm font-medium text-purple-900">
-                      {student.fname} {student.lname}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-purple-800">{student.class}</td>
-                    <td className="px-6 py-4 text-sm text-purple-800">{student.div}</td>
-                    <td className="px-6 py-4 text-sm text-purple-800">{student.gender}</td>
-                    <td className="px-6 py-4">
-                      <Link
-                        to={`/stockallocate/${student.id}`}
-                        className="text-violet-600 hover:text-violet-800 transition-colors"
-                      >
-                        <LuWallet className="w-6 h-6" />
-                      </Link>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          </div> */}
           <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-purple-100">
             <div className="w-full overflow-x-auto">
               <table className="min-w-full table-fixed">
                 <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-xs">
                   <tr>
-                    {["Name", "Class", "Division", "Gender", "Actions"].map(
+                    {["Name", "FeeId", "Class", "Division", "Gender", "FatherMobile", "Status", "Type", "Actions"].map(
                       (header) => (
                         <th
                           key={header}
@@ -341,16 +296,35 @@ function StockAllocate() {
                       className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
                     >
                       <td className="px-6 py-4 text-sm font-medium text-purple-900">
-                        {student.fname} {student.lname}
+                        {student.fname || '-'} {student.fatherName || '-'} {student.lname || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-purple-900">
+                        {student.feeId || "N/A"}
                       </td>
                       <td className="px-6 py-4 text-sm text-purple-800">
-                        {student.class}
+                        {student.class || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-purple-800 uppercase">
+                        {student.div || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-purple-800 capitalize">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-lg ${student?.gender?.toLowerCase() === "male"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-pink-100 text-pink-700"
+                            }`}
+                        >
+                          {student.gender || "N/A"}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-purple-800">
-                        {student.div}
+                        {student.fatherMobile || "N/A"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-purple-800">
-                        {student.gender}
+                      <td className="px-6 py-4 text-sm text-purple-800 capitalize">
+                        {student.status || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-purple-800 uppercase">
+                        {student.type || "N/A"}
                       </td>
                       <td className="px-6 py-4">
                         <Link

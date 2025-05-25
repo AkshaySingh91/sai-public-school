@@ -37,7 +37,6 @@ function StockList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingStockId, setEditingStockId] = useState(null);
@@ -56,24 +55,21 @@ function StockList() {
   const classNames = school.class?.length
     ? school.class
     : [
-        "Nursery",
-        "JRKG",
-        "SRKG",
-        "1st",
-        "2nd",
-        "3rd",
-        "4th",
-        "5th",
-        "6th",
-        "7th",
-        "8th",
-        "9th",
-      ];
+      "Nursery",
+      "JRKG",
+      "SRKG",
+      "1st",
+      "2nd",
+      "3rd",
+      "4th",
+      "5th",
+      "6th",
+      "7th",
+      "8th",
+      "9th",
+    ];
 
-  // Pagination variables
-  // const indexOfLastItem = currentPage * itemsPerPage;
-  // const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  // setCurrentStocks = filteredStocks.slice(indexOfFirstItem, indexOfLastItem);
+  // Pagination variables 
   const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -111,165 +107,9 @@ function StockList() {
       setLoading(false);
     }
   };
-
-  // const addStock = async () => {
-  //   if (!validateStock()) return;
-
-  //   try {
-  //     const fromIdx = classNames.indexOf(newStock.fromClass);
-  //     const toIdx = classNames.indexOf(newStock.toClass);
-  //     const batch = writeBatch(db);
-  //     for (let i = fromIdx; i <= toIdx; i++) {
-  //       const stockRef = doc(collection(db, "allStocks"));
-  //       batch.set(stockRef, {
-  //         ...newStock,
-  //         quantity: parseInt(newStock.quantity),
-  //         purchasePrice: parseFloat(newStock.purchasePrice),
-  //         sellingPrice: parseFloat(newStock.sellingPrice),
-  //         className: classNames[i],
-  //         createdAt: new Date().toISOString(),
-  //         schoolCode: userData.schoolCode
-  //       });
-  //     }
-  //     await batch.commit();
-  //     resetForm();
-  //     fetchStocks();
-  //   } catch (error) {
-  //     alert("Error adding stock: " + error.message);
-  //   }
-  // };
-
-  // const addStock = async () => {
-  //   if (!validateStock()) return;
-
-  //   try {
-  //     if (isEditing) {
-  //       const fromIdx = classNames.indexOf(newStock.fromClass);
-  //       const toIdx = classNames.indexOf(newStock.toClass);
-  //       const batch = writeBatch(db);
-  //       // 🔄 UPDATE EXISTING STOCK
-  //       // const stockRef = doc(db, "allStocks", editingStockId);
-  //       // await updateDoc(stockRef, {
-  //       //   ...newStock,
-  //       //   quantity: parseInt(newStock.quantity),
-  //       //   purchasePrice: parseFloat(newStock.purchasePrice),
-  //       //   sellingPrice: parseFloat(newStock.sellingPrice),
-  //       //   updatedAt: new Date().toISOString(),
-  //       // });
-  //       for (let i = fromIdx; i <= toIdx; i++) {
-  //         const stockRef = doc(collection(db, "allStocks",editingStockId));
-  //         batch.set(stockRef, {
-  //           ...newStock,
-  //           quantity: parseInt(newStock.quantity),
-  //           purchasePrice: parseFloat(newStock.purchasePrice),
-  //           sellingPrice: parseFloat(newStock.sellingPrice),
-  //           className: classNames[i],
-  //           createdAt: new Date().toISOString(),
-  //           schoolCode: userData.schoolCode,
-  //         });
-  //       }
-
-  //       await batch.commit();
-
-  //       // ⬆️ Update local state after edit
-  //       setCurrentStocks((prev) =>
-  //         prev.map((s) => (s.id === editingStockId ? { ...s, ...newStock } : s))
-  //       );
-  //     } else {
-  //       // ➕ ADD NEW STOCK IN BATCH FOR CLASS RANGE
-  //       const fromIdx = classNames.indexOf(newStock.fromClass);
-  //       const toIdx = classNames.indexOf(newStock.toClass);
-  //       const batch = writeBatch(db);
-
-  //       for (let i = fromIdx; i <= toIdx; i++) {
-  //         const stockRef = doc(collection(db, "allStocks"));
-  //         batch.set(stockRef, {
-  //           ...newStock,
-  //           quantity: parseInt(newStock.quantity),
-  //           purchasePrice: parseFloat(newStock.purchasePrice),
-  //           sellingPrice: parseFloat(newStock.sellingPrice),
-  //           className: classNames[i],
-  //           createdAt: new Date().toISOString(),
-  //           schoolCode: userData.schoolCode,
-  //         });
-  //       }
-
-  //       await batch.commit();
-  //     }
-
-  //     // ✅ Reset modal & form
-  //     resetForm();
-  //     fetchStocks();
-  //   } catch (error) {
-  //     alert("Error adding/updating stock: " + error.message);
-  //   }
-  // };
-
-  //   const addStock = async () => {
-  //   if (!validateStock()) return;
-
-  //   try {
-  //     const fromIdx = classNames.indexOf(newStock.fromClass);
-  //     const toIdx = classNames.indexOf(newStock.toClass);
-  //     const batch = writeBatch(db);
-
-  //     if (isEditing) {
-  //       // 🗑️ Delete the old stock document
-  //       const oldRef = doc(db, "allStocks", editingStockId);
-  //       batch.delete(oldRef);
-
-  //       // ➕ Recreate new stock documents for the selected class range
-  //       for (let i = fromIdx; i <= toIdx; i++) {
-  //         const newDocRef = doc(collection(db, "allStocks"));
-  //         batch.set(newDocRef, {
-  //           ...newStock,
-  //           quantity: parseInt(newStock.quantity),
-  //           purchasePrice: parseFloat(newStock.purchasePrice),
-  //           sellingPrice: parseFloat(newStock.sellingPrice),
-  //           className: classNames[i],
-  //           createdAt: new Date().toISOString(),
-  //           schoolCode: userData.schoolCode,
-  //         });
-  //       }
-
-  //       await batch.commit();
-
-  //       // ⬆️ Update local state after edit
-  //       fetchStocks(); // re-fetch from Firestore instead of local map
-  //       setIsEditing(false);
-  //       setEditingStockId(null);
-  //     } else {
-  //       // ➕ Add new stock for selected class range
-  //       for (let i = fromIdx; i <= toIdx; i++) {
-  //         const stockRef = doc(collection(db, "allStocks"));
-  //         batch.set(stockRef, {
-  //           ...newStock,
-  //           quantity: parseInt(newStock.quantity),
-  //           purchasePrice: parseFloat(newStock.purchasePrice),
-  //           sellingPrice: parseFloat(newStock.sellingPrice),
-  //           className: classNames[i],
-  //           createdAt: new Date().toISOString(),
-  //           schoolCode: userData.schoolCode,
-  //         });
-  //       }
-
-  //       await batch.commit();
-  //     }
-
-  //     // ✅ Reset form and refresh data
-  //     resetForm();
-  //     fetchStocks();
-  //   } catch (error) {
-  //     alert("Error adding/updating stock: " + error.message);
-  //   }
-  // };
-
   const addStock = async () => {
     if (!validateStock()) return;
-
     try {
-      const fromIdx = classNames.indexOf(newStock.fromClass);
-      const toIdx = classNames.indexOf(newStock.toClass);
       const batch = writeBatch(db);
 
       if (isEditing) {
@@ -277,65 +117,93 @@ function StockList() {
         const existingStock = currentStocks.find(
           (s) => s.id === editingStockId
         );
-        const existingClassName = existingStock?.className;
+        console.log(existingStock, newStock)
 
         // Case 1: Class range is unchanged (i.e., only one class and it matches old class)
-        if (fromIdx === toIdx && classNames[fromIdx] === existingClassName) {
-          const stockRef = doc(db, "allStocks", editingStockId);
-          await updateDoc(stockRef, {
-            ...newStock,
-            quantity: parseInt(newStock.quantity),
-            purchasePrice: parseFloat(newStock.purchasePrice),
-            sellingPrice: parseFloat(newStock.sellingPrice),
-            updatedAt: new Date().toISOString(),
-          });
+        // if (fromIdx === toIdx && classNames[fromIdx] === existingClassName) {
+        //   const stockRef = doc(db, "allStocks", editingStockId);
+        //   await updateDoc(stockRef, {
+        //     ...newStock,
+        //     quantity: parseInt(newStock.quantity),
+        //     purchasePrice: parseFloat(newStock.purchasePrice),
+        //     sellingPrice: parseFloat(newStock.sellingPrice),
+        //     updatedAt: new Date().toISOString(),
+        //   });
 
-          // Update UI
-          setCurrentStocks((prev) =>
-            prev.map((s) =>
-              s.id === editingStockId ? { ...s, ...newStock } : s
-            )
-          );
-        } else {
-          // Case 2: Class range has changed → delete and recreate
-          const oldRef = doc(db, "allStocks", editingStockId);
-          batch.delete(oldRef);
+        //   // Update UI
+        //   setCurrentStocks((prev) =>
+        //     prev.map((s) =>
+        //       s.id === editingStockId ? { ...s, ...newStock } : s
+        //     )
+        //   );
+        // } else {
+        //   // Case 2: Class range has changed → delete and recreate
+        //   const oldRef = doc(db, "allStocks", editingStockId);
+        //   batch.delete(oldRef);
 
-          for (let i = fromIdx; i <= toIdx; i++) {
-            const newDocRef = doc(collection(db, "allStocks"));
-            batch.set(newDocRef, {
-              ...newStock,
-              quantity: parseInt(newStock.quantity),
-              purchasePrice: parseFloat(newStock.purchasePrice),
-              sellingPrice: parseFloat(newStock.sellingPrice),
-              className: classNames[i],
-              createdAt: new Date().toISOString(),
-              schoolCode: userData.schoolCode,
-            });
-          }
+        //   for (let i = fromIdx; i <= toIdx; i++) {
+        //     const newDocRef = doc(collection(db, "allStocks"));
+        //     batch.set(newDocRef, {
+        //       ...newStock,
+        //       quantity: parseInt(newStock.quantity),
+        //       purchasePrice: parseFloat(newStock.purchasePrice),
+        //       sellingPrice: parseFloat(newStock.sellingPrice),
+        //       className: classNames[i],
+        //       createdAt: new Date().toISOString(),
+        //       schoolCode: userData.schoolCode,
+        //     });
+        //   }
 
-          await batch.commit();
-          fetchStocks(); // refresh list
-        }
+        //   await batch.commit();
+        //   fetchStocks(); // refresh list
+        // }
+        const stockRef = doc(db, "allStocks", editingStockId);
+        await updateDoc(stockRef, {
+          ...existingStock,
+          itemName: newStock.itemName,
+          quantity: parseInt(newStock.quantity),
+          purchasePrice: parseFloat(newStock.purchasePrice),
+          sellingPrice: parseFloat(newStock.sellingPrice),
+          category: newStock.category,
+          updatedAt: new Date().toISOString(),
+          fromClass: newStock.fromClass,
+          toClass: newStock.toClass,
+        });
 
+        setCurrentStocks((prev) =>
+          prev.map((s) =>
+            s.id === editingStockId ? { ...s, ...newStock } : s
+          )
+        );
+
+        // await batch.commit();
+        fetchStocks(); // refresh list
         // Reset editing state
         setIsEditing(false);
         setEditingStockId(null);
       } else {
         // ➕ Add new stock for selected class range
-        for (let i = fromIdx; i <= toIdx; i++) {
-          const stockRef = doc(collection(db, "allStocks"));
-          batch.set(stockRef, {
-            ...newStock,
-            quantity: parseInt(newStock.quantity),
-            purchasePrice: parseFloat(newStock.purchasePrice),
-            sellingPrice: parseFloat(newStock.sellingPrice),
-            className: classNames[i],
-            createdAt: new Date().toISOString(),
-            schoolCode: userData.schoolCode,
-          });
-        }
-
+        const stockRef = doc(collection(db, "allStocks"));
+        batch.set(stockRef, {
+          ...newStock,
+          quantity: parseInt(newStock.quantity),
+          purchasePrice: parseFloat(newStock.purchasePrice),
+          sellingPrice: parseFloat(newStock.sellingPrice),
+          createdAt: new Date().toISOString(),
+          schoolCode: userData.schoolCode,
+        });
+        //  for (let i = fromIdx; i <= toIdx; i++) {
+        //   const stockRef = doc(collection(db, "allStocks"));
+        //   batch.set(stockRef, {
+        //     ...newStock,
+        //     quantity: parseInt(newStock.quantity),
+        //     purchasePrice: parseFloat(newStock.purchasePrice),
+        //     sellingPrice: parseFloat(newStock.sellingPrice),
+        //     className: classNames[i],
+        //     createdAt: new Date().toISOString(),
+        //     schoolCode: userData.schoolCode,
+        //   });
+        // }
         await batch.commit();
       }
 
@@ -359,20 +227,6 @@ function StockList() {
     }
     return true;
   };
-
-  // const resetForm = () => {
-  //   setNewStock({
-  //     itemName: "",
-  //     quantity: "",
-  //     purchasePrice: "",
-  //     sellingPrice: "",
-  //     fromClass: "",
-  //     toClass: "",
-  //     category: "All",
-  //   });
-  //   setShowModal(false);
-  // };
-
   const resetForm = () => {
     setNewStock({
       itemName: "",
@@ -387,240 +241,175 @@ function StockList() {
     setEditingStockId(null);
     setShowModal(false);
   };
-
   const handleExcelUpload = async (e) => {
-    const file = e.target.files[0];
+    const REQUIRED_HEADERS = [
+      "ItemName",
+      "Quantity",
+      "PurchasePrice",
+      "SellingPrice",
+      "Category",
+      "FromClass",
+      "ToClass",
+    ];
+    const VALID_CATEGORIES = ["All", "Boys", "Girls"];
+    const file = e.target.files?.[0];
     if (!file) return;
-
     setLoading(true);
     try {
-      // Get existing stock items for duplicate check
-      const existingStockSnap = await getDocs(collection(db, "allStocks"));
-      const existingStockItems = existingStockSnap.docs
-        .filter((doc) => doc.data().schoolCode === userData.schoolCode)
-        .map((doc) => ({
-          itemName: doc.data().itemName.toLowerCase().trim(),
-          className: doc.data().className.toLowerCase().trim(),
-        }));
+      // 1. Load existing items for duplicate-check
+      const existingKeys = new Set(
+        currentStocks
+          .map(d =>
+            `${d.itemName.toLowerCase().trim()}|${d.FromClass}|${d.ToClass}`
+          )
+      );
+      // 2. Read workbook
+      const dataBinary = await file.arrayBuffer();
+      const wb = XLSX.read(dataBinary, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const swalInstance = Swal.fire({
-          title: "Processing Excel File",
-          html: "Validating and uploading stock items...",
-          allowOutsideClick: false,
-          showConfirmButton: false,
-          didOpen: () => Swal.showLoading(),
-        });
+      if (!rows.length) {
+        throw new Error("The uploaded sheet is empty.");
+      }
+      // 3. Header validation (exact match + case-suggestions)
+      const actualHeaders = Object.keys(rows[0]);
+      // exact-missing
+      const missingExact = REQUIRED_HEADERS.filter(h => !actualHeaders.includes(h));
+      // case-only mismatches
+      const caseMismatches = REQUIRED_HEADERS
+        .filter(h => !actualHeaders.includes(h))
+        .map(h => {
+          const alt = actualHeaders.find(a => a.toLowerCase() === h.toLowerCase());
+          return alt ? { actual: alt, expected: h } : null;
+        })
+        .filter(x => x);
 
-        try {
-          const workbook = XLSX.read(e.target.result, { type: "binary" });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-          const data = XLSX.utils.sheet_to_json(worksheet);
+      if (missingExact.length || caseMismatches.length) {
+        // build error message
+        let msg = "";
+        if (caseMismatches.length) {
+          msg += caseMismatches
+            .map((m, i) => `${i + 1}. \`${m.actual}\` → \`${m.expected}\``)
+            .join("<br/>");
+        }
+        if (missingExact.length) {
+          msg += (msg ? "<br/>" : "") +
+            "Missing columns: " +
+            missingExact.map(h => `\`${h}\``).join(", ");
+        }
+        throw new Error(msg);
+      }
 
-          // Validate headers
-          const requiredHeaders = [
-            "ItemName",
-            "Quantity",
-            "PurchasePrice",
-            "SellingPrice",
-            "Category",
-            "ClassName",
-          ];
-          const actualHeaders = Object.keys(data[0] || {});
-          const missingHeaders = requiredHeaders.filter(
-            (h) => !actualHeaders.includes(h)
-          );
+      // 4. Row-level validation & batch collection
+      const errors = [];
+      const batch = writeBatch(db);
+      rows.forEach((row, idx) => {
+        const rowNum = idx + 2; // header is row 1
+        const iName = row.ItemName?.toString().trim();
+        const qty = Number(row.Quantity);
+        const pp = Number(row.PurchasePrice);
+        const sp = Number(row.SellingPrice);
+        const cat = row.Category?.toString().trim();
+        const fromC = row.FromClass;
+        const toC = row.ToClass;
 
-          if (missingHeaders.length > 0) {
-            throw new Error(
-              `Missing required columns: ${missingHeaders.join(", ")}\n\n` +
-                `Required columns: ${requiredHeaders.join(", ")}`
-            );
-          }
+        // a) required
+        if (!iName) errors.push(`Row ${rowNum}: ItemName is required`);
+        if (isNaN(qty)) errors.push(`Row ${rowNum}: Quantity must be a number`);
+        if (isNaN(pp)) errors.push(`Row ${rowNum}: PurchasePrice must be a number`);
+        if (isNaN(sp)) errors.push(`Row ${rowNum}: SellingPrice must be a number`);
+        if (!VALID_CATEGORIES.includes(cat))
+          errors.push(`Row ${rowNum}: Category must be one of ${VALID_CATEGORIES.join(", ")}`);
 
-          const errors = [];
-          const batch = [];
-          const uploadedItems = new Set();
+        const fromIdx = classNames.indexOf(fromC);
+        const toIdx = classNames.indexOf(toC);
+        if (fromIdx > toIdx) errors.push(`Row ${rowNum}: FromClass must be less than ToClass`);
+        // b) logical checks
+        if (qty <= 0) errors.push(`Row ${rowNum}: Quantity must be > 0`);
+        if (pp <= 0) errors.push(`Row ${rowNum}: PurchasePrice must be > 0`);
+        if (sp <= 0) errors.push(`Row ${rowNum}: SellingPrice must be > 0`);
+        if (sp < pp)
+          errors.push(`Row ${rowNum}: SellingPrice (${sp}) cannot be less than PurchasePrice (${pp})`);
 
-          data.forEach((row, index) => {
-            const rowNumber = index + 2;
-            try {
-              // Validate and normalize data
-              const itemName = row.ItemName?.toString().trim();
-              const quantity = parseInt(row.Quantity);
-              const purchasePrice = parseFloat(row.PurchasePrice);
-              const sellingPrice = parseFloat(row.SellingPrice);
-              const category = row.Category?.toString().trim();
-              const className = row.ClassName?.toString().trim();
+        // c) duplicate in file
+        const key = `${iName.toLowerCase()}|${fromC}|${toC}`;
+        if (batch._writes?.some(w => w._document?.key.path.segments.includes(key))) {
+          errors.push(`Row ${rowNum}: Duplicate entry in the sheet`);
+        }
+        // d) duplicate in DB
+        if (existingKeys.has(key)) {
+          errors.push(`Row ${rowNum}: Already exists in database`);
+        }
 
-              // Validate required fields
-              if (!itemName) throw new Error("Item name is required");
-              if (isNaN(quantity)) throw new Error("Invalid quantity");
-              if (isNaN(purchasePrice))
-                throw new Error("Invalid purchase price");
-              if (isNaN(sellingPrice)) throw new Error("Invalid selling price");
-              if (!className) throw new Error("Class name is required");
-
-              // Validate numerical values
-              if (quantity <= 0)
-                throw new Error("Quantity must be greater than 0");
-              if (purchasePrice <= 0)
-                throw new Error("Purchase price must be positive");
-              if (sellingPrice <= 0)
-                throw new Error("Selling price must be positive");
-              if (sellingPrice < purchasePrice)
-                throw new Error(
-                  "Selling price cannot be less than purchase price"
-                );
-
-              // Validate category
-              const validCategories = ["All", "Boys", "Girls"];
-              if (!validCategories.includes(category)) {
-                throw new Error(
-                  `Invalid category: ${category}. Valid values: ${validCategories.join(
-                    ", "
-                  )}`
-                );
-              }
-
-              // Validate class exists
-              if (!classNames.includes(className)) {
-                throw new Error(`Invalid class: ${className}`);
-              }
-
-              // Check for duplicates
-              const uniqueKey = `${itemName.toLowerCase()}-${className.toLowerCase()}`;
-              if (uploadedItems.has(uniqueKey)) {
-                throw new Error("Duplicate item-class combination in file");
-              }
-
-              const existingDuplicate = existingStockItems.find(
-                (item) =>
-                  item.itemName === itemName.toLowerCase() &&
-                  item.className === className.toLowerCase()
-              );
-
-              if (existingDuplicate) {
-                throw new Error(
-                  "Item-class combination already exists in database"
-                );
-              }
-
-              // Add to batch
-              batch.push({
-                itemName,
-                quantity,
-                purchasePrice,
-                sellingPrice,
-                category,
-                className,
-                schoolCode: userData.schoolCode,
-                createdAt: new Date().toISOString(),
-              });
-
-              uploadedItems.add(uniqueKey);
-            } catch (err) {
-              errors.push(`Row ${rowNumber}: ${err.message}`);
-            }
-          });
-
-          if (errors.length > 0) {
-            throw new Error(
-              `Found ${errors.length} error(s) in spreadsheet:\n\n${errors.join(
-                "\n"
-              )}`
-            );
-          }
-
-          if (batch.length === 0) {
-            throw new Error("No valid stock items found in spreadsheet");
-          }
-
-          // Batch write to Firestore
-          const batchCommit = writeBatch(db);
-          batch.forEach((item) => {
-            const docRef = doc(collection(db, "allStocks"));
-            batchCommit.set(docRef, item);
-          });
-          await batchCommit.commit();
-
-          // Show success
-          Swal.close();
-          Swal.fire({
-            title: "Upload Successful!",
-            html: `
-            <div class="text-left">
-              <p>Added ${batch.length} new stock items:</p>
-              <ul class="list-disc pl-5 mt-2 max-h-40 overflow-y-auto">
-                ${batch
-                  .map(
-                    (item) => `
-                  <li class="py-1">
-                    ${item.itemName} (${item.className}) - 
-                    Qty: ${item.quantity}, 
-                    ₹${item.purchasePrice} → ₹${item.sellingPrice}
-                  </li>
-                `
-                  )
-                  .join("")}
-              </ul>
-            </div>
-          `,
-            icon: "success",
-            confirmButtonColor: "#2563eb",
-            width: "600px",
-          });
-
-          fetchStocks();
-          setShowExcelModal(false);
-        } catch (err) {
-          Swal.fire({
-            title: "Upload Error",
-            html: `
-            <div class="text-left">
-              <p class="font-medium">${err.message.split("\n")[0]}</p>
-              <div class="mt-2 max-h-60 overflow-y-auto bg-gray-50 p-3 rounded">
-                ${err.message.split("\n").slice(1).join("<br/>")}
-              </div>
-            </div>
-          `,
-            icon: "error",
-            confirmButtonColor: "#2563eb",
-            width: "700px",
+        // if row clean, queue it
+        if (!errors.find(msg => msg.startsWith(`Row ${rowNum}:`))) {
+          const newDoc = doc(collection(db, "allStocks"));
+          batch.set(newDoc, {
+            itemName: iName,
+            quantity: qty,
+            purchasePrice: pp,
+            sellingPrice: sp,
+            category: cat,
+            fromClass: fromC,
+            toClass: toC,
+            schoolCode: userData.schoolCode,
+            createdAt: new Date().toISOString()
           });
         }
-      };
+      });
 
-      reader.onerror = () => {
-        throw new Error("Error reading file");
-      };
+      if (errors.length) {
+        throw new Error(errors.join("<br/>"));
+      }
 
-      reader.readAsBinaryString(file);
+      // 5. Commit & feedback
+      await batch.commit();
+      Swal.fire({
+        icon: "success",
+        title: `Uploaded ${rows.length} items`,
+        confirmButtonText: "OK",
+      });
+      fetchStocks();
+      setShowExcelModal(false);
+
     } catch (err) {
       Swal.fire({
-        title: "Upload Error",
-        text: err.message,
         icon: "error",
+        title: "Upload Error",
+        html: err.message,
+        width: 700,
         confirmButtonColor: "#2563eb",
       });
     } finally {
       setLoading(false);
-      e.target.value = ""; // Reset file input
+      e.target.value = null; // reset input
     }
   };
-
   const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      stocks.map((stock) => ({
+    // Define headers as keys
+    const headers = {
+      ItemName: '',
+      Quantity: '',
+      PurchasePrice: '',
+      SellingPrice: '',
+      Category: '',
+      FromClass: '',
+      ToClass: ''
+    };
+    const data = stocks.length > 0
+      ? stocks.map(stock => ({
         ItemName: stock.itemName,
         Quantity: stock.quantity,
         PurchasePrice: stock.purchasePrice,
         SellingPrice: stock.sellingPrice,
         Category: stock.category,
-        ClassName: stock.className,
+        FromClass: stock.fromClass,
+        ToClass: stock.toClass
       }))
-    );
+      : [headers]; // only headers as keys with empty values
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Stocks");
     XLSX.writeFile(workbook, "stock-list.xlsx");
@@ -628,32 +417,42 @@ function StockList() {
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    autoTable(doc, {
-      head: [
-        [
-          "Item Name",
-          "Quantity",
-          "Class",
-          "Category",
-          "Purchase Price",
-          "Selling Price",
-        ],
+
+    const head = [
+      [
+        "ItemName",
+        "Quantity",
+        "PurchasePrice",
+        "SellingPrice",
+        "Category",
+        "FromClass",
+        "ToClass",
       ],
-      body: stocks.map((stock) => [
-        stock.itemName,
-        stock.quantity,
-        stock.className,
-        stock.category,
-        stock.purchasePrice,
-        stock.sellingPrice,
-      ]),
+    ];
+
+    const body =
+      stocks.length < 0
+        ? stocks.map((stock) => [
+          stock.itemName,
+          stock.quantity,
+          stock.purchasePrice,
+          stock.sellingPrice,
+          stock.category,
+          stock.fromClass,
+          stock.toClass,
+        ])
+        : [];
+
+    autoTable(doc, {
+      head,
+      body,
       theme: "grid",
       headStyles: { fillColor: [37, 99, 235] },
       margin: { top: 20 },
     });
+
     doc.save("stock-list.pdf");
   };
-
   const openEditModal = (stock) => {
     setNewStock({
       itemName: stock.itemName,
@@ -671,25 +470,25 @@ function StockList() {
 
   const deletestock = async (id) => {
     const result = await Swal.fire({
-          title: 'Confirm Delete Stock?',
-          text: "You won't be able to revert this!",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#2563eb',
-          cancelButtonColor: '#d33',
-          confirmButtonText: 'Yes, delete it!'
-        });
-    
-        if (result.isConfirmed) {
-          try {
-            await deleteDoc(doc(db, "allStocks", id));
-            Swal.fire({ icon: 'success', text: 'Stock Deleted', confirmButtonColor: '#2563eb' });
-            fetchStocks();
-          } catch (error) {
-            console.error("Error deleting Stock:", error);
-            Swal.fire({ icon: 'error', text: 'Deletion failed', confirmButtonColor: '#2563eb' });
-          }
-        }
+      title: 'Confirm Delete Stock?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#2563eb',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, "allStocks", id));
+        Swal.fire({ icon: 'success', text: 'Stock Deleted', confirmButtonColor: '#2563eb' });
+        fetchStocks();
+      } catch (error) {
+        console.error("Error deleting Stock:", error);
+        Swal.fire({ icon: 'error', text: 'Deletion failed', confirmButtonColor: '#2563eb' });
+      }
+    }
   };
 
   return (
@@ -761,86 +560,15 @@ function StockList() {
             </div>
 
             {/* Table Section */}
-            {/* <div className="overflow-x-auto rounded-xl border border-purple-100 shadow-lg overflow-y-hidden">
-              <table className="sm:min-w-full min-w-[1000px] divide-y divide-purple-100 overflow-y-hidden">
-                <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-sm">
-                  <tr>
-                    {[
-                      "Item Name",
-                      "Quantity",
-                      "Class",
-                      "Category",
-                      "Purchase Price",
-                      "Selling Price",
-                      "Action",
-                    ].map((header, index) => (
-                      <th
-                        key={index}
-                        className="px-4 py-3 text-left font-semibold tracking-wide whitespace-nowrap border-r border-purple-500/30 last:border-r-0"
-                      >
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-purple-100 bg-white">
-                  {currentStocks.map((stock, index) => (
-                    <motion.tr
-                      key={stock.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
-                    >
-                      <td className="px-4 py-3 font-medium text-violet-900">
-                        {stock.itemName}
-                      </td>
-                      <td className="px-4 py-3 text-center text-purple-800 font-semibold">
-                        {stock.quantity}
-                      </td>
-                      <td className="px-4 py-3 text-center text-gray-600">
-                        {stock.className || "N/A"}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100/80 text-amber-800">
-                          {stock.category}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center font-medium text-purple-700">
-                        ₹{stock.purchasePrice}
-                      </td>
-                      <td className="px-4 py-3 text-center font-medium text-emerald-700">
-                        ₹{stock.sellingPrice}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-3 items-center">
-                          <button
-                            onClick={() => openEditModal(stock)}
-                            className="text-violet-600 hover:text-purple-800 transition-colors p-2 rounded-full hover:bg-purple-100/50"
-                          >
-                            <Settings className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => deletestock(stock.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors p-2 rounded-full hover:bg-red-100/50"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div> */}
             <div className="overflow-x-auto border border-purple-100 shadow-lg rounded-xl my-6">
               <table className="min-w-full divide-y divide-purple-100 table-fixed">
                 <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-sm">
                   <tr>
                     {[
                       "Item Name",
+                      "From-Class",
+                      "To-Class",
                       "Quantity",
-                      "Class",
                       "Category",
                       "Purchase Price",
                       "Selling Price",
@@ -864,25 +592,30 @@ function StockList() {
                       transition={{ delay: index * 0.05 }}
                       className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
                     >
-                      <td className="px-6 py-3 text-center align-middle font-medium text-violet-900">
+                      <td className="px-6 py-3 text-center align-middle font-medium text-violet-900 capitalize">
                         {stock.itemName}
                       </td>
-                      <td className="px-6 py-3 text-center align-middle text-purple-800 font-semibold">
-                        {stock.quantity}
+                      <td className="px-6 py-3 text-center align-middle font-bold text-violet-900">
+                        {stock.fromClass || "N/A"}
                       </td>
-                      <td className="px-6 py-3 text-center align-middle text-gray-600">
-                        {stock.className || "N/A"}
+                      <td className="px-6 py-3 text-center align-middle font-bold text-violet-900">
+                        {stock.toClass || "N/A"}
+                      </td>
+                      <td className="px-6 py-3 text-center align-middle font-medium text-violet-900">
+                        <span className="inline-block px-3 py-1 rounded-full text- font-semibold">
+                          {stock.quantity || "N/A"}
+                        </span>
                       </td>
                       <td className="px-6 py-3 text-center align-middle">
                         <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-amber-100/80 text-amber-800">
-                          {stock.category}
+                          {stock.category || "N/A"}
                         </span>
                       </td>
                       <td className="px-6 py-3 text-center align-middle font-medium text-purple-700">
-                        ₹{stock.purchasePrice}
+                        ₹{stock.purchasePrice || "N/A"}
                       </td>
                       <td className="px-6 py-3 text-center align-middle font-medium text-emerald-700">
-                        ₹{stock.sellingPrice}
+                        ₹{stock.sellingPrice || "N/A"}
                       </td>
                       <td className="px-6 py-3 text-center align-middle">
                         <div className="flex justify-center items-center gap-3">
@@ -947,7 +680,16 @@ function StockList() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  // either we have click on add or edit 
+                  if (isEditing) {
+                    resetForm();
+                    setIsEditing(false);
+                    setShowModal(false)
+                  } else {
+                    setShowModal(false)
+                  }
+                }}
               >
                 <motion.div
                   initial={{ scale: 0.95 }}
@@ -1073,13 +815,6 @@ function StockList() {
                     >
                       Cancel
                     </motion.button>
-                    {/* <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      onClick={addStock}
-                      className="px-6 py-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 shadow-md transition-all"
-                    >
-                      Add Stock
-                    </motion.button> */}
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       onClick={addStock}
@@ -1107,7 +842,7 @@ function StockList() {
                   initial={{ scale: 0.95 }}
                   animate={{ scale: 1 }}
                   exit={{ scale: 0.95 }}
-                  className="bg-white rounded-2xl p-6 max-w-2xl w-full space-y-4 shadow-2xl border border-purple-100"
+                  className="bg-white rounded-2xl p-6 max-w-3xl w-full space-y-4 shadow-2xl border border-purple-100"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex justify-between items-center pb-4 border-b border-purple-100">
@@ -1138,7 +873,8 @@ function StockList() {
                               "PurchasePrice",
                               "SellingPrice",
                               "Category",
-                              "ClassName",
+                              "FromClass",
+                              "ToClass",
                             ].map((header, index) => (
                               <th
                                 key={index}
@@ -1169,7 +905,10 @@ function StockList() {
                               </span>
                             </td>
                             <td className="px-4 py-2.5 text-center text-purple-800">
-                              1st
+                              Nursery
+                            </td>
+                            <td className="px-4 py-2.5 text-center text-purple-800">
+                              3rd
                             </td>
                           </tr>
                         </tbody>

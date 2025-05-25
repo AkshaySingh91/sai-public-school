@@ -227,7 +227,7 @@ export default function FeeReceipt({ student, school, transaction }) {
           <div
             key={idx}
             className="receipt-copy bg-white border border-gray-300 rounded-sm">
-            <div className="heading uppercase text-green-700 w-full text-center text-lg font-bold py-1 border-2 border-gray-300 ">{transaction?.feeType?.toLowerCase() === "StockFee" ? "Stationery Fee Receipt" : "Fee Recipt"}</div>
+            <div className="heading uppercase text-green-700 w-full text-center text-lg font-bold py-1 border-2 border-gray-300 ">{transaction?.feeType?.toLowerCase() === "ItemFee" ? "Stationery Fee Receipt" : "Fee Recipt"}</div>
             <div className="p-2 border-b border-gray-200 grid grid-cols-2 text-xs ">
               <div>
                 <p className="font-bold">Receipt ID: {transaction.receiptId}</p>

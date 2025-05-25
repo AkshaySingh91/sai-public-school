@@ -184,8 +184,8 @@ export default function ImportExistingStudent() {
                 dob: inputData.DOB.split('-').reverse().join('-'),
                 gender: inputData.sex === 'M' ? 'male' : 'female', // normalized
                 motherName: inputData.motherName?.toLowerCase() || "",
-                fatherContact: String(inputData.fatherMobile),
-                motherContact: String(inputData.motherMobile),
+                fatherMobile: String(inputData.fatherMobile),
+                motherMobile: String(inputData.motherMobile),
                 address: inputData.address?.toLowerCase() || "",
 
                 // Academic Info

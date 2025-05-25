@@ -214,25 +214,25 @@ function BusList() {
       const validBuses = [];
 
       jsonData.forEach((bus, index) => {
-        if (!bus["Number Plate"] || !bus["Bus No"] || !bus["Driver Name"]) {
+        if (!bus["NumberPlate"] || !bus["BusNo"] || !bus["DriverName"]) {
           errors.push(`Row ${index + 2}: Missing required fields`);
           return;
         }
         // Check for duplicates
-        if (checkExistingBus(bus["Bus No"], bus["Number Plate"])) {
+        if (checkExistingBus(bus["BusNo"], bus["NumberPlate"])) {
           errors.push(`Row ${index + 2}: Bus already exists`);
           return;
         }
         validBuses.push({
-          numberPlate: bus["Number Plate"].toString().trim(),
-          busNo: bus["Bus No"].toString().trim(),
-          driverName: bus["Driver Name"].toString().trim(),
+          numberPlate: bus["NumberPlate"].toString().trim(),
+          busNo: bus["BusNo"].toString().trim(),
+          driverName: bus["DriverName"].toString().trim(),
           mobile: bus["Mobile"]?.toString().trim() || "",
           assistant: bus["Assistant"]?.toString().trim() || "-",
           status: ["Active", "Inactive"].includes(bus["Status"]?.toString().trim())
             ? bus["Status"].toString().trim()
             : "Inactive",
-          insuranceDate: bus["Insurance Date"]?.toString().trim() || "Not set",
+          insuranceDate: bus["InsuranceDate"]?.toString().trim() || "Not set",
           schoolCode: users?.schoolCode,
         });
       });
@@ -280,40 +280,97 @@ function BusList() {
   const totalPages = Math.ceil(filteredBuses.length / itemsPerPage);
   // Export to Excel
   const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(buses.map(bus => ({
-      "Bus No": bus.busNo,
-      "Number Plate": bus.numberPlate,
-      "Driver Name": bus.driverName,
-      "Mobile": bus.mobile,
-      "Assistant": bus.assistant,
-      "Status": bus.status,
-      "Insurance Date": bus.insuranceDate
-    })));
-
+    const headers = {
+      BusNo: '',
+      NumberPlate: '',
+      DriverName: '',
+      Mobile: '',
+      Assistant: '',
+      Status: '',
+      InsuranceDate: ''
+    };
+    const data = buses.length < 0
+      ? buses.map(b => ({
+        BusNo: b.busNo,
+        NumberPlate: b.numberPlate,
+        DriverName: b.driverName,
+        Mobile: b.mobile,
+        Assistant: b.assistant,
+        Status: b.status,
+        InsuranceDate: b.insuranceDate
+      }))
+      : [headers]; // only headers as keys with empty values
+    const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Buses");
     XLSX.writeFile(workbook, "buses.xlsx");
   };
+  const downloadExcelTemplate = async () => {
+    const result = await Swal.fire({
+      title: "Bus list upload templete",
+      text: "In this templete you can add bus list and upload it to our system",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#7c3aed",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, download it!",
+    });
+    if (!result.isConfirmed) return
+
+    const headers = [{
+      BusNo: '',
+      NumberPlate: '',
+      DriverName: '',
+      Mobile: '',
+      Assistant: '',
+      Status: '',
+      InsuranceDate: ''
+    }];
+    const worksheet = XLSX.utils.json_to_sheet(headers);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+    XLSX.writeFile(workbook, "bus-template.xlsx");
+  };
   // Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF();
+
+    const head = [
+      [
+        "BusNo",
+        "NumberPlate",
+        "DriverName",
+        "Mobile",
+        "Assistant",
+        "Status",
+        "InsuranceDate"
+      ],
+    ];
+
+    const body =
+      buses.length > 0
+        ? buses.map((b) => [
+          b.busNo,
+          b.numberPlate,
+          b.driverName,
+          b.mobile,
+          b.assistant,
+          b.status,
+          b.insuranceDate
+        ])
+        : [];
+
     autoTable(doc, {
-      head: [['Bus No', 'Number Plate', 'Driver', 'Mobile', 'Assistant', 'Status', 'Insurance Date']],
-      body: buses.map(bus => [
-        bus.busNo,
-        bus.numberPlate,
-        bus.driverName,
-        bus.mobile,
-        bus.assistant,
-        bus.status,
-        bus.insuranceDate
-      ]),
-      theme: 'grid',
-      styles: { halign: 'center' },
-      headStyles: { fillColor: [37, 99, 235] }
+      head,
+      body,
+      theme: "grid",
+      headStyles: { fillColor: [37, 99, 235] },
+      margin: { top: 20 },
     });
-    doc.save('buses.pdf');
+
+    doc.save("buses.pdf");
   };
+
 
   useEffect(() => { fetchBuses(); }, [users?.schoolCode]);
 
@@ -350,6 +407,16 @@ function BusList() {
               >
                 <Upload className="w-5 h-5" />
                 Bulk Upload
+              </motion.button>
+              {/* New Template Buttons */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={downloadExcelTemplate}
+                className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 whitespace-nowrap rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
+              >
+                <FileText className="w-4 h-4" />
+                Excel Template
               </motion.button>
             </div>
 
@@ -419,7 +486,7 @@ function BusList() {
                       <td className="px-4 py-3 font-mono tracking-tight text-purple-800">{bus.numberPlate}</td>
                       <td className="px-4 py-3 text-gray-700">{bus.driverName}</td>
                       <td className="px-4 py-3 text-gray-600">{bus.mobile || '-'}</td>
-                      <td className="px-4 py-3 text-gray-600">{bus.assistant}</td>
+                      <td className="px-4 py-3 text-gray-600 text-center">{bus.assistant}</td>
                       <td className="px-4 py-3">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${bus.status === 'Active'
                           ? 'bg-emerald-100/80 text-emerald-800'
@@ -532,13 +599,13 @@ function BusList() {
                   <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
                     <tr>
                       {[
-                        "Bus No*",
-                        "Number Plate*",
-                        "Driver Name*",
+                        "BusNo*",
+                        "NumberPlate*",
+                        "DriverName*",
                         "Mobile",
                         "Assistant",
                         "Status",
-                        "Insurance Date",
+                        "InsuranceDate",
                       ].map((col) => (
                         <th
                           key={col}

@@ -132,3 +132,109 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
+
+
+/*
+    listen 80;
+    listen [::]:80;
+    server_name tuljabhavanibss.in www.tuljabhavanibss.in;
+    return 301 https://tuljabhavanibss.in$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name tuljabhavanibss.in www.tuljabhavanibss.in;
+
+    # SSL Configuration
+    ssl_certificate /etc/letsencrypt/live/tuljabhavanibss.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tuljabhavanibss.in/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+
+    # Frontend Configuration
+    root /var/www/projects/saiPublicSchool/Frontend/dist;
+    index index.html;
+
+    # Client-side routing for SPA
+    location / {
+        try_files $uri $uri/ /index.html;
+
+        # Cache control for static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|avif)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+
+    # API Proxy Configuration
+    location /api/ {
+        proxy_pass http://localhost:1000;
+        proxy_http_version 1.1;
+
+        # Essential headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Authorization $http_authorization;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # CORS headers for API
+        add_header 'Access-Control-Allow-Origin' "$http_origin" always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type' always;
+        add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+        # Handle preflight requests
+        if ($request_method = OPTIONS) {
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+
+        # Timeouts
+        proxy_connect_timeout 75s;
+        proxy_send_timeout 3600s;
+        proxy_read_timeout 3600s;
+    }
+
+    # Static files (if needed)
+    location /files/ {
+        alias /var/www/projects/exp/;
+        autoindex off;
+        expires 1d;
+        add_header Cache-Control "public";
+
+        # Security for file access
+        location ~* \.php$ {
+            deny all;
+        }
+    }
+
+    # Security: Block hidden files
+    location ~ /\.(?!well-known) {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # SSL stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+}
+
+*/

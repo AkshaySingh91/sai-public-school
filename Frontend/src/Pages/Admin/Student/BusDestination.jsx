@@ -8,10 +8,10 @@ import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where } fro
 import { useAuth } from "../../../contexts/AuthContext";
 import { useSchool } from "../../../contexts/SchoolContext";
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import TableLoader from "../../../components/TableLoader";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import Swal from "sweetalert2";
 
 
@@ -188,16 +188,6 @@ function BusDestination() {
         const wb = XLSX.read(bstr, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json(ws);
-
-        // Show loading Swal
-        const swalInstance = Swal.fire({
-          title: 'Processing Excel File',
-          html: 'Validating and uploading destinations...',
-          allowOutsideClick: false,
-          showConfirmButton: false,
-          didOpen: () => Swal.showLoading()
-        });
-
         try {
           // Validate column headers
           const requiredHeaders = ["Destination", "Fee"];
@@ -219,7 +209,6 @@ function BusDestination() {
               `Required columns: ${requiredHeaders.join(", ")}`
             );
           }
-
           const errors = [];
           const batch = [];
           const addedDestinations = [];
@@ -331,7 +320,7 @@ function BusDestination() {
       destinations.map(d => ({
         Destination: d.name,
         Fee: d.fee,
-        "Academic Year": d.academicYear,
+        AcademicYear: d.academicYear,
         Status: assignedMap[d.name]?.active ? "Active" : "Inactive"
       }))
     );
@@ -339,11 +328,32 @@ function BusDestination() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Destinations");
     XLSX.writeFile(workbook, "destinations.xlsx");
   };
+  const downloadExcelTemplate = async () => {
+    const result = await Swal.fire({
+      title: "Bus Destination upload templete",
+      text: "In this templete you can add bus destination, fees and upload it to our system",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#7c3aed",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, download it!",
+    });
+    if (!result.isConfirmed) return
+    const headers = [{
+      Destination: '',
+      Fee: '',
+    }];
+    const worksheet = XLSX.utils.json_to_sheet(headers);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+    XLSX.writeFile(workbook, "bus-template.xlsx");
+  };
+
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    doc.autoTable({
-      head: [['Destination', 'Fee', 'Academic Year', 'Status']],
+    autoTable(doc, {
+      head: [['Destination', 'Fee', 'AcademicYear', 'Status']],
       body: destinations.map(d => [
         d.name,
         `₹${d.fee}`,
@@ -407,6 +417,16 @@ function BusDestination() {
                 </div>
 
                 <div className="ml-auto flex gap-3 w-full sm:w-auto">
+                  {/* New Template Buttons */}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={downloadExcelTemplate}
+                    className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Excel Template
+                  </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}

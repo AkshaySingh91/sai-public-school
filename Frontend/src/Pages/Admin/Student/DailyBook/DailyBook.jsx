@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import {
   FileText,
   File,
@@ -132,7 +132,7 @@ export default function DailyBook() {
       t.status || "pending",
     ]);
 
-    doc.autoTable({
+    autoTable(doc, {
       head: headers,
       body: rows,
       theme: "grid",
@@ -467,8 +467,8 @@ export default function DailyBook() {
                         <td className="px-2 py-2">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${t.status === "completed"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-800"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-yellow-100 text-yellow-800"
                               }`}
                           >
                             {t.status || "pending"}

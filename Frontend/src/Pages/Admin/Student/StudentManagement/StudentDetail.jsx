@@ -1,6 +1,6 @@
 // src/Pages/Admin/Students/StudentDetail.jsx
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { redirect, useParams } from "react-router-dom";
 import {
   doc,
   getDoc,
@@ -411,7 +411,14 @@ export function StudentDetail() {
 
       // 5. Create transaction object
       // if mode !== cheque , than receiptId will be total reciept in this year + 1 
-      const receiptId = (schoolData.tuitionReceiptCount || 0) + 1;
+      // check if transaction if of bus or tuition
+
+      let receiptId;
+      if (feeType?.toLowerCase() == "busfee") {
+        receiptId = (Number(schoolData.busReceiptCount) || 0) + 1;
+      } else {
+        receiptId = (Number(schoolData.tuitionReceiptCount) || 0) + 1;
+      }
       // return
       const transaction = {
         ...newTransaction,
@@ -486,32 +493,33 @@ export function StudentDetail() {
       });
       // 8. update total recipt if not cheque
       if (newTransaction.paymentMode.toLowerCase() !== 'cheque') {
-        const schoolsRef = collection(db, 'schools');
-        const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) throw new Error("School not found");
-        const schoolDoc = querySnapshot.docs[0];
-        await updateDoc(doc(db, 'schools', schoolDoc.id), {
-          tuitionReceiptCount: receiptId
-        });
+       user: userData
+        if (feeType?.toLowerCase() == "busfee") {
+          await updateDoc(doc(db, 'schools', schoolDoc.id), {
+            busReceiptCount: receiptId
+          });
+        } else {
+          await updateDoc(doc(db, 'schools', schoolDoc.id), {
+            tuitionReceiptCount: receiptId
+          });
+        }
       }
-
+      refresh()
       // 9. Update local state
-      setStudent(prev => ({ ...prev, allFee: updatedFees }));
-      setTransactions(updatedTransactions);
-      setNewTransaction({
-        academicYear: student.academicYear,
-        paymentMode: "",
-        account: "",
-        date: new Date().toISOString().split("T")[0],
-        feeType: "",
-        amount: "",
-        remark: "",
-      });
+      // setStudent(prev => ({ ...prev, allFee: updatedFees }));
+      // setTransactions(updatedTransactions);
+      // setNewTransaction({
+      //   academicYear: student.academicYear,
+      //   paymentMode: "",
+      //   account: "",
+      //   date: new Date().toISOString().split("T")[0],
+      //   feeType: "",
+      //   amount: "",
+      //   remark: "",
+      // });
 
       Swal.fire("Success!", "Transaction recorded with historical context", "success");
       // re popullate school data 
-      refresh()
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
@@ -520,8 +528,14 @@ export function StudentDetail() {
   const handleTransactionStatusUpdate = async (tempReceiptId, newStatus) => {
     try {
       const transaction = transactions.find((t) => t.tempReceiptId === tempReceiptId);
+      let receiptId;
+      if (transaction.feeType?.toLowerCase() == "busfee") {
+        receiptId = (Number(schoolData.busReceiptCount) || 0) + 1;
+      } else {
+        receiptId = (Number(schoolData.tuitionReceiptCount) || 0) + 1;
+      }
+      console.log(receiptId)
       if (!transaction) throw new Error("Transaction not found");
-      let receiptId = (Number.parseInt(schoolData.tuitionReceiptCount || 0)) + 1;
       const updatedTransactions = transactions.map((t) =>
         t.tempReceiptId === tempReceiptId ? {
           // update status
@@ -566,9 +580,15 @@ export function StudentDetail() {
         const querySnapshot = await getDocs(q);
         if (querySnapshot.empty) throw new Error("School not found");
         const schoolDoc = querySnapshot.docs[0];
-        await updateDoc(doc(db, 'schools', schoolDoc.id), {
-          tuitionReceiptCount: receiptId
-        });
+        if (transaction.feeType?.toLowerCase() == "busfee") {
+          await updateDoc(doc(db, 'schools', schoolDoc.id), {
+            busReceiptCount: receiptId
+          });
+        } else {
+          await updateDoc(doc(db, 'schools', schoolDoc.id), {
+            tuitionReceiptCount: receiptId
+          });
+        }
       }
 
       setStudent((prev) => ({ ...prev, allFee: updatedFees }));

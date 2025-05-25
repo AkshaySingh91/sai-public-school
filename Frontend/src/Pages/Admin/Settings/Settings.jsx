@@ -167,9 +167,6 @@ const Settings = () => {
     }
   };
 
-
-
-
   if (loading) return <SkeletonLoader type="settings" />;
   if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
 

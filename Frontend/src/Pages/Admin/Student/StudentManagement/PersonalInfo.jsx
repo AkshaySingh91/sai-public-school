@@ -502,7 +502,7 @@ export default function PersonalInfo({
                             max={busFee}
                           />
                         </div>
-                        <div className="remar">
+                        <div className="remark">
                           <InputField
                             icon={<FileTextIcon />}
                             label="Remark"

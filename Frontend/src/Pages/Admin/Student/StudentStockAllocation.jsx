@@ -3,37 +3,42 @@ import { useParams } from "react-router-dom";
 import { db } from "../../../config/firebase";
 import { doc, getDoc, query, updateDoc, collection, where, getDocs, arrayUnion, writeBatch } from "firebase/firestore";
 import { useSchool } from "../../../contexts/SchoolContext";
-import { nanoid } from "nanoid";
 import { toast } from "react-toastify";
 import StudentsStockPaymentHistory from "./StudentsStockPaymentHistory"
 import Swal from "sweetalert2"
 import NotFound from "../../../components/NotFound"
-import { User } from "lucide-react";
+import { FileTextIcon, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { ShoppingCart, ReceiptText, History, IndianRupee, CheckCircle } from "lucide-react";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const StudentStockAllocation = () => {
     const { studentId } = useParams();
-    const { school } = useSchool();
+    const { school, refresh } = useSchool();
     const [student, setStudent] = useState(null);
     const [stockItems, setStockItems] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
     const [activeTab, setActiveTab] = useState('create');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [studentStockLoading, setStudentStockLoading] = useState(false);
     const [accounts] = useState(school?.account || ["CASH", "ONLINE"]);
     const [selectedAccount, setSelectedAccount] = useState("CASH");
     const [transactions, setTransactions] = useState([]);
     // for tnx history tab
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 5; // Set your preferred page size
-    const totalItems = student?.StockPaymentDetail?.length || 0;
+    const { userData } = useAuth();
 
     // Slice transactions based on pagination
     const paginatedTransactions = transactions.slice(
         (currentPage - 1) * pageSize,
         currentPage * pageSize
     );
+    // this remark will user if student get some discount
+    const [remark, setRemark] = useState("");
+
     const fetchStudent = async () => {
+        setLoading(true);
         try {
             const docRef = doc(db, "students", studentId);
             const docSnap = await getDoc(docRef);
@@ -46,39 +51,71 @@ const StudentStockAllocation = () => {
             setLoading(false);
         }
     };
-    console.log(school)
     useEffect(() => {
         fetchStudent();
     }, [studentId]);
 
     useEffect(() => {
         const fetchStock = async () => {
-            if (!student) return;
+            if (!student || !school) return;
 
             try {
+                setStudentStockLoading(true);
+                // Get school's class order for range comparison
+                const classOrder = school.class || [
+                    "Nursery", "JRKG", "SRKG", "1st", "2nd", "3rd",
+                    "4th", "5th", "6th", "7th", "8th", "9th"
+                ];
+
+                // Get student's class index
+                const studentClassIndex = classOrder.indexOf(student.class);
+
                 const q = query(
                     collection(db, "allStocks"),
-                    where("schoolCode", "==", student.schoolCode),
-                    where("className", "==", student.class),
-                    where("category", "in", ["All", student.gender === "Male" ? "Boys" : "Girls"])
+                    where("schoolCode", "==", student.schoolCode)
                 );
 
                 const snapshot = await getDocs(q);
-                const items = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    selected: false,
-                    purchaseQuantity: 1
-                }));
-                setStockItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                setSelectedItems(items);
+                const filteredItems = snapshot.docs
+                    .map(doc => {
+                        const data = doc.data();
+                        // Get indices for fromClass and toClass
+                        const fromIndex = classOrder.indexOf(data.fromClass);
+                        const toIndex = classOrder.indexOf(data.toClass);
+
+                        return {
+                            id: doc.id,
+                            ...data,
+                            fromIndex,
+                            toIndex
+                        };
+                    })
+                    .filter(item => {
+                        // Check if student's class falls within the item's class range
+                        const inClassRange = studentClassIndex >= item.fromIndex &&
+                            studentClassIndex <= item.toIndex;
+                        // Check category match
+                        const categoryMatch = item.category === "All" ||
+                            item.category === (student.gender === "Male" ? "Boys" : "Girls");
+
+                        return inClassRange && categoryMatch && item.quantity > 0;
+                    })
+                    .map(item => ({
+                        ...item,
+                        selected: false,
+                        purchaseQuantity: 1
+                    }));
+                setStockItems(filteredItems);
+                setSelectedItems(filteredItems);
             } catch (error) {
                 toast.error("Failed to load stock items");
+            } finally {
+                setStudentStockLoading(false);
             }
         };
 
         fetchStock();
-    }, [student]);
+    }, [student, school]);
 
     useEffect(() => {
         if (student && student.StockPaymentDetail & student && student.StockPaymentDetail.length) {
@@ -101,6 +138,7 @@ const StudentStockAllocation = () => {
         const selected = selectedItems.filter(item => item.selected);
         if (selected.length === 0) return;
         const stockReceiptCount = (school.stockReceiptCount || 0) + 1;
+        console.log({ stockReceiptCount })
         const paymentData = {
             account: selectedAccount,
             date: new Date().toISOString(),
@@ -112,12 +150,13 @@ const StudentStockAllocation = () => {
                 total: item.sellingPrice * item.purchaseQuantity
             })),
             total: selected.reduce((sum, item) => sum + (item.sellingPrice * item.purchaseQuantity), 0),
-            receiptId: stockReceiptCount
+            receiptId: stockReceiptCount,
+            feeType: "ItemFee",
+            remark
         };
 
         try {
             const batch = writeBatch(db);
-
             // Update student document
             const studentRef = doc(db, "students", studentId);
             batch.update(studentRef, {
@@ -125,11 +164,11 @@ const StudentStockAllocation = () => {
             });
 
             // Update stock quantities
-            selected.forEach(item => {
-                const stockRef = doc(db, "allStocks", item.id);
-                const newQuantity = item.quantity - item.purchaseQuantity;
-                batch.update(stockRef, { quantity: newQuantity });
-            });
+            // selected.forEach(item => {
+            //     const stockRef = doc(db, "allStocks", item.id);
+            //     const newQuantity = item.quantity - item.purchaseQuantity;
+            //     batch.update(stockRef, { quantity: newQuantity });
+            // });
 
             await batch.commit();
 
@@ -137,6 +176,15 @@ const StudentStockAllocation = () => {
             setSelectedItems(items => items.map(item =>
                 item.selected ? { ...item, selected: false, quantity: item.quantity - item.purchaseQuantity } : item
             ));
+            // update stockReceiptCount from school
+            const schoolsRef = collection(db, 'schools');
+            const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) throw new Error("School not found");
+            const schoolDoc = querySnapshot.docs[0];
+            await updateDoc(doc(db, 'schools', schoolDoc.id), {
+                stockReceiptCount: stockReceiptCount
+            });
 
             // Show success message and print receipt
             Swal.fire({
@@ -146,12 +194,12 @@ const StudentStockAllocation = () => {
                 <div class="text-center">
                     <p>Receipt ID: <strong>${paymentData.receiptId}</strong></p>
                     <p class="mt-2">Total Amount: ₹${paymentData.total}</p>
-                </div>
-            `,
+                </div>`,
                 confirmButtonColor: '#2563eb',
             });
             // update studen bec on updating trans StudentsStockPaymentHistory will not update due to conditional rendering
-            setStudent(prev => ({ ...prev, StockPaymentDetail: [...transactions, paymentData] }))
+            refresh()
+            // setStudent(prev => ({ ...prev, StockPaymentDetail: [...transactions, paymentData] }))
         } catch (error) {
             console.error('Payment error:', error);
             Swal.fire({
@@ -169,7 +217,7 @@ const StudentStockAllocation = () => {
     };
 
     const deleteStockTransaction = async (receiptId) => {
-        if (!(receiptId && receiptId.trim())) return
+        if (!((typeof receiptId === "string" && receiptId.trim()) || typeof receiptId === "number")) return
         const result = await Swal.fire({
             title: 'Delete Stock Transaction?',
             text: `This will permanently remove transaction ${receiptId}`,
@@ -189,51 +237,14 @@ const StudentStockAllocation = () => {
             await updateDoc(studentRef, {
                 StockPaymentDetail: updatedTransactions
             });
-
-            setTransactions(updatedTransactions);
-
+            console.log(updatedTransactions)
+            // setTransactions(updatedTransactions);
+            refresh()
             Swal.fire('Deleted!', 'Stock transaction removed successfully.', 'success');
         } catch (error) {
             Swal.fire('Error', error.message, 'error');
         }
     };
-    // UI Components
-    const ProfileCard = () => (
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-fit">
-            <div className="text-center mb-6">
-                <div className="w-20 h-20 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <User size={62} className="text-purple-500" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-1">
-                    {student.fname} {student.lname}
-                </h2>
-                <p className="text-gray-600 mb-4">
-                    {student.class} - {student.div}
-                </p>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                    <DetailItem label="Academic Year" value={student.academicYear} />
-                    <DetailItem label="Status" value={student.status} badge />
-                    <DetailItem label="Date of Birth" value={new Date(student.dob).toLocaleDateString()} />
-                    <DetailItem label="Bus Stop" value={student.busStop} />
-                    <DetailItem label="Father's Name" value={student.fatherName} />
-                    <DetailItem label="Category" value={student.category} />
-                </div>
-            </div>
-        </div>
-    );
-    const DetailItem = ({ label, value, badge }) => (
-        <div className="bg-gray-50 p-3 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">{label}</div>
-            {badge ? (
-                <span className={`px-2 py-1 rounded-full text-xs ${value === 'current' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                    {value}
-                </span>
-            ) : (
-                <div className="font-medium text-gray-800 truncate">{value || '-'}</div>
-            )}
-        </div>
-    );
     // animation 
     const tabVariants = {
         active: {
@@ -275,7 +286,69 @@ const StudentStockAllocation = () => {
             {/* Left Profile Card */}
             <aside className="lg:w-1/3 w-full">
                 <div className="sticky top-6">
-                    <ProfileCard /> {/* Ensure ProfileCard uses similar purple theme */}
+                    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-fit">
+                        <div className="text-center mb-6">
+                            <div className="w-20 h-20 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                <User size={62} className="text-purple-500" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-1 capitalize">
+                                {student.fname} {student.lname}
+                            </h2>
+                            <p className="text-gray-600 mb-4">
+                                {student.class} - <span className="uppercase">{student.div}</span>
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                {/* Academic Year */}
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 mb-1">Academic Year</div>
+                                    <div className="font-medium text-gray-800 truncate">{student.academicYear || '-'}</div>
+                                </div>
+
+                                {/* Status with badge */}
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 mb-1">Status</div>
+                                    <span
+                                        className={`px-2 py-1 rounded-full text-xs ${student.status === 'current'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-yellow-100 text-yellow-700'
+                                            }`}
+                                    >
+                                        {student.status}
+                                    </span>
+                                </div>
+
+                                {/* Date of Birth */}
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 mb-1">Date of Birth</div>
+                                    <div className="font-medium text-gray-800 truncate">
+                                        {student.dob ? new Date(student.dob).toLocaleDateString() : '-'}
+                                    </div>
+                                </div>
+
+                                {/* Bus Stop */}
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 mb-1">Bus Stop</div>
+                                    <div className="font-medium text-gray-800 truncate">{student.busStop || '-'}</div>
+                                </div>
+
+                                {/* Father's Name */}
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 mb-1">Father's Name</div>
+                                    <div className="font-medium text-gray-800 truncate">{student.fatherName || '-'}</div>
+                                </div>
+
+                                {/* Category */}
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 mb-1">Student Group</div>
+                                    <div className="font-medium text-gray-800 truncate ">
+                                        {student.class} - <span className="uppercase">{student.gender}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </aside>
 
@@ -329,70 +402,75 @@ const StudentStockAllocation = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-6"
                     >
-                        {selectedItems.length ? (
-                            <div className="overflow-hidden">
-                                <div className="bg-white rounded-xl border border-purple-100 shadow-lg overflow-x-auto">
-                                    <table className="w-full ">
-                                        <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
-                                            <tr>
-                                                {["Select", "Item Name", "Unit Price", "Available Qty", "Order Qty"].map((header, idx) => (
-                                                    <th
-                                                        key={idx}
-                                                        className="px-4 py-3 text-left text-sm font-semibold first:rounded-tl-xl last:rounded-tr-xl"
-                                                    >
-                                                        {header}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-purple-100">
-                                            {selectedItems.map(item => (
-                                                <motion.tr
-                                                    key={item.id}
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    className="hover:bg-purple-50 transition-colors"
-                                                >
-                                                    <td className="px-4 py-3">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={item.selected}
-                                                            onChange={() => handleSelectItem(item.id)}
-                                                            disabled={item.quantity === 0}
-                                                            className="h-5 w-5 text-purple-600 rounded border-purple-300 focus:ring-purple-500"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-3 font-medium text-purple-900">{item.itemName}</td>
-                                                    <td className="px-4 py-3 text-violet-700">
-                                                        <IndianRupee className="inline w-4 h-4 mr-1" />
-                                                        {item.sellingPrice}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-purple-800">{item.quantity}</td>
-                                                    <td className="px-4 py-3">
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            max={item.quantity}
-                                                            value={item.purchaseQuantity}
-                                                            onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                                            className="w-20 px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
-                                                            disabled={!item.selected}
-                                                        />
-                                                    </td>
-                                                </motion.tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                        {
+                            !studentStockLoading ?
+                                selectedItems.length ? (
+                                    <div className="overflow-hidden">
+                                        <div className="bg-white rounded-xl border border-purple-100 shadow-lg overflow-x-auto">
+                                            <table className="w-full ">
+                                                <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
+                                                    <tr>
+                                                        {["Select", "Item Name", "Unit Price", "Available Qty", "Order Qty"].map((header, idx) => (
+                                                            <th
+                                                                key={idx}
+                                                                className="px-4 py-3 text-left text-sm font-semibold first:rounded-tl-xl last:rounded-tr-xl"
+                                                            >
+                                                                {header}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-purple-100">
+                                                    {selectedItems.map(item => (
+                                                        <motion.tr
+                                                            key={item.id}
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            className="hover:bg-purple-50 transition-colors"
+                                                        >
+                                                            <td className="px-4 py-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={item.selected}
+                                                                    onChange={() => handleSelectItem(item.id)}
+                                                                    disabled={item.quantity === 0}
+                                                                    className="h-5 w-5 text-purple-600 rounded border-purple-300 focus:ring-purple-500"
+                                                                />
+                                                            </td>
+                                                            <td className="px-4 py-3 font-medium text-purple-900 uppercase">{item.itemName}</td>
+                                                            <td className="px-4 py-3 text-violet-700">
+                                                                <IndianRupee className="inline w-4 h-4 mr-1" />
+                                                                {item.sellingPrice}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-purple-800">{item.quantity}</td>
+                                                            <td className="px-4 py-3">
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    max={item.quantity}
+                                                                    value={item.purchaseQuantity}
+                                                                    onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                                                    className="w-20 px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
+                                                                    disabled={!item.selected}
+                                                                />
+                                                            </td>
+                                                        </motion.tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-purple-50 text-xl text-center p-6 ">
+                                        <p>No Stock allocatated for  <span className="uppercase font-medium font-mono whitespace-nowrap">class - {student.class}</span> and <span className="uppercase font-medium font-mono whitespace-nowrap">Division - {student.div}</span> </p>
+                                    </div>
+                                ) :
+                                <div className="bg-purple-50 rounded-xl p-6 animate-pulse flex flex-col items-center">
+                                    <div className="h-8 bg-purple-200 rounded-full w-3/4 mb-4" />
+                                    <div className="h-6 bg-purple-200 rounded-full w-1/2 mb-3" />
+                                    <div className="h-6 bg-purple-200 rounded-full w-2/3" />
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="bg-purple-50 rounded-xl p-6 animate-pulse flex flex-col items-center">
-                                <div className="h-8 bg-purple-200 rounded-full w-3/4 mb-4" />
-                                <div className="h-6 bg-purple-200 rounded-full w-1/2 mb-3" />
-                                <div className="h-6 bg-purple-200 rounded-full w-2/3" />
-                            </div>
-                        )}
-
+                        }
                         {/* Selected Items Summary */}
                         {selectedItems.filter(item => item.selected).length > 0 ? (
                             <motion.div
@@ -448,7 +526,22 @@ const StudentStockAllocation = () => {
                                                 .reduce((sum, item) => sum + item.sellingPrice * item.purchaseQuantity, 0)}
                                         </span>
                                     </div>
-
+                                    <div className="remark space-y-2">
+                                        <label className="text-sm font-medium text-gray-700 flex items-center">
+                                            <span className="mr-2 text-purple-500"><FileTextIcon /> </span>
+                                            Remark
+                                        </label>
+                                        <input
+                                            value={remark}
+                                            onChange={(e) => {
+                                                if (e.target.value.trim()) {
+                                                    setRemark(e.target.value)
+                                                }
+                                            }}
+                                            type="text"
+                                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                                        />
+                                    </div>
                                     <motion.button
                                         onClick={handlePayment}
                                         whileHover={{ scale: 1.02 }}
