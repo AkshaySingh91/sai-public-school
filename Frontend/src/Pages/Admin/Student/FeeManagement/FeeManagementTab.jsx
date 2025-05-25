@@ -29,7 +29,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
         .filter((t) => t.academicYear === student.academicYear && t.status == "completed")
         .reduce((sum, t) => sum + Number(t.amount), 0);
 
-    console.log(paidFees)
+    console.log({ paidFees })
     // on mount / student changes, seed from student.allFee
     useEffect(() => {
         if (student.allFee) {
@@ -40,7 +40,7 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
 
     // whenever any contributing field changes, recompute school total and summary
     useEffect(() => {
-        if (((fees.tuitionFees?.total || 0) > 0) && (fees.messFee >= 0) && (fees.hostelFee >= 0) && (fees.busFee >= 0)) {
+        if (((fees.tuitionFees?.total || 0) >= 0) && (fees.messFee >= 0) && (fees.hostelFee >= 0) && (fees.busFee >= 0)) {
             const tuition = Number(fees.tuitionFees?.tuitionFee) || 0;
             const academic = Number(fees.tuitionFees?.AdmissionFee) || 0;
             const schoolTotal = tuition + academic;
@@ -54,6 +54,12 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
             }));
 
             setSummaryTotal(schoolTotal + mess + hostel + bus);
+            console.log({
+                schoolTotal
+                , mess
+                , hostel
+                , bus
+            })
         }
     }, [
         fees.tuitionFees?.tuitionFee,
@@ -175,14 +181,28 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
                     {/* Current Year Progress */}
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-purple-600">Current Year Progress</h3>
-                        <FeeBar label="School Fees" paid={currentYearPaid.TuitionFee} total={currentYearTotals.TuitionFee} />
-                        <FeeBar label="Bus Fees" paid={currentYearPaid.BusFee} total={currentYearTotals.BusFee} />
-                        {currentYearTotals.MessFee > 0 && (
-                            <FeeBar label="Mess Fees" paid={currentYearPaid.MessFee} total={currentYearTotals.MessFee} />
-                        )}
-                        {currentYearTotals.HostelFee > 0 && (
-                            <FeeBar label="Hostel Fees" paid={currentYearPaid.HostelFee} total={currentYearTotals.HostelFee} />
-                        )}
+                        {
+                            !currentYearTotals.TuitionFee && !currentYearTotals.BusFee && !currentYearTotals.MessFee && !currentYearTotals.HostelFee ?
+                                <div className="h-full flex flex-col items-center gap-4  font-mono text-center text-xl">
+                                    <p>
+                                        No Fees For This Student, he may be DSR & No prefering Bus
+                                    </p>
+                                    <text x="50" y="50" textAnchor="middle" dominantBaseline="middle"
+                                        className='text-3xl mt-4 font-bold text-gray-400'>
+                                        N/A
+                                    </text>
+                                </div> :
+                                <>
+                                    <FeeBar label="School Fees" paid={currentYearPaid.TuitionFee} total={currentYearTotals.TuitionFee} />
+                                    <FeeBar label="Bus Fees" paid={currentYearPaid.BusFee} total={currentYearTotals.BusFee} />
+                                    {currentYearTotals.MessFee > 0 && (
+                                        <FeeBar label="Mess Fees" paid={currentYearPaid.MessFee} total={currentYearTotals.MessFee} />
+                                    )}
+                                    {currentYearTotals.HostelFee > 0 && (
+                                        <FeeBar label="Hostel Fees" paid={currentYearPaid.HostelFee} total={currentYearTotals.HostelFee} />
+                                    )}
+                                </>
+                        }
                     </div>
                 </div>
             </motion.div>

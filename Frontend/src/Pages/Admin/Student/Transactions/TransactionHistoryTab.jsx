@@ -5,7 +5,7 @@ import { db } from '../../../../config/firebase';
 import Swal from 'sweetalert2';
 import { Link } from 'react-router-dom';
 
-export default function TransactionHistory({ student, transactions, setTransactions, handleTransactionStatusUpdate }) {
+export default function TransactionHistory({ student, transactions, setTransactions, handleTransactionStatusUpdate , fetchData}) {
     const deleteTransaction = async (tx, isCompleted) => {
         const result = await Swal.fire({
             title: 'Delete transaction?',
@@ -26,6 +26,7 @@ export default function TransactionHistory({ student, transactions, setTransacti
             // return
             await updateDoc(ref, { transactions: newTrans });
             setTransactions(newTrans)
+            fetchData()
             Swal.fire('Deleted!', 'Transaction removed and fees rolled back.', 'success');
         } catch (e) {
             Swal.fire('Error', e.message, 'error');

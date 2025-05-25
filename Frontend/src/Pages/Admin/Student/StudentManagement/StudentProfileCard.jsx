@@ -77,26 +77,17 @@ export default function StudentProfile({
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4 }}
-      className="
-        w-full md:w-1/3
-        space-y-6
-        md:sticky md:top-6
-        max-h-[calc(100vh-96px)] md:max-h-[calc(100vh-48px)]
-        overflow-y-auto
-        pb-6
-      "
-    >
-      <div className="bg-white rounded-2xl shadow-sm p-6 border border-purple-100">
-        {/* Avatar & Name */}
+      className="md:w-1/3 space-y-6 sticky top-6 h-fit overflow-y-auto"    >
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-purple-50 rounded-full mx-auto mb-4 flex items-center justify-center">
+          <div className="w-20 h-20 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
             <User className="w-10 h-10 text-purple-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 capitalize">
             {student.fname} {student.lname}
           </h2>
           <p className="text-gray-600 mt-1 font-medium">
-            Class {student.class} &ndash; Division {student.div}
+            Class : <span className="uppercase">{student.class}</span> &ndash; Division : <span className="uppercase">{student.div}</span>
           </p>
           <p className="text-sm text-violet-700 font-mono mt-2">
             FeeID: {student.feeId}
@@ -106,7 +97,7 @@ export default function StudentProfile({
         {/* Details List */}
         <div className="space-y-4">
           <DetailItem icon={<CalendarDays />} label="Academic Year" value={student.academicYear} />
-          <DetailItem icon={<User />} label="Student Type" value={student.type} />
+          <DetailItem icon={<User />} label="Student Type" value={student.type?.toUpperCase()} />
 
           <DetailItem icon={<Banknote />} label="Status">
             <div className="flex items-center">

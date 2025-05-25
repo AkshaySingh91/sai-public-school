@@ -4,14 +4,14 @@ import { MdOutlineFileUpload, MdOutlinePictureAsPdf } from "react-icons/md";
 import { FaPlus, FaTimes, FaFileExcel, FaSearch } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { db } from "../../../config/firebase";
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where } from "firebase/firestore";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useSchool } from "../../../contexts/SchoolContext";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import TableLoader from "../../../components/TableLoader";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Swal from "sweetalert2";
 
 
@@ -43,10 +43,15 @@ function BusDestination() {
   const fetchDestinations = async () => {
     setLoading(true);
     try {
-      const ref = collection(db, "allDestinations");
-      const snap = await getDocs(ref);
-      const dests = snap.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
+      const q = query(
+        collection(db, "allDestinations"),
+        where("schoolCode", "==", userData.schoolCode)
+      );
+      const querySnapshot = await getDocs(q);
+      const dests = querySnapshot.docs
+        .map((doc) => {
+          return { id: doc.id, ...doc.data() }
+        })
         .filter((d) => d.schoolCode === userData.schoolCode);
       setDestinations(dests);
       setFilteredDestinations(dests);

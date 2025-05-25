@@ -1,9 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
-import { initFirebase } from './utils/firebase.js';
-import StudentDocUpload from './Routes/studentDocUpload.js';
-import settingsRouter from './Routes/settings.js';
+import { initFirebase } from './utils/firebase.js'; 
+import fileUpload from 'express-fileupload';
 import admin from 'firebase-admin';
 
 config();
@@ -32,10 +31,80 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(fileUpload({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  abortOnLimit: true,
+  responseOnLimit: 'File size exceeds maximum allowed limit'
+}));
+
+// Initialize Firebase then start server 
+initFirebase()
+    .then(() => {
+        // Now import routes that depend on Firebase
+        import('./Routes/studentDocUpload.js').then(StudentDocUpload => {
+            import('./Routes/settings.js').then(settingsRouter => {
+
+                // Setup routes after initialization
+                app.use('/api/admin/student', verifyAccountant, fetchSchool, StudentDocUpload.default);
+                app.use('/api/admin/settings', verifyAccountant, fetchSchool, settingsRouter.default);
+
+                // Start server
+                app.listen(PORT, () => console.log(`🚀 Listening on port ${PORT}`));
+            });
+        });
+    })
+    .catch(err => {
+        console.error('Firebase initialization failed:', err);
+        process.exit(1);
+    });
+
+// Auth middleware
+async function verifyAccountant(req, res, next) {
+    try {
+        const authHeader = req.headers.authorization || '';
+        if (!authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authorization header required in the form “Bearer <token>”' });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = await admin.auth().verifyIdToken(token);
+        const userSnap = await admin.firestore().collection('Users').doc(decoded.uid).get();
+
+        if (!userSnap.exists || userSnap.data().role !== 'accountant') {
+            return res.status(403).json({ error: 'Forbidden: not an accountant' });
+        }
+
+        req.user = { uid: decoded.uid, ...userSnap.data() };
+        next();
+    } catch (err) {
+        console.error('[Auth Error]', err);
+        res.status(401).json({ error: 'Authentication failed', details: err.message });
+    }
+}
+
+// School lookup middleware
+async function fetchSchool(req, res, next) {
+    try {
+        const snap = await admin
+            .firestore()
+            .collection('schools')
+            .where('Code', '==', req.user.schoolCode)
+            .limit(1)
+            .get();
+
+        if (snap.empty) {
+            return res.status(404).json({ error: 'School not found' });
+        }
+        req.school = snap.docs[0].data();
+        next();
+    } catch (err) {
+        next(err);
+    }
+}
 
 // Mount routes
 app.post('/api/superadmin/schools/create-accountant', async (req, res) => {
-    try { 
+    try {
         const { name, email, password, phone, schoolCode } = req.body;
         if (!name || !email || !password || !schoolCode) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -57,19 +126,9 @@ app.post('/api/superadmin/schools/create-accountant', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-app.use('/api/admin/student', StudentDocUpload);
-app.use('/api/admin/settings', settingsRouter);
-
 // Global error handler
 app.use((err, req, res, next) => {
     console.error('[Server Error]', err);
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Initialize Firebase then start server
-initFirebase()
-    .then(() => app.listen(PORT, () => console.log(`🚀 Listening on port ${PORT}`)))
-    .catch(err => {
-        console.error(err);
-        process.exit(1);
-    });

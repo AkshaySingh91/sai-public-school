@@ -82,10 +82,6 @@ export default function SchoolMetricsCards() {
         setLoading(false);
         return;
       }
-
-      const school = schoolSnap.docs[0].data();
-      const currentYear = school.academicYear;
-
       const studSnap = await getDocs(
         query(
           collection(db, "students"),
@@ -107,45 +103,47 @@ export default function SchoolMetricsCards() {
         const all = s.allFee || {};
 
         const isActive = s.status?.toLowerCase() === "new" || s.status.toLowerCase() === "current";
-
         if (isActive) {
+          // cal discounted amnt for each student except left
           metricsData.discountedAmount +=
-            (all.busFeeDiscount || 0) + (all.tutionFeesDiscount || 0);
+            (all.busFeeDiscount || 0) + (all.tuitionFeesDiscount || 0);
+          // for all student also for left one
           metricsData.expectedCollection +=
             (all.tuitionFees?.total || 0) +
             (all.busFee || 0) +
             (all.messFee || 0) +
             (all.hostelFee || 0);
+
           metricsData.lastYearBalance +=
             (all.lastYearBalanceFee || 0) + (all.lastYearBusFee || 0);
 
-          (s.transactions || []).forEach((tx) => {
-            const amt = Number(tx.amount) || 0;
-            const ts = new Date(tx.timestamp);
-
-            // Today's collection (still filtered by today and completed)
-            const today = new Date();
-            const isToday =
-              ts.getFullYear() === today.getFullYear() &&
-              ts.getMonth() === today.getMonth() &&
-              ts.getDate() === today.getDate();
-
-            if (isToday && tx.status === "completed") {
-              metricsData.todaysCollection += amt;
-            }
-            // if transaction is completed & it is of this year
-            if (
-              tx.status === "completed" &&
-              tx.academicYear === s.academicYear
-            ) {
-              metricsData.collectedFees += amt;
-            }
+          // we sum of all transaction (also pending , one) for collected fees for all students
+          (s.transactions || []).forEach((t) => {
+            metricsData.collectedFees += Number(t.amount) || 0;
           });
         }
       });
 
-      metricsData.pendingAmount =
-        metricsData.expectedCollection - metricsData.collectedFees;
+      // we calc only collected fees for today of all type also for cheque pending
+      const fromDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const toDate = new Date();
+      studSnap.forEach(docSnap => {
+        // we calc today collection by adding all the fees of all type of students
+        const student = docSnap.data();
+        // remove student that has added from external system
+        const filteredTxs = (student.transactions || []).filter((t) => {
+          console.log(t.receiptId)
+          return !isNaN(Number(t.receiptId))
+        })
+        filteredTxs.forEach((t) => {
+          const txDate = new Date(t.timestamp);
+          if (txDate >= fromDate && txDate <= toDate) {
+            metricsData.todaysCollection += Number(t.amount) || 0;
+          }
+        });
+
+      });
+      metricsData.pendingAmount = metricsData.expectedCollection - metricsData.collectedFees;
       metricsData.pendingAmount = Math.max(metricsData.pendingAmount, 0);
 
       setMetrics(metricsData);

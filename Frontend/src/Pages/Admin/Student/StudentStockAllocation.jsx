@@ -7,7 +7,6 @@ import { nanoid } from "nanoid";
 import { toast } from "react-toastify";
 import StudentsStockPaymentHistory from "./StudentsStockPaymentHistory"
 import Swal from "sweetalert2"
-import { useNavigate } from 'react-router-dom';
 import NotFound from "../../../components/NotFound"
 import { User } from "lucide-react";
 import { motion } from "framer-motion";
@@ -24,7 +23,6 @@ const StudentStockAllocation = () => {
     const [accounts] = useState(school?.account || ["CASH", "ONLINE"]);
     const [selectedAccount, setSelectedAccount] = useState("CASH");
     const [transactions, setTransactions] = useState([]);
-    const navigate = useNavigate();
     // for tnx history tab
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 5; // Set your preferred page size
@@ -48,7 +46,7 @@ const StudentStockAllocation = () => {
             setLoading(false);
         }
     };
-
+    console.log(school)
     useEffect(() => {
         fetchStudent();
     }, [studentId]);
@@ -102,7 +100,7 @@ const StudentStockAllocation = () => {
     const handlePayment = async () => {
         const selected = selectedItems.filter(item => item.selected);
         if (selected.length === 0) return;
-
+        const stockReceiptCount = (school.stockReceiptCount || 0) + 1;
         const paymentData = {
             account: selectedAccount,
             date: new Date().toISOString(),
@@ -114,7 +112,7 @@ const StudentStockAllocation = () => {
                 total: item.sellingPrice * item.purchaseQuantity
             })),
             total: selected.reduce((sum, item) => sum + (item.sellingPrice * item.purchaseQuantity), 0),
-            receiptId: `STOCK-${nanoid(6).toUpperCase()}`
+            receiptId: stockReceiptCount
         };
 
         try {
@@ -334,58 +332,58 @@ const StudentStockAllocation = () => {
                         {selectedItems.length ? (
                             <div className="overflow-hidden">
                                 <div className="bg-white rounded-xl border border-purple-100 shadow-lg overflow-x-auto">
-                                <table className="w-full ">
-                                    <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
-                                        <tr>
-                                            {["Select", "Item Name", "Unit Price", "Available Qty", "Order Qty"].map((header, idx) => (
-                                                <th
-                                                    key={idx}
-                                                    className="px-4 py-3 text-left text-sm font-semibold first:rounded-tl-xl last:rounded-tr-xl"
+                                    <table className="w-full ">
+                                        <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
+                                            <tr>
+                                                {["Select", "Item Name", "Unit Price", "Available Qty", "Order Qty"].map((header, idx) => (
+                                                    <th
+                                                        key={idx}
+                                                        className="px-4 py-3 text-left text-sm font-semibold first:rounded-tl-xl last:rounded-tr-xl"
+                                                    >
+                                                        {header}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-purple-100">
+                                            {selectedItems.map(item => (
+                                                <motion.tr
+                                                    key={item.id}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    className="hover:bg-purple-50 transition-colors"
                                                 >
-                                                    {header}
-                                                </th>
+                                                    <td className="px-4 py-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={item.selected}
+                                                            onChange={() => handleSelectItem(item.id)}
+                                                            disabled={item.quantity === 0}
+                                                            className="h-5 w-5 text-purple-600 rounded border-purple-300 focus:ring-purple-500"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-3 font-medium text-purple-900">{item.itemName}</td>
+                                                    <td className="px-4 py-3 text-violet-700">
+                                                        <IndianRupee className="inline w-4 h-4 mr-1" />
+                                                        {item.sellingPrice}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-purple-800">{item.quantity}</td>
+                                                    <td className="px-4 py-3">
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max={item.quantity}
+                                                            value={item.purchaseQuantity}
+                                                            onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                                            className="w-20 px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
+                                                            disabled={!item.selected}
+                                                        />
+                                                    </td>
+                                                </motion.tr>
                                             ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-purple-100">
-                                        {selectedItems.map(item => (
-                                            <motion.tr
-                                                key={item.id}
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                className="hover:bg-purple-50 transition-colors"
-                                            >
-                                                <td className="px-4 py-3">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={item.selected}
-                                                        onChange={() => handleSelectItem(item.id)}
-                                                        disabled={item.quantity === 0}
-                                                        className="h-5 w-5 text-purple-600 rounded border-purple-300 focus:ring-purple-500"
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-3 font-medium text-purple-900">{item.itemName}</td>
-                                                <td className="px-4 py-3 text-violet-700">
-                                                    <IndianRupee className="inline w-4 h-4 mr-1" />
-                                                    {item.sellingPrice}
-                                                </td>
-                                                <td className="px-4 py-3 text-purple-800">{item.quantity}</td>
-                                                <td className="px-4 py-3">
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        max={item.quantity}
-                                                        value={item.purchaseQuantity}
-                                                        onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                                        className="w-20 px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500"
-                                                        disabled={!item.selected}
-                                                    />
-                                                </td>
-                                            </motion.tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         ) : (
                             <div className="bg-purple-50 rounded-xl p-6 animate-pulse flex flex-col items-center">

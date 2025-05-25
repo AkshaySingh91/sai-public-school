@@ -1,55 +1,73 @@
 // routes/settings.js
 import express from 'express';
 import admin from 'firebase-admin';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import multer from "multer"
-import path, { dirname } from "path"
-import { fileURLToPath } from "url";
-import fs from 'fs';
+import path from "path"
+import { getStorageBucket } from '../utils/firebase.js';
+const bucket = getStorageBucket();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const storage = multer.diskStorage({
-    destination(req, file, cb) {
-        const assetsDir = path.join(__dirname, "..", "Assets");
-        // ensure directory exists
-        fs.mkdirSync(assetsDir, { recursive: true });
-        cb(null, assetsDir);
-    },
-    filename(req, file, cb) {
-        // e.g. "PuneTaluka.png"
-        const ext = path.extname(file.originalname).toLowerCase();
-        const taluka = req?.school?.location?.taluka ? req.school.location.taluka.replace(/\s+/g, "_") : "schoolLogo" + Math.floor((Math.random() * 1000));
-        cb(null, taluka + "-school-logo" + ext);
-    },
-});
-const upload = multer({
-    storage,
-    limits: {
-        fileSize: 2 * 1024 * 1024, // 2 MB
-    },
-    fileFilter(req, file, cb) {
-        // only images
-        if (!file.mimetype.startsWith("image/")) {
-            return cb(new Error("Only image files are allowed."));
-        }
-        cb(null, true);
-    },
-});
 
 const router = express.Router();
-// Configure R2 client
-const r2Client = new S3Client({
-    region: "auto",
-    endpoint: process.env.R2_ENDPOINT,
-    credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
+// Helper function to delete old files
+const deleteOldFile = async (fileUrl) => {
+    if (!fileUrl) return;
+
+    try {
+        const filePath = decodeURIComponent(fileUrl.split('/o/')[1].split('?')[0]);
+        const file = bucket.file(filePath);
+        await file.delete();
+    } catch (error) {
+        console.error('Error deleting old file:', error);
+    }
+};
+router.post('/upload-profile', async (req, res) => {
+    try {
+        if (!req.files?.profileImage) {
+            return res.status(400).json({ error: 'No image uploaded' });
+        }
+
+        const user = req.user;
+        const file = req.files.profileImage;
+
+        // Delete old image first
+        const userDoc = await admin.firestore().collection('Users').doc(user.uid).get();
+        await deleteOldFile(userDoc.data()?.profileUrl);
+
+        // Upload new image
+        const fileName = `profile/${user.uid}-${Date.now()}${path.extname(file.name)}`;
+        const fileRef = bucket.file(fileName);
+
+        await new Promise((resolve, reject) => {
+            const stream = fileRef.createWriteStream({
+                metadata: {
+                    contentType: file.mimetype,
+                    metadata: {
+                        uploadedBy: user.uid,
+                        type: 'profile'
+                    }
+                }
+            });
+
+            stream.on('error', reject);
+            stream.on('finish', resolve);
+            stream.end(file.data);
+        });
+
+        // Get public URL
+        const [url] = await fileRef.getSignedUrl({
+            action: 'read',
+            expires: '03-09-2491'
+        });
+
+        // Update Firestore
+        await admin.firestore().collection('Users').doc(user.uid).update({
+            profileUrl: url
+        });
+
+        res.json({ imageUrl: url });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
-
-
 // Get user profile
 router.get('/profile', async (req, res) => {
     try {
@@ -60,66 +78,23 @@ router.get('/profile', async (req, res) => {
     }
 });
 
-// Update profile
 router.put('/profile', async (req, res) => {
     try {
-        const { name, phone } = req.body;
-        await admin.firestore().collection('Users').doc(req.user.uid).update({
-            name,
-            phone: phone || null
-        });
-        res.json({ message: "Profile updated successfully" });
+        const { name, email, phone, profileUrl } = req.body;
+        const updateData = {
+            name: name || null,
+            email: email || null,
+            phone: phone || null,
+            profileUrl: profileUrl || null,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        await admin.firestore().collection('Users').doc(req.user.uid).update(updateData);
+        res.status(200).json({ message: "Profile updated successfully" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
-
-// Change password
-router.post('/change-password', async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const user = await admin.auth().getUser(req.user.uid);
-
-        // Verify current password
-        // Note: You'll need to implement proper password verification
-        // This might require Firebase Auth custom tokens or re-authentication
-        // This is a simplified example
-
-        await admin.auth().updateUser(req.user.uid, { password: newPassword });
-        res.json({ message: "Password updated successfully" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Upload profile image
-router.post('/upload-profile', async (req, res) => {
-    try {
-        if (!req.files || !req.files.image) {
-            return res.status(400).json({ error: "No image uploaded" });
-        }
-
-        const image = req.files.image;
-        const key = `profile/${req.user.uid}/${Date.now()}_${image.name}`;
-
-        await r2Client.send(new PutObjectCommand({
-            Bucket: process.env.R2_BUCKET,
-            Key: key,
-            Body: image.data,
-            ContentType: image.mimetype
-        }));
-
-        const imageUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
-        await admin.firestore().collection('Users').doc(req.user.uid).update({
-            profileImage: imageUrl
-        });
-
-        res.json({ imageUrl });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Delete profile image
 router.delete('/profile-image', async (req, res) => {
     try {
@@ -144,6 +119,94 @@ router.delete('/profile-image', async (req, res) => {
     }
 });
 
+// School Logo Upload
+router.post('/school/logo', async (req, res) => {
+    try {
+        if (!req.files?.logo) {
+            return res.status(400).json({ error: 'No logo uploaded' });
+        }
+
+        const schoolCode = req.user.schoolCode;
+        const file = req.files.logo;
+
+        // Get school document
+        const schoolQuery = await admin.firestore().collection('schools')
+            .where('Code', '==', schoolCode)
+            .get();
+
+        const schoolDoc = schoolQuery.docs[0];
+
+        // Delete old logo
+        await deleteOldFile(schoolDoc.data()?.logoUrl);
+
+        // Upload new logo
+        const fileName = `schools/${schoolCode}/logo-${Date.now()}${path.extname(file.name)}`;
+        const fileRef = bucket.file(fileName);
+
+        await new Promise((resolve, reject) => {
+            const stream = fileRef.createWriteStream({
+                metadata: {
+                    contentType: file.mimetype,
+                    metadata: {
+                        schoolCode,
+                        type: 'logo'
+                    }
+                }
+            });
+
+            stream.on('error', reject);
+            stream.on('finish', resolve);
+            stream.end(file.data);
+        });
+
+        // Get public URL
+        const [url] = await fileRef.getSignedUrl({
+            action: 'read',
+            expires: '03-09-2491'
+        });
+
+        // Update Firestore
+        await schoolDoc.ref.update({ logoUrl: url });
+        res.json({ logoUrl: url });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Profile Image
+router.delete('/profile-image', async (req, res) => {
+    try {
+        const userDoc = await admin.firestore().collection('Users').doc(req.user.uid).get();
+        const profileUrl = userDoc.data()?.profileUrl;
+
+        await deleteOldFile(profileUrl);
+
+        await admin.firestore().collection('Users').doc(req.user.uid).update({
+            profileUrl: admin.firestore.FieldValue.delete()
+        });
+
+        res.json({ message: "Profile image deleted" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Change password
+router.post('/change-password', async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = req.user;
+        // Important: Client must re-authenticate before calling this
+        await admin.auth().updateUser(user.uid, {
+            password: newPassword
+        });
+
+        res.json({ message: "Password updated successfully" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // School routes
 router.get('/school', async (req, res) => {
     try {
@@ -152,7 +215,6 @@ router.get('/school', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
 router.put('/school', async (req, res) => {
     try {
         const { schoolName,
@@ -169,6 +231,7 @@ router.put('/school', async (req, res) => {
             busReceiptCount,
             stockReceiptCount,
         } = req.body;
+        console.log(req.body)
         const schoolDoc = await admin.firestore().collection('schools')
             .where('Code', '==', req.user.schoolCode)
             .get();
@@ -188,23 +251,9 @@ router.put('/school', async (req, res) => {
             tuitionReceiptCount,
             busReceiptCount,
             stockReceiptCount,
-        }); 
-        res.json({ message: "School updated successfully" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-router.post('/school/logo', upload.single("logo"), async (req, res) => {
-    try {
-        // At this point multer has already written the file (overwriting existing)
-        // If you need to do anything extra, you can:
-        // – Move it somewhere else
-        // – Update your Firestore record with the new filename/URL
-        return res.json({
-            message: "Logo uploaded successfully.",
-            filename: req.file.filename,
         });
-
+        console.log("object")
+        res.json({ message: "School updated successfully" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

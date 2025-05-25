@@ -436,6 +436,7 @@ export default function ImportExistingStudent() {
     // Generic Student Processor
     const processStudent = async (studentData) => {
         const transactions = [];
+        // check if stu has done any transaction than only process that transaction
         if (studentData["TuitionPaidFee"] > 0) {
             transactions.push(createTransaction(
                 'TuitionFee',
@@ -454,6 +455,11 @@ export default function ImportExistingStudent() {
                 studentData["Ayear"] || "24-25",
             ));
         }
+        // we have studentData["TuitionFee"] & we have to calculate AdmissionFee, but student may be new or current, if new than only AdmissionFee will be there, if current than AdmissionFee will 0
+        // if stu is DSR no addmission fee, 
+        const addmissionFee = studentData["Type"].toLowerCase() === "dsr" ? 0 : (studentData["Status"].toLowerCase() === "new" ? 1000 : 0);
+        const tuitionFee = Number(studentData["TuitionFee"]) - addmissionFee;
+        
         const studentDoc = {
             schoolCode: userData.schoolCode,
             createdAt: new Date(),
@@ -475,15 +481,15 @@ export default function ImportExistingStudent() {
                 lastYearBusFee: 0,
                 lastYearBusFeeDiscount: 0,
                 tuitionFees: {
-                    AdmissionFee: 1000,
+                    AdmissionFee: Number(studentData["TuitionFee"]) ? 1000 : 0,
                     tuitionFee: Number(studentData["TuitionFee"]) >= 1000
                         ? Number(studentData["TuitionFee"]) - 1000
                         : 0,
-                    total: Number(studentData["TuitionFee"])
+                    total: addmissionFee + tuitionFee
                 },
                 tuitionFeesDiscount: Number(studentData["TuitionFeesDiscount"]),
                 busFee: Number(studentData["BusFee"]),
-                busFeeDiscount: Number(studentData["BusFeeDiscount"]),
+                busFeeDiscount: Number(studentData["BusDiscount"]),
                 messFee: 0,
                 hostelFee: 0,
             },

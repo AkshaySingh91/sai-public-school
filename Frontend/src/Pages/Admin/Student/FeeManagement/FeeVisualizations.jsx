@@ -46,8 +46,8 @@ export const PieChart = ({ title, paid, total, color }) => {
 };
 
 export const FeeBar = ({ label, paid, total }) => {
+  console.log({label, paid, total})
   if (total <= 0) return null;
-
   const paidPercent = (paid / total) * 100 || 0;
   const remainingPercent = 100 - paidPercent;
   const isPaidComplete = paid >= total;

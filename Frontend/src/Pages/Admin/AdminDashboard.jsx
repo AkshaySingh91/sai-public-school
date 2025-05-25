@@ -42,16 +42,11 @@ const AdminDashboard = () => {
             const currentYear = school.academicYear;
 
             const newStudentsSnap = await getDocs(
-                query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "new"))
-            );
-
-            const currentStudentsSnap = await getDocs(
-                query(collection(db, "students"), where("schoolCode", "==", code), where("status", "==", "current"))
+                query(collection(db, "students"), where("schoolCode", "==", code))
             );
             // Combine results
             const studentSnap = [
                 ...newStudentsSnap.docs,
-                ...currentStudentsSnap.docs
             ];
             const totalStudents = studentSnap.length;
             //   Employees & teachers
@@ -68,11 +63,19 @@ const AdminDashboard = () => {
 
             //   Sum up “current‐year” earnings by walking each student’s array
             let totalEarnings = 0;
+            const fromDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const toDate = new Date();
+
             studentSnap.forEach(docSnap => {
                 const student = docSnap.data();
-                const txs = Array.isArray(student.transactions) ? student.transactions : [];
-                txs.forEach(t => {
-                    if (t.academicYear === currentYear & t.status == "completed") {
+                // remove student that has added from external system
+                const filteredTxs = (student.transactions || []).filter((t) => {
+                    console.log(t.receiptId)
+                    return !isNaN(Number(t.receiptId))
+                })
+                filteredTxs.forEach((t) => {
+                    const txDate = new Date(t.timestamp);
+                    if (txDate >= fromDate && txDate <= toDate) {
                         totalEarnings += Number(t.amount) || 0;
                     }
                 });
@@ -115,7 +118,7 @@ const AdminDashboard = () => {
 
                     {/* Right Section */}
                     <div className="flex items-center gap-4 z-2 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm">
-                        {/* Profile Image with Fallback */} 
+                        {/* Profile Image with Fallback */}
                         <div className="relative">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold">
                                 {userData.avatar || (

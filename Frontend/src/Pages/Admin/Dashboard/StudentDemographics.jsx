@@ -19,8 +19,8 @@ export default function StudentDemographics() {
             if (!userData?.schoolCode) return;
 
             try {
-                // Fetch student type counts
-                const types = school.studentsType || [];
+                // Fetch student type counts 
+                const types = school.studentsType && school.studentsType.length ? school.studentsType.map(t => t.toLowerCase()) : [];
                 const typeCounts = await Promise.all(types.map(async (type) => {
                     const q = query(
                         collection(db, 'students'),
@@ -30,6 +30,7 @@ export default function StudentDemographics() {
                     const snap = await getDocs(q);
                     return { type, count: snap.size };
                 }));
+                console.log(typeCounts)
                 setStudentTypes(typeCounts);
 
                 // Fetch class division counts
@@ -83,7 +84,7 @@ export default function StudentDemographics() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto uppercase">
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>

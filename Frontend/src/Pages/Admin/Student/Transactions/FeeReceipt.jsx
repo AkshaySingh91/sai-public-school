@@ -219,16 +219,14 @@ export default function FeeReceipt({ student, school, transaction }) {
 
                 </div>
               ) : <div className="mb-4 text-xl uppercase text-red-400 font-bold">
-                {transaction?.feeType?.toLowerCase() === "busfee" ? `${school.busReceipetHeader || ""}` : `${school.stockReceiptHeader || ""}`}
+                {transaction?.feeType?.toLowerCase() === "busfee" ? `${school.busReceiptHeader || ""}` : `${school.stockReceiptHeader || ""}`}
               </div>
             }
           </div>
 
           <div
             key={idx}
-            className="receipt-copy bg-white border border-gray-300 rounded-sm"
-          >
-            {/* Receipt Header */}
+            className="receipt-copy bg-white border border-gray-300 rounded-sm">
             <div className="heading uppercase text-green-700 w-full text-center text-lg font-bold py-1 border-2 border-gray-300 ">{transaction?.feeType?.toLowerCase() === "StockFee" ? "Stationery Fee Receipt" : "Fee Recipt"}</div>
             <div className="p-2 border-b border-gray-200 grid grid-cols-2 text-xs ">
               <div>

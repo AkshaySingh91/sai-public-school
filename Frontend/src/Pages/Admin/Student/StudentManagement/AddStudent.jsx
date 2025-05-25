@@ -102,12 +102,13 @@ export default function AddStudent() {
       if (!studentType) {
         console.warn(`No fee structure found for student type ${formData.type}`);
         return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
-      } 
+      }
       // very important if student is new than we dont have to assign addmission fee only tuition fee required
       const feeStructure = studentType.feeStructure || {};
       let AdmissionFee = 0;
       let tuitionFee = 0;
       if (formData?.status?.toLowerCase() === "new") {
+        // for dsr no addmission fee & tuition
         AdmissionFee = Number(feeStructure.AdmissionFee) || 0;
         tuitionFee = Number(feeStructure.TuitionFee) || 0;
       } else {

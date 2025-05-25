@@ -27,7 +27,6 @@ const Settings = () => {
       if (!user) {
         throw new Error("User not authenticated");
       }
-
       const userToken = await user.getIdToken();
 
       const [profileRes, schoolRes] = await Promise.all([
@@ -54,6 +53,7 @@ const Settings = () => {
         profileRes.json(),
         schoolRes.json(),
       ]);
+      console.log(profileData)
       setProfile(profileData);
       setSchool(schoolData);
       setError(null);
@@ -67,27 +67,62 @@ const Settings = () => {
   useEffect(() => {
     fetchData();
   }, []);
-  const handleProfileUpdate = async () => {
+  const handleProfileUpdate = async (profileData, imageFile) => {
     try {
-      const userToken = await auth.currentUser.getIdToken();
-      const response = await fetch(
-        "http://localhost:5000/admin/settings/profile",
+      setLoading(true);
+      let imageUrl = profileData.profileUrl;
+
+      // 1. Upload image if new file is selected
+      if (imageFile) {
+        const userToken = await auth.currentUser.getIdToken();
+        const formData = new FormData();
+        formData.append('profileImage', imageFile);
+
+        const uploadResponse = await fetch(
+          VITE_NODE_ENV === "Development"
+            ? `http://localhost:${VITE_PORT}/api/admin/settings/upload-profile`
+            : `${VITE_DOMAIN_PROD}/api/admin/settings/upload-profile`,
+          {
+            method: 'POST',
+            body: formData,
+            headers: {
+              Authorization: `Bearer ${userToken}`,
+            },
+          }
+        );
+
+        if (!uploadResponse.ok) throw new Error('Image upload failed');
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.imageUrl;
+      }
+
+      // 2. Update profile data with new image URL
+      const updateResponse = await fetch(
+        VITE_NODE_ENV === "Development"
+          ? `http://localhost:${VITE_PORT}/api/admin/settings/profile`
+          : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`,
         {
-          method: "PUT",
+          method: 'PUT',
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${userToken}`,
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${await auth.currentUser.getIdToken()}`,
           },
-          body: JSON.stringify(profile),
+          body: JSON.stringify({
+            ...profileData,
+            profileUrl: imageUrl
+          }),
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
+      if (!updateResponse.ok) throw new Error('Profile update failed');
+
+      Swal.fire('Success!', 'Profile updated successfully', 'success');
+      return true;
     } catch (err) {
-      console.log(err);
-      setError("Failed to update profile");
+      Swal.fire('Error!', err.message, 'error');
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,27 +132,28 @@ const Settings = () => {
 
       const userToken = await auth.currentUser.getIdToken();
       const formData = new FormData();
-      console.log("file", file);
-      formData.append("image", file); // Key should match backend field name
-      console.log("formData", formData);
-      console.log("usertoken", userToken);
-      const response = await fetch("http://localhost:5000/admin/settings/upload-profile", {
-        method: "PODT",
-        body: {
-          formData
-        },
-        headers: {
-          Authorization: `Bearer ${userToken}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData.append("profileImage", file); // Key must match server field name
+
+      let response = await fetch(
+        VITE_NODE_ENV === "Development"
+          ? `http://localhost:${VITE_PORT}/api/admin/settings/upload-profile`
+          : `${VITE_DOMAIN_PROD}/api/admin/settings/upload-profile`,
+        {
+          method: "POST",
+          body: formData,  
+          headers: {
+            Authorization: `Bearer ${userToken}`, 
+          },
+        }
       );
+
+      response = await response.json();
       console.log("response", response);
 
       // Update profile with new image URL
       setProfile((prev) => ({
         ...prev,
-        profileImage: response.data.imageUrl,
+        profileImage: response.imageUrl,
       }));
     } catch (err) {
       setError(err.message || "Failed to upload image");
@@ -130,6 +166,7 @@ const Settings = () => {
       setLoading(false);
     }
   };
+
 
 
 

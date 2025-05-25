@@ -11,6 +11,12 @@ export async function initFirebase() {
     const raw = await fs.readFile(serviceAccountPath, 'utf-8');
     const cred = JSON.parse(raw);
 
-    admin.initializeApp({ credential: admin.credential.cert(cred) });
+    admin.initializeApp({
+        credential: admin.credential.cert(cred),
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+    });
     console.log('✅ Firebase Admin initialized');
+}
+export function getStorageBucket() {
+  return admin.storage().bucket();
 }

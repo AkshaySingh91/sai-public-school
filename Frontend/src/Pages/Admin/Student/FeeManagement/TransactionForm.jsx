@@ -5,7 +5,6 @@ import { InputField } from '../InputField'
 import { SelectField } from '../SelectField'
 
 function TransactionForm({ newTransaction, setNewTransaction, schoolData, handleTransactionSubmit, student }) {
-    console.log({newTransaction})
     return (
         <>
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">

@@ -188,36 +188,34 @@ export function StudentDetail() {
   const tabLabels = ["Student Details", "Fee Details", "Transactions", "Documents"]
 
   // first the student data will fetch using id /student/id using student data we will set form, student previous transaction, school details
+  const fetchData = async () => {
+    try {
+      const studentDoc = await getDoc(doc(db, "students", studentId));
+      if (!studentDoc.exists()) throw new Error("Student not found");
+      const studentData = { id: studentDoc.id, ...studentDoc.data() };
+      setStudent(studentData);
+      setFormData(studentData);
+
+      setNewTransaction((prev) => ({
+        ...prev,
+        academicYear: studentData.academicYear,
+        paymentMode: schoolData.paymentModes?.[0] || "",
+        account: schoolData.accounts?.[0]?.AccountNo || "",
+        feeType: schoolData.feeTypes?.[0] || "",
+      }));
+
+      // Fetch transactions
+      if (studentData.transactions) {
+        setTransactions(studentData.transactions);
+      }
+    } catch (error) {
+      Swal.fire("Error", error.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     setLoading(true);
-    // Fetch student data
-    const fetchData = async () => {
-      try {
-        const studentDoc = await getDoc(doc(db, "students", studentId));
-        if (!studentDoc.exists()) throw new Error("Student not found");
-        const studentData = { id: studentDoc.id, ...studentDoc.data() };
-        setStudent(studentData);
-        setFormData(studentData);
-
-        setNewTransaction((prev) => ({
-          ...prev,
-          academicYear: studentData.academicYear,
-          paymentMode: schoolData.paymentModes?.[0] || "",
-          account: schoolData.accounts?.[0]?.AccountNo || "",
-          feeType: schoolData.feeTypes?.[0] || "",
-        }));
-
-        // Fetch transactions
-        if (studentData.transactions) {
-          setTransactions(studentData.transactions);
-        }
-      } catch (error) {
-        Swal.fire("Error", error.message, "error");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [studentId, userData.schoolCode]);
   // Modify handleStudentUpdate to handle academic year changes
@@ -238,6 +236,7 @@ export function StudentDetail() {
     try {
       await updateDoc(doc(db, "students", studentId), { allFee: updatedFees });
       setStudent((prev) => ({ ...prev, allFee: updatedFees }));
+      fetchData()
       Swal.fire("Success!", "Fee structure updated", "success");
     } catch (error) {
       Swal.fire("Error", error.message, "error");
@@ -338,9 +337,9 @@ export function StudentDetail() {
       let previousPayments = 0;
       previousPayments = transactions
         .filter(tx =>
-          tx.feeType === feeType &&
+          tx.feeType?.toLowerCase() === feeType?.toLowerCase() &&
           tx.academicYear === newTransaction.academicYear &&
-          tx.status === 'completed'
+          tx.status?.toLowerCase() === 'completed'
         )
         .reduce((sum, tx) => sum + Number(tx.amount), 0);
 
@@ -368,7 +367,8 @@ export function StudentDetail() {
             break;
         }
       } else if (isPrevAcademicYear) {
-        switch (feeType) {
+        const fee = feeType.toLowerCase();
+        switch (fee) {
           // last year fees input field change thus to know what is initial we have to add previousPayments
           case 'tuitionfee':
             initialFee = previousPayments + (student.allFee.lastYearBalanceFee || 0) + (student.allFee.lastYearDiscount || 0);
@@ -381,8 +381,8 @@ export function StudentDetail() {
             currentBalance = initialFee - applicableDiscount;
             break;
           default:
-            initialFee = previousPayments + (student.allFee.lastYearBalanceFee || 0) + (student.allFee.lastYearDiscount || 0);
-            currentBalance = initialFee;
+            Swal.fire("error", "For Last year , you can make payment of Bus & Tuition fee only.", "error");
+            return;
         }
       } else {
         Swal.fire("Invalid Academic Year", "You can make payment of this or previous year only", "error");
@@ -406,7 +406,7 @@ export function StudentDetail() {
         remainingBefore,
         remainingAfter,
         transactionDate: transactionDate.toISOString(),
-        feeCategory: feeType.replace('Fee', '') // School/Bus/Mess/Hostel
+        feeCategory: feeType.replace('Fee', '') // Tuition/Bus/Mess/Hostel
       };
 
       // 5. Create transaction object
@@ -430,15 +430,16 @@ export function StudentDetail() {
       // 6. Update student's fee balance (only if transaction is completed)
       const updatedFees = { ...student.allFee };
       if (transaction.status === 'completed') {
-        if (isPrevAcademicYear && (feeType === 'SchoolFee' || feeType === 'busFee')) {
-          switch (feeType) {
-            case 'SchoolFee':
+        const f = feeType?.toLocaleLowerCase();
+        if (isPrevAcademicYear && (f === 'tuitionfee' || f === 'busfee')) {
+          switch (f) {
+            case 'tuitionfee':
               updatedFees.lastYearBalanceFee = Math.max(
                 updatedFees.lastYearBalanceFee - paymentAmount,
                 0
               );
               break;
-            case 'busFee':
+            case 'busfee':
               updatedFees.lastYearBusFee = Math.max(
                 updatedFees.lastYearBusFee - paymentAmount,
                 0
@@ -451,7 +452,7 @@ export function StudentDetail() {
               );
           }
         } else if (isPrevAcademicYear) {
-          Swal.fire("Invalid Feetype", `For previous year fee type should be either "SchoolFee" or "busFee"`, "error");
+          Swal.fire("Invalid Feetype", `For previous year fee type should be either "tuitionfee" or "busFee"`, "error");
           return;
         }
       }
@@ -536,14 +537,15 @@ export function StudentDetail() {
         const { amount, feeType, academicYear } = transaction;
         // for last year transaction we have to reduce the amount from allFee , but for this year we just need to update status
         if (academicYear !== student.academicYear) {
-          switch (feeType) {
-            case "SchoolFee":
+          const f = feeType.toLowerCase();
+          switch (f) {
+            case "tuitionfee":
               updatedFees.lastYearBalanceFee = Math.max(
                 (updatedFees.lastYearBalanceFee || 0) - amount,
                 0
               );
               break;
-            case "busFee":
+            case "busfee":
               updatedFees.lastYearBusFee = Math.max(
                 (updatedFees.lastYearBusFee || 0) - amount,
                 0
@@ -571,8 +573,8 @@ export function StudentDetail() {
 
       setStudent((prev) => ({ ...prev, allFee: updatedFees }));
       setTransactions(updatedTransactions);
+      fetchData()
       Swal.fire("Success!", "Transaction status updated", "success");
-
       // re popullate school data 
       refresh()
     } catch (error) {
@@ -695,6 +697,7 @@ export function StudentDetail() {
         // 9) Update local state & notify
         setStudent(updatedStudent);
         setFormData((f) => ({ ...f, ...updatedStudent }));
+        fetchData()
         Swal.fire("Success!", "Moved to next academic year.", "success");
       } catch (error) {
         Swal.fire("Error", error.message, "error");
@@ -831,6 +834,7 @@ export function StudentDetail() {
                       transactions={transactions}
                       setTransactions={setTransactions}
                       handleTransactionStatusUpdate={handleTransactionStatusUpdate}
+                      fetchData={fetchData}
                     />
                   </motion.div>
                 )}

@@ -21,7 +21,7 @@ const SchoolSettings = ({ school, setSchool }) => {
 
     const [feeIdCount, setFeeIdCount] = useState(school.feeIdCount || 0)
     const [schoolReceiptHeader, setSchoolReceiptHeader] = useState(school.schoolReceiptHeader || "")
-    const [transportReceiptHeader, setTransportReceiptHeader] = useState(school.transportReceiptHeader || "")
+    const [busReceiptHeader, setbusReceiptHeader] = useState(school.busReceiptHeader || "")
     const [stockReceiptHeader, setStockReceiptHeader] = useState(school.stockReceiptHeader || "")
     const [tuitionReceiptCount, settuitionReceiptCount] = useState(school.tuitionReceiptCount || 0)
     const [busReceiptCount, setBusReceiptCount] = useState(school.busReceiptCount || 0)
@@ -141,7 +141,7 @@ const SchoolSettings = ({ school, setSchool }) => {
             schoolLocation,
             feeIdCount,
             schoolReceiptHeader,
-            transportReceiptHeader,
+            busReceiptHeader,
             stockReceiptHeader,
             tuitionReceiptCount,
             busReceiptCount,
@@ -464,10 +464,10 @@ const SchoolSettings = ({ school, setSchool }) => {
                         </label>
                         <input
                             type="text"
-                            value={transportReceiptHeader}
+                            value={busReceiptHeader}
                             onChange={(e) => {
                                 if (e.target.value.trim() !== "") {
-                                    setTransportReceiptHeader(e.target.value)
+                                    setbusReceiptHeader(e.target.value)
                                 }
                             }}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"

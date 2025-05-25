@@ -21,8 +21,10 @@ function StockFeeReceiptPage() {
             if (!studentDoc.exists()) return;
 
             const studentData = { id: studentDoc.id, ...studentDoc.data() };
+            console.log(studentData.StockPaymentDetail, receiptId)
+            // dont type check this line
             const tx = (studentData.StockPaymentDetail || [])
-                .find(t => t.receiptId === receiptId);
+                .find(t => t.receiptId == receiptId);
 
             if (!tx) {
                 Swal.fire('Error', 'Transaction not found', 'error');

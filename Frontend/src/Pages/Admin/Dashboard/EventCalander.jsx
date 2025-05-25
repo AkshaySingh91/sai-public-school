@@ -20,13 +20,15 @@ const EventCalendar = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [showExcelModal, setShowExcelModal] = useState(false);
+
     const currentEvents = events.filter(e =>
         isSameDay(parseISO(e.date), selectedDate) &&
         e.academicYear === school?.academicYear
     );
 
     const nextEvent = events
-    
+
         .filter(e => isAfter(parseISO(e.date), selectedDate))
         .sort((a, b) => parseISO(a.date) - parseISO(b.date))[0];
 
@@ -300,63 +302,151 @@ const EventCalendar = () => {
                 )}
             </div>
 
-            {/* Add Event Form */}
+
+
             <div className="mt-4 border-t pt-4">
                 <div className="flex gap-2">
                     <button
                         onClick={() => setShowAddForm(!showAddForm)}
-                        className="flex items-center gap-1 text-sm text-purple-600 hover:bg-purple-50 px-3 py-1 rounded"
+                        className="flex items-center gap-1 text-sm text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg transition-colors"
                     >
                         <Plus size={16} /> Add Event
                     </button>
-                    <label className="flex items-center gap-1 text-sm text-gray-600 hover:bg-gray-50 px-3 py-1 rounded cursor-pointer relative">
-                        <Upload size={16} />
-                        <input
-                            key={fileKey}
-                            type="file"
-                            className="hidden"
-                            accept=".xls,.xlsx"
-                            onChange={(e) => {
-                                handleFileUpload(e);
-                                e.target.value = null; // Reset input after selection
-                            }}
-                        />
-                        {uploading ? 'Uploading...' : 'Upload'}
-                        {uploading && (
-                            <span className="ml-2 inline-block h-3 w-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></span>
-                        )}
-                    </label>
-                </div>
 
-                <AnimatePresence>
-                    {showAddForm && (
-                        <motion.form
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            onSubmit={handleAddEvent}
-                            className="mt-3 flex gap-2"
-                        >
-                            <input
-                                type="date"
-                                className="flex-1 text-sm px-2 py-1 border rounded"
-                                value={newEvent.date}
-                                onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Event name"
-                                className="flex-1 text-sm px-2 py-1 border rounded"
-                                value={newEvent.title}
-                                onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
-                            />
-                            <button
-                                type="submit"
-                                className="px-2 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                    <button
+                        onClick={() => setShowExcelModal(true)}
+                        className="flex items-center gap-1 text-sm text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                        <Upload size={16} />
+                        Bulk Upload
+                    </button>
+                </div> 
+                {/* Add Event Form */}
+                <div className="mt-4 border-t pt-4">
+                    <AnimatePresence>
+                        {showAddForm && (
+                            <motion.form
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                onSubmit={handleAddEvent}
+                                className="mt-3 flex gap-2"
                             >
-                                Save
-                            </button>
-                        </motion.form>
+                                <input
+                                    type="date"
+                                    className="flex-1 text-sm px-2 py-1 border rounded"
+                                    value={newEvent.date}
+                                    onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Event name"
+                                    className="flex-1 text-sm px-2 py-1 border rounded"
+                                    value={newEvent.title}
+                                    onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
+                                />
+                                <button
+                                    type="submit"
+                                    className="px-2 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                                >
+                                    Save
+                                </button>
+                            </motion.form>
+                        )}
+                    </AnimatePresence>
+                </div>
+                {/* Excel Template Modal */}
+                <AnimatePresence>
+                    {showExcelModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+                            onClick={() => setShowExcelModal(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.95, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.95, y: -20 }}
+                                className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-xl border border-purple-100"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex justify-between items-center pb-4 mb-4 border-b border-purple-100">
+                                    <h2 className="text-xl font-bold text-purple-700">
+                                        Event Upload Template
+                                    </h2>
+                                    <button
+                                        onClick={() => setShowExcelModal(false)}
+                                        className="text-gray-500 hover:text-purple-600 transition-colors"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="text-sm text-gray-600 bg-purple-50 p-3 rounded-lg">
+                                        <span className="font-medium text-purple-600">Note:</span>
+                                        {' '}File must contain these columns (date format: DD-MM-YYYY)
+                                    </div>
+
+                                    <div className="overflow-x-auto rounded-lg border border-purple-100">
+                                        <table className="min-w-full text-sm">
+                                            <thead className="bg-purple-50">
+                                                <tr>
+                                                    {['Date*', 'Event*'].map((header) => (
+                                                        <th
+                                                            key={header}
+                                                            className="px-4 py-3 text-left font-medium text-purple-700 border-r border-purple-100 last:border-r-0"
+                                                        >
+                                                            {header}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-purple-100">
+                                                <tr>
+                                                    <td className="px-4 py-3 font-mono text-purple-600">2024-03-15</td>
+                                                    <td className="px-4 py-3 text-gray-700">Sports Day</td>
+                                                </tr>
+                                                <tr className="bg-purple-50/50">
+                                                    <td className="px-4 py-3 font-mono text-purple-600">2024-03-20</td>
+                                                    <td className="px-4 py-3 text-gray-700">Parent-Teacher Meeting</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <motion.label
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="block w-full px-4 py-3 bg-purple-600 text-white rounded-lg text-center cursor-pointer hover:bg-purple-700 transition-colors relative"
+                                    >
+                                        {uploading ? (
+                                            <>
+                                                <span className="inline-flex items-center gap-2">
+                                                    <span className="animate-spin">🌀</span>
+                                                    Uploading...
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                Choose Excel File
+                                                <input
+                                                    type="file"
+                                                    accept=".xls,.xlsx"
+                                                    onChange={(e) => {
+                                                        handleFileUpload(e);
+                                                        setShowExcelModal(false);
+                                                    }}
+                                                    className="hidden"
+                                                />
+                                            </>
+                                        )}
+                                    </motion.label>
+                                </div>
+                            </motion.div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
             </div>
