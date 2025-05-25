@@ -411,7 +411,7 @@ export function StudentDetail() {
 
       // 5. Create transaction object
       // if mode !== cheque , than receiptId will be total reciept in this year + 1 
-      const receiptId = (schoolData.receiptCount || 0) + 1;
+      const receiptId = (schoolData.tuitionReceiptCount || 0) + 1;
       // return
       const transaction = {
         ...newTransaction,
@@ -492,7 +492,7 @@ export function StudentDetail() {
         if (querySnapshot.empty) throw new Error("School not found");
         const schoolDoc = querySnapshot.docs[0];
         await updateDoc(doc(db, 'schools', schoolDoc.id), {
-          receiptCount: receiptId
+          tuitionReceiptCount: receiptId
         });
       }
 
@@ -521,7 +521,7 @@ export function StudentDetail() {
     try {
       const transaction = transactions.find((t) => t.tempReceiptId === tempReceiptId);
       if (!transaction) throw new Error("Transaction not found");
-      let receiptId = (Number.parseInt(schoolData.receiptCount || 0)) + 1;
+      let receiptId = (Number.parseInt(schoolData.tuitionReceiptCount || 0)) + 1;
       const updatedTransactions = transactions.map((t) =>
         t.tempReceiptId === tempReceiptId ? {
           // update status
@@ -567,7 +567,7 @@ export function StudentDetail() {
         if (querySnapshot.empty) throw new Error("School not found");
         const schoolDoc = querySnapshot.docs[0];
         await updateDoc(doc(db, 'schools', schoolDoc.id), {
-          receiptCount: receiptId
+          tuitionReceiptCount: receiptId
         });
       }
 

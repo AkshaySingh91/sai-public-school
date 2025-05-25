@@ -245,7 +245,7 @@ export default function ImportExistingStudent() {
             //     const querySnapshot = await getDocs(q);
             //     if (!querySnapshot.empty) {
             //         await updateDoc(doc(db, 'schools', querySnapshot.docs[0].id), {
-            //             receiptCount: school.receiptCount + transactions.length
+            //             tuitionReceiptCount: school.tuitionReceiptCount + transactions.length
             //         });
             //     }
             // }
