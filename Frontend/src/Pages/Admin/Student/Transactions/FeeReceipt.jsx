@@ -111,15 +111,17 @@ export default function FeeReceipt({ student, school, transaction }) {
   } = student;
   // Determine fee context
   const isPrevYear = txYear !== currAcademicYear;
-  const feeCategory = feeType.includes("Tuition")
-    ? "Tuition"
-    : feeType.includes("Bus")
-      ? "Bus"
-      : feeType.includes("Mess")
-        ? "Mess"
-        : feeType.includes("Hostel")
-          ? "Hostel"
-          : "Other";
+  const feeCategory =
+    feeType?.toLowerCase().includes("admission")
+      ? "Admission" :
+      feeType?.toLowerCase().includes("tuition")
+        ? "Tuition"
+        : feeType?.toLowerCase().includes("bus")
+          ? "Bus"
+          : feeType?.toLowerCase().includes("mess")
+            ? "Mess"
+            : feeType?.toLowerCase().includes("hostel")
+              ? "Hostel" : "Other";
 
   // Extract from historical snapshot
   const {
@@ -132,15 +134,21 @@ export default function FeeReceipt({ student, school, transaction }) {
 
   // Build receipt rows based on fee type
   const rows = [];
-  const showDiscount = ["School", "Bus"].includes(feeCategory);
+  const showDiscount = ["bus", "tuition"].includes(feeCategory.toLowerCase());
 
   // Fee Breakdown
+  let totalFeeWithDiscount = initialFee;
+  if (applicableDiscount) {
+    totalFeeWithDiscount = initialFee + applicableDiscount;
+  }
   rows.push({
     label: `${isPrevYear ? "Last Year " : ""}${humanize(feeCategory)} Fee`,
-    amt: initialFee,
+    amt: feeType?.toLowerCase().includes("admission")
+      ? student?.allFee?.tuitionFees?.AdmissionFee : totalFeeWithDiscount,
+    // amt: initialFee,
   });
 
-  if (showDiscount) {
+  if (applicableDiscount) {
     rows.push({
       label: `${isPrevYear ? "Last Year " : ""}${humanize(
         feeCategory
@@ -150,7 +158,7 @@ export default function FeeReceipt({ student, school, transaction }) {
 
     rows.push({
       label: "Net Fee After Discount",
-      amt: initialFee - applicableDiscount,
+      amt: totalFeeWithDiscount - applicableDiscount,
       highlight: true,
     });
   }
@@ -165,6 +173,8 @@ export default function FeeReceipt({ student, school, transaction }) {
   // Current Payment
   rows.push({
     label: "This Payment",
+    // label: feeType?.toLowerCase().includes("admission")
+    //   ? "Admission Fee" : "This Payment",
     amt: txAmount,
     mode: paymentMode,
     account,
@@ -175,14 +185,15 @@ export default function FeeReceipt({ student, school, transaction }) {
   // Outstanding
   rows.push({
     label: "Outstanding fee",
-    amt: remainingAfter,
+    amt: feeType?.toLowerCase().includes("admission")
+      ? (student?.allFee?.tuitionFees?.AdmissionFee || 0) - txAmount : remainingAfter,
+    // amt: remainingAfter,
     total: true,
   });
 
   // Formatting function
   const format = (amt) => `₹${Math.abs(amt).toFixed(2)}`;
   const amountInWords = convertToWords(Math.round(txAmount)) + " Only";
-  console.log(transaction, student)
   return (
     <div className="space-y-24 overflow-hidden">
       {["School Copy", "Parent Copy"].map((copy, idx) => (
@@ -192,7 +203,7 @@ export default function FeeReceipt({ student, school, transaction }) {
           </div>
           <div className="text-center  mt-4">
             {
-              transaction?.feeType?.toLowerCase() === "tuitionfee" ? (
+              transaction?.feeType?.toLowerCase() !== "busfee" ? (
                 <div className="flex  sm:flex-row sm:gap-10 gap-4 justify-evenly items-center sm:items-start">
                   <img
                     src={feelog}
@@ -219,7 +230,7 @@ export default function FeeReceipt({ student, school, transaction }) {
 
                 </div>
               ) : <div className="mb-4 text-xl uppercase text-red-400 font-bold">
-                {transaction?.feeType?.toLowerCase() === "busfee" ? `${school.busReceiptHeader || ""}` : `${school.stockReceiptHeader || ""}`}
+                {transaction?.feeType?.toLowerCase() === "busfee" ? `${school.busReceiptHeader || ""}` : `${school.tuitionReiciptHeader || ""}`}
               </div>
             }
           </div>

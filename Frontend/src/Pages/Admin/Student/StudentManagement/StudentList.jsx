@@ -81,16 +81,39 @@ const StudentList = () => {
 
   // filters
   useEffect(() => {
+    const searchTerm = String(filters.search || '').toLowerCase();
+    const classFilter = String(filters.class || 'all').toLowerCase();
+    const divFilter = String(filters.div || 'all').toLowerCase();
+
     const result = students.filter(s => {
-      const name = `${s.fname} ${s.fatherName} ${s.lname}`.toLowerCase();
+      // build a safe fullName
+      const fullName = [
+        s.fname,
+        s.fatherName,
+        s.lname
+      ]
+        .filter(Boolean)                  // drop undefined/null
+        .map(v => String(v))              // coerce everything to string
+        .join(' ')
+        .toLowerCase();
 
-      const matchSearch = name.includes(filters.search.toLowerCase()) ||
-        s.feeId?.toLowerCase().includes(filters.search.toLowerCase());
+      const feeId = String(s.feeId || '').toLowerCase();
 
-      const matchClass = filters.class === 'all' || s.class?.toLowerCase() === filters.class?.toLowerCase();
-      const matchDiv = filters.div === 'all' || s.div?.toLowerCase() === filters.div?.toLowerCase();
+      const matchSearch =
+        fullName.includes(searchTerm) ||
+        feeId.includes(searchTerm);
+
+      const matchClass =
+        classFilter === 'all' ||
+        String(s.class || '').toLowerCase() === classFilter;
+
+      const matchDiv =
+        divFilter === 'all' ||
+        String(s.div || '').toLowerCase() === divFilter;
+
       return matchSearch && matchClass && matchDiv;
     });
+
     setFilteredStudents(result);
     setCurrentPage(1);
   }, [filters, students]);
@@ -264,7 +287,7 @@ const StudentList = () => {
               .filter((t) => {
                 return (
                   t.academicYear === student.academicYear &&
-                  t?.feeType?.toLowerCase() === key.toLowerCase() &&
+                  t?.feeType?.toLowerCase() === key?.toLowerCase() &&
                   t.status === "completed"
                 );
               })

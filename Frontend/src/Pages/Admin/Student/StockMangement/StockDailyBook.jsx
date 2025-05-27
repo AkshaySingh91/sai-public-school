@@ -1,8 +1,8 @@
 // src/Pages/Admin/Students/DailyBook.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { useAuth } from "../../../contexts/AuthContext";
-import { db } from "../../../config/firebase";
+import { useAuth } from "../../../../contexts/AuthContext";
+import { db } from "../../../../config/firebase";
 import { Link } from "react-router-dom";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -61,7 +61,7 @@ export default function StockDailyBook() {
         const studentData = studentDoc.data();
         const studentInfo = {
           id: studentDoc.id,
-          name: `${studentData.fname} ${studentData.lname}`,
+          name: `${studentData.fname} ${studentData.lname || ""} ${studentData.lname}`,
           class: studentData.class,
           gender: studentData.gender,
         };
@@ -103,6 +103,7 @@ export default function StockDailyBook() {
       });
 
       allTx.sort((a, b) => new Date(b.date) - new Date(a.date));
+      console.log(allTx)
       setStockTransactions(allTx);
       setLoading(false);
     };
@@ -306,7 +307,7 @@ export default function StockDailyBook() {
                         </td>
                         <td className="px-4 py-3 text-gray-600">{t.class}</td>
                         <td className="px-4 py-3 text-gray-600">{t.gender}</td>
-                        <td className="px-4 py-3 text-violet-700 break-words">
+                        <td className="px-4 py-3 text-violet-900 font-medium max-w-[150px] truncate">
                           {t.items}
                         </td>
                         <td className="px-4 py-3 text-center text-purple-800 font-medium">

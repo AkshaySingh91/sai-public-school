@@ -117,9 +117,11 @@ export default function SchoolMetricsCards() {
           metricsData.lastYearBalance +=
             (all.lastYearBalanceFee || 0) + (all.lastYearBusFee || 0);
 
-          // we sum of all transaction (also pending , one) for collected fees for all students
+          // we sum of all those that are collected from external system only "completed" one
           (s.transactions || []).forEach((t) => {
-            metricsData.collectedFees += Number(t.amount) || 0;
+            console.log(t.status)
+            if (t?.status?.toLowerCase() === "completed")
+              metricsData.collectedFees += Number(t.amount) || 0;
           });
         }
       });
@@ -127,21 +129,22 @@ export default function SchoolMetricsCards() {
       // we calc only collected fees for today of all type also for cheque pending
       const fromDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const toDate = new Date();
-      studSnap.forEach(docSnap => {
-        // we calc today collection by adding all the fees of all type of students
+      studSnap.forEach((docSnap) => {
         const student = docSnap.data();
-        // remove student that has added from external system
+
         const filteredTxs = (student.transactions || []).filter((t) => {
-          console.log(t.receiptId)
-          return !isNaN(Number(t.receiptId))
-        })
-        filteredTxs.forEach((t) => {
           const txDate = new Date(t.timestamp);
-          if (txDate >= fromDate && txDate <= toDate) {
-            metricsData.todaysCollection += Number(t.amount) || 0;
-          }
+          if (isNaN(txDate.getTime())) return false; // Skip invalid dates
+          // Check if transaction is within the date range
+          const isWithinDateRange = txDate >= fromDate && txDate <= toDate;
+          // not imported from external system , but status can be pending
+          const hasValidReceipt = !isNaN(Number(t.receiptId)) || t.status !== "completed";
+
+          return isWithinDateRange && hasValidReceipt;
         });
 
+        // Sum amounts of filtered transactions
+        metricsData.todaysCollection += filteredTxs.reduce((sum, tx) => sum + (tx.amount || 0), 0);
       });
       metricsData.pendingAmount = metricsData.expectedCollection - metricsData.collectedFees;
       metricsData.pendingAmount = Math.max(metricsData.pendingAmount, 0);

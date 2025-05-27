@@ -68,10 +68,9 @@ const AdminDashboard = () => {
 
             studentSnap.forEach(docSnap => {
                 const student = docSnap.data();
-                // remove student that has added from external system
+                // remove student that has added from external system, show pending transaction also 
                 const filteredTxs = (student.transactions || []).filter((t) => {
-                    console.log(t.receiptId)
-                    return !isNaN(Number(t.receiptId))
+                    return !isNaN(Number(t.receiptId)) || (isNaN(Number(t.receiptId)) && t.status !== "completed");
                 })
                 filteredTxs.forEach((t) => {
                     const txDate = new Date(t.timestamp);

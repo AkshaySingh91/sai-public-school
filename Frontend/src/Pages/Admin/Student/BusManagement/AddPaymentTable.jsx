@@ -9,8 +9,8 @@ import {
   where,
   getDocs,
 } from "firebase/firestore";
-import { db } from "../../../config/firebase";
-import { useSchool } from "../../../contexts/SchoolContext";
+import { db } from "../../../../config/firebase";
+import { useSchool } from "../../../../contexts/SchoolContext";
 
 import { v4 as uuidv4 } from "uuid";
 const AddPaymentTable = ({

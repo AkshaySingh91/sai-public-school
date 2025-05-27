@@ -1,24 +1,7 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2"
 import {
-  User,
-  VenusAndMars,
-  Mail,
-  Phone,
-  GraduationCapIcon,
-  Hash,
-  CalendarDays,
-  Ticket,
-  HomeIcon,
-  CreditCardIcon,
-  Utensils,
-  Bus,
-  HeartPulseIcon,
-  MapPin,
-  IndianRupee,
-  BadgePercent,
-  CheckCircle,
-  FileTextIcon
+  User, VenusAndMars, Mail, Phone, GraduationCapIcon, Hash, CalendarDays, Ticket, HomeIcon, CreditCardIcon, Utensils, Bus, HeartPulseIcon, MapPin, IndianRupee, BadgePercent, CheckCircle, FileTextIcon
 } from "lucide-react";
 import { InputField } from "../InputField";
 import { SelectField } from "../SelectField";
@@ -47,7 +30,6 @@ export default function PersonalInfo({
   );
   const [busDiscountRemark, setBusDiscountRemark] = useState(formData.busDiscountRemark || "")
   // Fetch destinations
-  console.log(formData)
   useEffect(() => {
     const fetchDestinations = async () => {
       try {
@@ -362,7 +344,7 @@ export default function PersonalInfo({
             />
             <InputField
               icon={<Hash />}
-              label="Personal Education No"
+              label="PEN No."
               value={formData.penNo}
               onChange={(e) => setFormData({ ...formData, penNo: e.target.value })}
             />

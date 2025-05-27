@@ -19,8 +19,6 @@ function formatDateTime(isoString) {
     time: time.toLowerCase(),
   };
 }
-const result = formatDateTime("2025-05-25T06:05:00.845Z");
-console.log(result); // { date: "25-05-2025", time: "06:05:00 am" }
 
 function convertToWords(n) {
   if (n === 0)
@@ -85,7 +83,6 @@ function StockFeeReceipt({ student, school, transaction }) {
   const { fname, lname, class: cls, div, academicYear, feeId } = student;
   const items = transaction.items || [];
   const totalAmount = items.reduce((sum, item) => sum + (item.total || 0), 0);
-  console.log(transaction)
   return (
     <div className="px-8 py-2 bg-white text-sm leading-relaxed text-black print:p-0">
       {['School Copy', 'Parent Copy'].map((copy, idx) => (

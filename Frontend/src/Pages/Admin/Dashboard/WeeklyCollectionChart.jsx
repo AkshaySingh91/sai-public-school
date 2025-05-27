@@ -67,7 +67,10 @@ export default function WeeklyCollectionChart() {
         studSnap.docs.forEach(d => {
             (d.data().transactions || []).forEach(tx => {
                 // it means we exclude transaction of studnet imported from other system
-                if (!isNaN(Number(tx.receiptId))) {
+                // (isNaN(Number(tx.receiptId)) && tx.status !== "completed" means include pending transaction
+                // !isNaN(Number(tx.receiptId)) means only include completed transaction
+
+                if (!isNaN(Number(tx.receiptId)) || (isNaN(Number(tx.receiptId)) && tx.status !== "completed")) {
                     const date = tx.timestamp?.slice(0, 10);
                     if (date in sums) sums[date] += Number(tx.amount) || 0;
                 }

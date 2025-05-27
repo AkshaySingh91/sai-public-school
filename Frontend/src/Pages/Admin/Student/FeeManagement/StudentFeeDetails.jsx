@@ -16,6 +16,7 @@ import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { PieChart, FeeBar } from "./FeeVisualizations";
 import { useAuth } from "../../../../contexts/AuthContext";
+import { useSchool } from "../../../../contexts/SchoolContext"
 
 const StudentFeeDetails = ({
   loading,
@@ -40,28 +41,28 @@ const StudentFeeDetails = ({
 }) => {
   const { userData } = useAuth();
   const [selectedStudentId, setSelectedStudentId] = useState(null);
-  const [school, setSchool] = useState([]);
-
-  useEffect(() => {
-    const fetchSchoolClasses = async () => {
-      if (userData?.schoolCode) {
-        const schoolQuery = query(
-          collection(db, "schools"),
-          where("Code", "==", userData.schoolCode)
-        );
-        const schoolSnapshot = await getDocs(schoolQuery);
-        if (schoolSnapshot.empty) {
-          throw new Error("School not found");
-        }
-        const schoolData = schoolSnapshot.docs[0].data();
-        setSchool({
-          id: schoolSnapshot.docs[0].id,
-          ...schoolData,
-        });
-      }
-    };
-    fetchSchoolClasses();
-  }, [userData?.schoolCode]);
+  const { school } = useSchool();
+  const division = school.divisions && school.divisions.length ? school.divisions : ["A", "B", "C", "D", "SEMI"]
+  // useEffect(() => {
+  //   const fetchSchoolClasses = async () => {
+  //     if (userData?.schoolCode) {
+  //       const schoolQuery = query(
+  //         collection(db, "schools"),
+  //         where("Code", "==", userData.schoolCode)
+  //       );
+  //       const schoolSnapshot = await getDocs(schoolQuery);
+  //       if (schoolSnapshot.empty) {
+  //         throw new Error("School not found");
+  //       }
+  //       const schoolData = schoolSnapshot.docs[0].data();
+  //       setSchool({
+  //         id: schoolSnapshot.docs[0].id,
+  //         ...schoolData,
+  //       });
+  //     }
+  //   };
+  //   fetchSchoolClasses();
+  // }, [userData?.schoolCode]);
 
   const handleClassChange = (e) => {
     const options = e.target.options;
@@ -80,6 +81,8 @@ const StudentFeeDetails = ({
   };
 
   const handleRowClick = (studentId) => {
+    console.log(currentItems.find(s => s.id === studentId))
+
     setSelectedStudentId((prev) => (prev === studentId ? null : studentId));
   };
   const exportExcel = useCallback(() => {
@@ -253,7 +256,7 @@ const StudentFeeDetails = ({
               className="px-4 py-2 text-sm w-full border rounded-lg bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             >
               <option value="All">All Divisions</option>
-              {["A", "B", "C", "D", "E"].map((div) => (
+              {division.map((div) => (
                 <option key={div} value={div}>
                   {div}
                 </option>
@@ -298,11 +301,10 @@ const StudentFeeDetails = ({
               setStudentActiveTab(tab);
               setCurrentPage(1);
             }}
-            className={`px-4 py-2.5 text-sm font-medium relative flex items-center gap-1.5 ${
-              studentActiveTab === tab
-                ? "text-purple-600 border-b-2 border-purple-600"
-                : "text-gray-500 hover:text-purple-500"
-            }`}
+            className={`px-4 py-2.5 text-sm font-medium relative flex items-center gap-1.5 ${studentActiveTab === tab
+              ? "text-purple-600 border-b-2 border-purple-600"
+              : "text-gray-500 hover:text-purple-500"
+              }`}
           >
             {tab === "active" ? (
               <UserCheck className="w-4 h-4" />
@@ -336,9 +338,8 @@ const StudentFeeDetails = ({
               ].map((header, idx) => (
                 <th
                   key={header}
-                  className={`px-3 py-2.5 text-left font-medium text-gray-700 ${
-                    idx === 0 ? "pl-4" : ""
-                  } ${idx === 8 ? "pr-4" : ""}`}
+                  className={`px-3 py-2.5 text-left font-medium text-gray-700 ${idx === 0 ? "pl-4" : ""
+                    } ${idx === 8 ? "pr-4" : ""}`}
                 >
                   {header}
                 </th>
@@ -359,20 +360,20 @@ const StudentFeeDetails = ({
                         {student.fname[0]}
                         {student.lname[0]}
                       </div>
-                      <span className="font-medium">
-                        {student.fname} {student.lname}
+                      <span className="font-medium capitalize">
+                        {student.fname} {student.fatherName || ""} {student.lname}
                       </span>
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-gray-600">{student.class}</td>
-                  <td className="px-3 py-2.5 text-gray-600">{student.div}</td>
+                  <td className="px-3 py-2.5 text-gray-600 uppercase">{student.div}</td>
                   <td className="px-3 py-2.5 font-mono text-purple-600">
                     {student.feeId}
                   </td>
                   <td className="px-3 py-2.5">
                     {formatCurrency(
                       (student?.lastYearTuitionBalance || 0) +
-                        (student?.lastYearBusFee || 0)
+                      (student?.lastYearBusFee || 0)
                     )}
                   </td>
                   <td className="px-3 py-2.5">
@@ -389,11 +390,10 @@ const StudentFeeDetails = ({
                   </td>
                   <td className="px-3 py-2.5 pr-4">
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${
-                        student.outstanding > 0
-                          ? "bg-red-100 text-red-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${student.outstanding > 0
+                        ? "bg-red-100 text-red-700"
+                        : "bg-green-100 text-green-700"
+                        }`}
                     >
                       {formatCurrency(Math.abs(student?.outstanding || 0))}
                     </span>
@@ -414,17 +414,17 @@ const StudentFeeDetails = ({
                                 title="School Balance"
                                 paid={student.lastYearBusPaid}
                                 total={
-                                  student.lastYearTuitionBalance +
-                                  student.lastYearTuitionPaid
+                                  (Number(student?.lastYearTuitionBalance) || 0) +
+                                  (Number(student?.lastYearTuitionPaid) || 0)
                                 }
                                 color="#7e22ce"
                               />
                               <PieChart
                                 title="Bus Balance"
-                                paid={student.lastYearBusPaid}
+                                paid={Number(student?.allFee?.lastYearBusPaid) || 0}
                                 total={
-                                  student.lastYearBusBalance +
-                                  student.lastYearBusPaid
+                                  (Number(student?.lastYearBusBalance) || 0) +
+                                  (Number(student?.lastYearBusPaid) || 0)
                                 }
                                 color="#3b82f6"
                               />
@@ -438,26 +438,26 @@ const StudentFeeDetails = ({
                             </h3>
                             <FeeBar
                               label="School Fees"
-                              paid={student.currentYearPaid.tuitionFee}
-                              total={student.currentYearTotals.tuitionFee}
+                              paid={student.currentYearPaid.schoolFee}
+                              total={student.currentYearTotals.schoolFee}
                             />
                             <FeeBar
                               label="Bus Fees"
                               paid={student.currentYearPaid.busFee}
                               total={student.currentYearTotals.busFee}
                             />
-                            {student.currentYearTotals.MessFee > 0 && (
+                            {student.currentYearTotals.messFee > 0 && (
                               <FeeBar
                                 label="Mess Fees"
-                                paid={student.currentYearPaid.MessFee}
-                                total={student.currentYearTotals.MessFee}
+                                paid={student.currentYearPaid.messFee}
+                                total={student.currentYearTotals.messFee}
                               />
                             )}
                             {student.currentYearTotals.HostelFee > 0 && (
                               <FeeBar
                                 label="Hostel Fees"
-                                paid={student.currentYearPaid.HostelFee}
-                                total={student.currentYearTotals.HostelFee}
+                                paid={student.currentYearPaid.hostelFee}
+                                total={student.currentYearTotals.hostelFee}
                               />
                             )}
                           </div>

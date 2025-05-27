@@ -105,6 +105,7 @@ export default function ImportExistingStudent() {
                 errs[field] = `${field} must be a valid number`;
             }
         });
+        console.log(errs)
 
         return errs;
     };
@@ -123,7 +124,7 @@ export default function ImportExistingStudent() {
                 initialFee: Number(feeAmount),
                 previousPayments: 0,
                 remainingBefore: Number(feeAmount - discount),
-                remainingAfter: Number(feeAmount - discount - paid),
+                remainingAfter: Number(feeAmount - paid),
                 transactionDate: new Date().toISOString()
             },
             paymentMode: 'CASH',
@@ -261,7 +262,6 @@ export default function ImportExistingStudent() {
     // Update handleBulkUpload function
     const handleBulkUpload = async (e) => {
         const file = e.target.files[0];
-        console.log(file)
         if (!file) return;
         setProcessing(true);
         setImportResults(null);
@@ -304,33 +304,37 @@ export default function ImportExistingStudent() {
                 const jsonData = utils.sheet_to_json(worksheet);
                 // Validate Data
                 const results = jsonData.map(row => {
+                    console.log(row)
                     const errors = validate(row);
                     return { ...row, errors };
                 });
 
                 const validStudents = results.filter(r => Object.keys(r.errors).length === 0);
                 const invalidStudents = results.filter(r => Object.keys(r.errors).length > 0);
+                console.log(validStudents, invalidStudents)
                 setTotalStudents(validStudents.length);
 
                 if (validStudents.length === 0) {
                     setImportResults(invalidStudents);
-                    return;
+                    // return;
                 }
                 // Process Students
-                Swal.fire({
-                    title: 'Processing Students',
-                    html: `
-                    <div class="text-center">
-                        <div class="progress-container mb-4">
-                            <div class="text-sm text-gray-600">Processing ${progress}/${validStudents.length}</div>
-                            <div class="text-xs text-purple-600">${currentStudent}</div>
+                if (validStudents.length) {
+                    Swal.fire({
+                        title: 'Processing Students',
+                        html: `
+                        <div class="text-center">
+                            <div class="progress-container mb-4">
+                                <div class="text-sm text-gray-600">Processing ${progress}/${validStudents.length}</div>
+                                <div class="text-xs text-purple-600">${currentStudent}</div>
+                            </div>
                         </div>
-                    </div>
-                `,
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    didOpen: () => Swal.showLoading()
-                });
+                    `,
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+                }
 
                 const errors = [];
 
@@ -437,12 +441,13 @@ export default function ImportExistingStudent() {
     const processStudent = async (studentData) => {
         const transactions = [];
         // check if stu has done any transaction than only process that transaction
+        // subtract disctount from tuition & bus fee 
         if (studentData["TuitionPaidFee"] > 0) {
             transactions.push(createTransaction(
                 'TuitionFee',
                 studentData["TuitionPaidFee"] || 0,
                 studentData["TuitionFeesDiscount"] || 0,
-                studentData["TuitionFee"] || 0,
+                (studentData["TuitionFee"] || 0) - (studentData["TuitionFeesDiscount"] || 0),
                 studentData["Ayear"] || "24-25",
             ));
         }
@@ -451,15 +456,38 @@ export default function ImportExistingStudent() {
                 'BusFee',
                 studentData["BusFeePaid"] || 0,
                 studentData["BusDiscount"] || 0,
-                studentData["BusFee"] || 0,
+                (studentData["BusFee"] || 0) - (studentData["BusDiscount"] || 0),
                 studentData["Ayear"] || "24-25",
             ));
         }
         // we have studentData["TuitionFee"] & we have to calculate AdmissionFee, but student may be new or current, if new than only AdmissionFee will be there, if current than AdmissionFee will 0
         // if stu is DSR no addmission fee, 
-        const addmissionFee = studentData["Type"].toLowerCase() === "dsr" ? 0 : (studentData["Status"].toLowerCase() === "new" ? 1000 : 0);
-        const tuitionFee = Number(studentData["TuitionFee"]) - addmissionFee;
-        
+        const admissionFee = studentData["Status"]?.toString()?.toLowerCase()?.trim() == "new" ?
+            (Number(studentData["TuitionFee"] - Number(studentData["TuitionFeesDiscount"]) > 1000 ? 1000 : 0)) :
+            0;
+        const tuitionFee = studentData["Status"]?.toString()?.toLowerCase()?.trim() == "new" ?
+            (Number(studentData["TuitionFee"] - Number(studentData["TuitionFeesDiscount"]) > 1000 ?
+                (Number(studentData["TuitionFee"]) - Number(studentData["TuitionFeesDiscount"]) - 1000) :
+                (Number(studentData["TuitionFee"]) - Number(studentData["TuitionFeesDiscount"])))) :
+            (Number(studentData["TuitionFee"]) - Number(studentData["TuitionFeesDiscount"]));
+
+        // main code
+        const allFee = {
+            lastYearBalanceFee: Number(studentData["LastYearBalanceFee"]),
+            lastYearDiscount: 0,
+            lastYearBusFee: 0,
+            lastYearBusFeeDiscount: 0,
+            tuitionFees: {
+                AdmissionFee: admissionFee,
+                tuitionFee,
+                total: admissionFee + tuitionFee
+            },
+            tuitionFeesDiscount: Number(studentData["TuitionFeesDiscount"]),
+            busFee: Number(studentData["BusFee"]) - Number(studentData["BusDiscount"]),// busFee - busDiscount
+            busFeeDiscount: Number(studentData["BusDiscount"]),
+            messFee: 0,
+            hostelFee: 0,
+        };
         const studentDoc = {
             schoolCode: userData.schoolCode,
             createdAt: new Date(),
@@ -475,24 +503,7 @@ export default function ImportExistingStudent() {
             address: (studentData["Address"] || "").toString().toLowerCase(),
 
             // Fee info
-            allFee: {
-                lastYearBalanceFee: Number(studentData["LastYearBalanceFee"]),
-                lastYearDiscount: 0,
-                lastYearBusFee: 0,
-                lastYearBusFeeDiscount: 0,
-                tuitionFees: {
-                    AdmissionFee: Number(studentData["TuitionFee"]) ? 1000 : 0,
-                    tuitionFee: Number(studentData["TuitionFee"]) >= 1000
-                        ? Number(studentData["TuitionFee"]) - 1000
-                        : 0,
-                    total: addmissionFee + tuitionFee
-                },
-                tuitionFeesDiscount: Number(studentData["TuitionFeesDiscount"]),
-                busFee: Number(studentData["BusFee"]),
-                busFeeDiscount: Number(studentData["BusDiscount"]),
-                messFee: 0,
-                hostelFee: 0,
-            },
+            allFee,
             feeId: studentData["FeeID"],
 
             // Academic (normalized)

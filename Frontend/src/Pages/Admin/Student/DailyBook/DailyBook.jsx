@@ -14,6 +14,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Receipt,
+  User,
+  CheckCircle,
+  Clock,
+  DollarSign,
 } from "lucide-react";
 
 const SkeletonLoader = () => (
@@ -46,6 +50,8 @@ export default function DailyBook() {
   );
   const [toDate, setToDate] = useState(new Date());
   const perPage = 8;
+  const [totalPaid, setTotalPaid] = useState(0);
+  const [totalStudent, setTotalStudent] = useState(0);
 
   useEffect(() => {
     const fetchDaily = async () => {
@@ -61,10 +67,11 @@ export default function DailyBook() {
         const data = doc.data();
         (data.transactions || []).forEach((t) => {
           const txDate = new Date(t.timestamp);
-          if (txDate >= fromDate && txDate <= toDate) {
+          // dont add imported transaction , but show cancle transaction
+          if (!(isNaN(Number(t.receiptId)) && t.status === "completed") && txDate >= fromDate && txDate <= toDate) {
             allTx.push({
               studentId: doc.id,
-              studentName: `${data.fname} ${data.lname}`,
+              studentName: `${data.fname}  ${data.fatherName || ""} ${data.lname}`,
               ...t,
             });
           }
@@ -73,7 +80,13 @@ export default function DailyBook() {
 
       allTx.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setTransactions(allTx);
+      console.log(allTx)
       setLoading(false);
+      // update total student, total paid
+      // const paid = allTx.reduce((sum, tnx) => tnx.status === "completed" ? (sum + (Number(tnx.amount) || 0)) : sum, 0);
+      const paid = allTx.reduce((sum, tnx) => sum + (Number(tnx.amount) || 0), 0);
+      setTotalPaid(paid);
+      setTotalStudent(allTx.length)
     };
     fetchDaily();
   }, [userData.schoolCode, fromDate, toDate]);
@@ -153,188 +166,29 @@ export default function DailyBook() {
   };
 
   return (
-    // <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
-    //   <div className="max-w-7xl mx-auto">
-    //     <div className="bg-white rounded-2xl shadow-lg p-6">
-    //       <div className="flex flex-col md:flex-row items-center justify-between mb-8">
-    //         <div className="flex items-center space-x-3 mb-4 md:mb-0">
-    //           <div className="p-3 bg-purple-100 rounded-xl">
-    //             <Receipt className="w-6 h-6 text-purple-600" />
-    //           </div>
-    //           <h1 className="text-3xl font-bold text-gray-800">
-    //             Daily Transactions
-    //           </h1>
-    //         </div>
-    //         <div className="flex space-x-3">
-    //           <button
-    //             onClick={exportExcel}
-    //             className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-500 rounded-lg hover:from-purple-600 hover:to-violet-600 transition-all"
-    //           >
-    //             <FileText className="w-4 h-4 mr-2" />
-    //             Excel
-    //           </button>
-    //           <button
-    //             onClick={exportPDF}
-    //             className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg hover:from-violet-600 hover:to-purple-600 transition-all"
-    //           >
-    //             <File className="w-4 h-4 mr-2" />
-    //             PDF
-    //           </button>
-    //         </div>
-    //       </div>
-
-    //       {loading ? (
-    //         <SkeletonLoader />
-    //       ) : (
-    //         <>
-    //           <div className="flex flex-wrap items-center gap-4 mb-6">
-    //             <div className="flex items-center gap-2">
-    //               <label className="text-sm font-medium text-gray-700">From:</label>
-    //               <input
-    //                 type="date"
-    //                 value={tempFrom}
-    //                 onChange={(e) => setTempFrom(e.target.value)}
-    //                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-    //               />
-    //             </div>
-    //             <div className="flex items-center gap-2">
-    //               <label className="text-sm font-medium text-gray-700">To:</label>
-    //               <input
-    //                 type="date"
-    //                 value={tempTo}
-    //                 onChange={(e) => setTempTo(e.target.value)}
-    //                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-    //               />
-    //             </div>
-    //             <button
-    //               onClick={() => {
-    //                 const from = new Date(tempFrom);
-    //                 from.setHours(0, 0, 0, 0);
-    //                 const to = new Date(tempTo);
-    //                 to.setHours(23, 59, 59, 999);
-    //                 setFromDate(from);
-    //                 setToDate(to);
-    //               }}
-    //               className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-violet-500 rounded-lg hover:from-purple-600 hover:to-violet-600 transition-all"
-    //             >
-    //               Show
-    //             </button>
-    //           </div>
-    //           <div className="overflow-x-auto rounded-xl border border-gray-100">
-    //             <table className="w-full table-fixed">
-    //               <thead className="bg-gradient-to-r from-purple-500 to-violet-500 text-white text-xs">
-    //                 <tr>
-    //                   {[
-    //                     "Date & Time",
-    //                     "Academic Year",
-    //                     "Student",
-    //                     "Fee Type",
-    //                     "Amount",
-    //                     "Payment Mode",
-    //                     "Account",
-    //                     "Remarks",
-    //                     "Receipt",
-    //                     "Status",
-    //                   ].map((h, i) => (
-    //                     <th
-    //                       key={i}
-    //                       className="px-2 py-3 text-left font-semibold whitespace-normal break-words"
-    //                     >
-    //                       {h}
-    //                     </th>
-    //                   ))}
-    //                 </tr>
-    //               </thead>
-    //               <tbody className="divide-y divide-gray-100 text-xs">
-    //                 {pageData.map((t, i) => (
-    //                   <tr
-    //                     key={i}
-    //                     className="hover:bg-purple-50 transition-colors"
-    //                   >
-    //                     <td className="px-2 py-2 text-gray-700 break-words">
-    //                       {new Date(t.date).toLocaleString()}
-    //                     </td>
-    //                     <td className="px-2 py-2 text-gray-600">
-    //                       {t.academicYear}
-    //                     </td>
-    //                     <td className="px-2 py-2 font-medium text-gray-900">
-    //                       {t.studentName}
-    //                     </td>
-    //                     <td className="px-2 py-2 text-gray-600">{t.feeType}</td>
-    //                     <td className="px-2 py-2 font-semibold text-purple-700">
-    //                       ₹{t.amount}
-    //                     </td>
-    //                     <td className="px-2 py-2 text-gray-600">
-    //                       <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 text-[10px]">
-    //                         {t.paymentMode}
-    //                       </span>
-    //                     </td>
-    //                     <td className="px-2 py-2 text-gray-600">{t.account}</td>
-    //                     <td className="px-2 py-2 text-gray-600 break-words">
-    //                       {t.remark || "-"}
-    //                     </td>
-    //                     <td className="px-2 py-2 font-medium break-words">
-    //                       {/* if trans is completed than only show link*/}
-    //                       {t.status === 'completed'
-    //                         ? <Link to={`/student/${t.studentId}/receipt/${t.receiptId}`}>{t.receiptId}</Link>
-    //                         : <span className="text-gray-400">{t.status}</span>
-    //                       }
-    //                     </td>
-    //                     <td className="px-2 py-2">
-    //                       <span
-    //                         className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${t.status === "completed"
-    //                           ? "bg-green-100 text-green-700"
-    //                           : "bg-yellow-100 text-yellow-800"
-    //                           }`}
-    //                       >
-    //                         {t.status || "pending"}
-    //                       </span>
-    //                     </td>
-    //                   </tr>
-    //                 ))}
-    //               </tbody>
-    //             </table>
-    //           </div>
-
-    //           <div className="mt-6 flex items-center justify-between px-4">
-    //             <div className="text-sm text-gray-600">
-    //               Showing {page * perPage - perPage + 1} to{" "}
-    //               {Math.min(page * perPage, transactions.length)} of{" "}
-    //               {transactions.length} entries
-    //             </div>
-    //             <div className="flex space-x-2">
-    //               <button
-    //                 onClick={() => setPage((p) => Math.max(p - 1, 1))}
-    //                 disabled={page === 1}
-    //                 className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-    //               >
-    //                 <ChevronLeft className="w-5 h-5 mr-1" />
-    //                 Previous
-    //               </button>
-    //               <button
-    //                 onClick={() => setPage((p) => Math.min(p + 1, pageCount))}
-    //                 disabled={page === pageCount}
-    //                 className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-    //               >
-    //                 Next
-    //                 <ChevronRight className="w-5 h-5 ml-1" />
-    //               </button>
-    //             </div>
-    //           </div>
-    //         </>
-    //       )}
-    //     </div>
-    //   </div>
-    // </div>
     <div className="sm:p-6 p-2 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="sm:bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex flex-col md:flex-row items-center justify-between mb-8">
-            <div className="flex items-center space-x-3 sm:mb-4 mb-8 md:mb-0 sm:mt-8">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <Receipt className="w-6 h-6 text-purple-600" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <StatCard
+              icon={User}
+              label="Students Paid Today"
+              value={totalStudent}
+              color="purple"
+            />
+            <StatCard
+              icon={CheckCircle}
+              label="Total Paid"
+              value={`₹${totalPaid.toLocaleString('en-IN')}`}
+              color="green"
+            />
+          </div>
+          <div className="flex flex-col md:flex-row items-center justify-between mb-8 lg:mt-6">
+            <div className="flex items-center space-x-3 sm:mb-4 mb-8 md:mb-0 sm:mt-8 lg:mt-0">
+              <div div className="p-3 bg-purple-100 rounded-xl">
+                <Receipt className="w-5 h-5 text-purple-600" />
               </div>
-              <h1 className="text-3xl font-bold text-[#9514FB]">
+              <h1 className="text-2xl font-bold text-[#9514FB]">
                 Daily Transactions
               </h1>
             </div>
@@ -431,20 +285,20 @@ export default function DailyBook() {
                         key={i}
                         className="hover:bg-purple-50 transition-colors"
                       >
-                        <td className="px-2 py-2 text-gray-700 break-words">
+                        <td className={`px-2 py-2 text-gray-700 break-words ${t.status !== "completed" ? "opacity-50" : ""} `}>
                           {new Date(t.date).toLocaleString()}
                         </td>
-                        <td className="px-2 py-2 text-gray-600">
+                        <td className={`px-2 py-2 text-gray-600 ${t.status !== "completed" ? "opacity-50" : ""} `}>
                           {t.academicYear}
                         </td>
-                        <td className="px-2 py-2 font-medium text-gray-900">
+                        <td className={`px-2 py-2 font-medium text-gray-900 capitalize ${t.status !== "completed" ? "opacity-50" : ""} `}>
                           {t.studentName}
                         </td>
-                        <td className="px-2 py-2 text-gray-600">{t.feeType}</td>
-                        <td className="px-2 py-2 font-semibold text-purple-700">
+                        <td className={`px-2 py-2 text-gray-600${t.status !== "completed" ? "opacity-50" : ""} `}>{t.feeType}</td>
+                        <td className={`px-2 py-2 font-semibold text-purple-700 ${t.status !== "completed" ? "opacity-50" : ""} `}>
                           ₹{t.amount}
                         </td>
-                        <td className="px-2 py-2 text-gray-600">
+                        <td className={`px-2 py-2 text-gray-600 uppercase ${t.status !== "completed" ? "opacity-50" : ""} `}>
                           <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 text-[10px]">
                             {t.paymentMode}
                           </span>
@@ -453,7 +307,7 @@ export default function DailyBook() {
                         <td className="px-2 py-2 text-gray-600 break-words">
                           {t.remark || "-"}
                         </td>
-                        <td className="px-2 py-2 font-medium break-words">
+                        <td className={`px-2 py-2 font-medium break-words ${t.status !== "completed" ? "opacity-50" : ""} `}>
                           {t.status === "completed" ? (
                             <Link
                               to={`/student/${t.studentId}/receipt/${t.receiptId}`}
@@ -466,9 +320,9 @@ export default function DailyBook() {
                         </td>
                         <td className="px-2 py-2">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${t.status === "completed"
+                            className={`px-2 py-0.5 rounded-full text-[10px]  font-medium ${t.status === "completed"
                               ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-800"
+                              : "bg-yellow-100 text-yellow-800 border-1 border-yellow-200"
                               }`}
                           >
                             {t.status || "pending"}
@@ -513,3 +367,16 @@ export default function DailyBook() {
     </div>
   );
 }
+const StatCard = ({ icon: Icon, label, value, color }) => (
+  <div className="bg-white rounded-xl p-2 shadow-sm border border-purple-100 ">
+    <div className="flex items-center gap-3">
+      <div className={`p-1 rounded-lg bg-${color}-100`}>
+        <Icon className={`w-5 h-5 text-${color}-600`} />
+      </div>
+      <div>
+        <p className="text-xs text-gray-600">{label}</p>
+        <p className="text-sm font-bold text-gray-900">{value}</p>
+      </div>
+    </div>
+  </div>
+);

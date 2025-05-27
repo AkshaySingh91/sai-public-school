@@ -90,10 +90,16 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
     const { currentYearPaid, lastYearPaid } = useMemo(() => {
         const currentYear = student.academicYear;
 
+
         return transactions.reduce((acc, t) => {
             console.log(t)
             if (t.status === "completed") {
                 if (t.academicYear === currentYear) {
+                    // if addmission fee paid than we have to sum it in tuition fee
+                    console.log(t?.feeType)
+                    if (t?.feeType?.toLowerCase() === 'admissionfee') {
+                        acc.currentYearPaid["TuitionFee"] = acc.currentYearPaid["TuitionFee"] + t.amount
+                    }
                     acc.currentYearPaid[t.feeType] = (acc.currentYearPaid[t.feeType] || 0) + t.amount;
                 } else {
                     if (t?.feeType?.toLowerCase() === 'tuitionfee') {
@@ -183,12 +189,9 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
                         <h3 className="text-lg font-semibold text-purple-600">Current Year Progress</h3>
                         {
                             !currentYearTotals.TuitionFee && !currentYearTotals.BusFee && !currentYearTotals.MessFee && !currentYearTotals.HostelFee ?
-                                <div className="h-full flex flex-col items-center gap-4  font-mono text-center text-xl">
-                                    <p>
-                                        No Fees For This Student, he may be DSR & No prefering Bus
-                                    </p>
+                                <div className="h-full my-auto font-mono text-center text-xl">
                                     <text x="50" y="50" textAnchor="middle" dominantBaseline="middle"
-                                        className='text-3xl mt-4 font-bold text-gray-400'>
+                                        className='text-5xl mt-4 font-bold text-gray-400'>
                                         N/A
                                     </text>
                                 </div> :

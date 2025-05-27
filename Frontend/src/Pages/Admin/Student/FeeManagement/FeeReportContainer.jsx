@@ -41,7 +41,6 @@ export default function FeeReportsContainer() {
           };
         });
         setStudents(data);
-        console.log("students in outstanding fee", data);
       } catch (error) {
         console.error("Error fetching students:", error);
       } finally {
@@ -68,15 +67,15 @@ export default function FeeReportsContainer() {
       return t.academicYear === `${startYear - 1}-${endYear - 1}`;
     });
     // consider only completed payment "t.status === "completed""
-    const lastYearSchoolPaid = lastYearTransactions
-      .filter((t) => t?.feeType?.toLowerCase() === "SchoolFee" && t?.status?.toLowerCase() === "completed")
+    const lastYearTuitionPaid = lastYearTransactions
+      .filter((t) => (t?.feeType?.toLowerCase() === "tuitionfee" || t?.feeType?.toLowerCase() === "admissionfee" || t?.feeType?.toLowerCase() === "hostelfee" || t?.feeType?.toLowerCase() === "messfee") && t?.status?.toLowerCase() === "completed")
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
     const lastYearBusPaid = lastYearTransactions
-      .filter((t) => t?.feeType?.toLowerCase() === "busFee" && t?.status?.toLowerCase() === "completed")
+      .filter((t) => t?.feeType?.toLowerCase() === "busfee" && t?.status?.toLowerCase() === "completed")
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-    // console.log({ lastYearSchoolPaid })
+    // console.log({ lastYearTuitionPaid })
     // console.log({ lastYearBusPaid })
 
     const currentYearTransactions = transactions.filter(
@@ -86,20 +85,22 @@ export default function FeeReportsContainer() {
     const tuitionFeeNet = fees.tuitionFees?.total || 0;
     const busFeeNet = fees.busFee || 0;
 
+    // this is total all type of fees paid by student
     const currentYearPaid = {
-      SchoolFee: currentYearTransactions
-        .filter((t) => t?.feeType?.toLowerCase() === "tuitionfee" && t?.status?.toLowerCase() === "completed")
+      schoolFee: currentYearTransactions
+        .filter((t) => (t?.feeType?.toLowerCase() === "tuitionfee" || t?.feeType?.toLowerCase() === "admissionfee") && t?.status?.toLowerCase() === "completed")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
       busFee: currentYearTransactions
         .filter((t) => t?.feeType?.toLowerCase() === "busfee" && t?.status?.toLowerCase() === "completed")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-      MessFee: currentYearTransactions
+      messFee: currentYearTransactions
         .filter((t) => t?.feeType?.toLowerCase() === "messfee" && t?.status?.toLowerCase() === "completed")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-      HostelFee: currentYearTransactions
+      hostelFee: currentYearTransactions
         .filter((t) => t?.feeType?.toLowerCase() === "hostelfee" && t?.status?.toLowerCase() === "completed")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
     };
+    // this is total fees for current year of student 
     const totalFees =
       tuitionFeeNet +
       busFeeNet +
@@ -108,8 +109,7 @@ export default function FeeReportsContainer() {
 
     const totalPaid = Object.values(currentYearPaid).reduce(
       (sum, val) => sum + val,
-      0
-    );
+      0);
     const totalDiscount =
       (fees.tutionFeesDiscount || 0) + (fees.busFeeDiscount || 0);
 
@@ -124,17 +124,17 @@ export default function FeeReportsContainer() {
       lastYearBusFee: fees.lastYearBusFee || 0,
       currentYearPaid,
       currentYearTotals: {
-        SchoolFee: tuitionFeeNet,
+        schoolFee: tuitionFeeNet,
         busFee: busFeeNet,
-        MessFee: fees.messFee || 0,
-        HostelFee: fees.hostelFee || 0,
+        messFee: fees.messFee || 0,
+        hostelFee: fees.hostelFee || 0,
       },
       totalFees: totalFees + totalDiscount, //add discount
       totalDiscount,
       afterDiscount: totalFees,
       paid: totalPaid,
       outstanding: totalFees - totalPaid,
-      lastYearSchoolPaid, //use to visulize chart
+      lastYearTuitionPaid, //use to visulize chart
       lastYearBusPaid, //use to visulize chart
       tutionFeeNet: totalFees - busFeeNet, // use in excel total tuition fee it inc mess, hostel also
       tutionFeePaid, // use in excel it is total tuition paid fee ic hostel, mess
@@ -262,49 +262,49 @@ export default function FeeReportsContainer() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-            {/* Outstanding Fee Section */}
-            <div className="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Outstanding Fee Section */}
+        <div className="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
 
-                <OutstandingFee
-                    loading={loading}
-                    activeRows={activeRows || []}
-                    inactiveRows={inactiveRows || []}
-                    classActiveTab={classActiveTab}
-                    setClassActiveTab={setClassActiveTab}
-                    formatCurrency={formatCurrency}
-                />
-            </div>
-
-            {/* Student Details Section */}
-            <div className="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
-                <StudentFeeDetails
-                    loading={loading}
-                    filteredAllStudents={filteredAllStudents}
-                    currentItems={currentItems}
-                    studentActiveTab={studentActiveTab}
-                    searchTerm={searchTerm}
-                    sortKey={sortKey}
-                    sortOrder={sortOrder}
-                    currentPage={currentPage}
-                    itemsPerPage={itemsPerPage}
-                    formatCurrency={formatCurrency}
-                    setStudentActiveTab={setStudentActiveTab}
-                    setSearchTerm={setSearchTerm}
-                    setSortKey={setSortKey}
-                    setSortOrder={setSortOrder}
-                    setCurrentPage={setCurrentPage}
-                    selectedClass={selectedClass}
-                    selectedDiv={selectedDiv}
-                    setSelectedClass={setSelectedClass}
-                    setSelectedDiv={setSelectedDiv}
-                />
-            </div>
+          <OutstandingFee
+            loading={loading}
+            activeRows={activeRows || []}
+            inactiveRows={inactiveRows || []}
+            classActiveTab={classActiveTab}
+            setClassActiveTab={setClassActiveTab}
+            formatCurrency={formatCurrency}
+          />
         </div>
-    </div>
-    
 
-    
-        
+        {/* Student Details Section */}
+        <div className="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
+          <StudentFeeDetails
+            loading={loading}
+            filteredAllStudents={filteredAllStudents}
+            currentItems={currentItems}
+            studentActiveTab={studentActiveTab}
+            searchTerm={searchTerm}
+            sortKey={sortKey}
+            sortOrder={sortOrder}
+            currentPage={currentPage}
+            itemsPerPage={itemsPerPage}
+            formatCurrency={formatCurrency}
+            setStudentActiveTab={setStudentActiveTab}
+            setSearchTerm={setSearchTerm}
+            setSortKey={setSortKey}
+            setSortOrder={setSortOrder}
+            setCurrentPage={setCurrentPage}
+            selectedClass={selectedClass}
+            selectedDiv={selectedDiv}
+            setSelectedClass={setSelectedClass}
+            setSelectedDiv={setSelectedDiv}
+          />
+        </div>
+      </div>
+    </div>
+
+
+
+
   );
 }

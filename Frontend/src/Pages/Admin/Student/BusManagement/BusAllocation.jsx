@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useSchool } from '../../../contexts/SchoolContext';
+import { db } from '../../../../config/firebase';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { useSchool } from '../../../../contexts/SchoolContext';
 import { motion } from 'framer-motion';
 import { Search, Download, ChevronDown, X, Users, CheckCircle, Clock, DollarSign, Filter, Bus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import { autoTable } from "jspdf-autotable"
-import TableLoader from '../../../components/TableLoader';
+import TableLoader from '../../../../components/TableLoader';
 import { debounce } from 'lodash';
 
 const BusAllocation = () => {

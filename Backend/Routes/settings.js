@@ -280,6 +280,9 @@ router.get('/school', async (req, res) => {
 });
 router.put('/school', async (req, res) => {
     try {
+        if (!req.user || !req.user.schoolCode) {
+            return res.status(401).json({ error: "Unauthorized - School code missing" });
+        }
         const { schoolName,
             divisions: d,
             class: c,
@@ -293,12 +296,38 @@ router.put('/school', async (req, res) => {
             tuitionReceiptCount,
             busReceiptCount,
             stockReceiptCount,
+            mobile,
+            email
         } = req.body;
-        console.log(req.body)
-        const schoolDoc = await admin.firestore().collection('schools')
+        // Validate required request body fields
+        if (!schoolName || !academicYear) {
+            return res.status(400).json({ error: "School name and academic year are required" });
+        }
+        if (feeIdCount && isNaN(feeIdCount)) {
+            return res.status(400).json({ error: "feeIdCount must be a number" });
+        }
+        if (tuitionReceiptCount && isNaN(tuitionReceiptCount)) {
+            return res.status(400).json({ error: "tuitionReceiptCount must be a number" });
+        }
+        if (busReceiptCount && isNaN(busReceiptCount)) {
+            return res.status(400).json({ error: "busReceiptCount must be a number" });
+        }
+        if (stockReceiptCount && isNaN(stockReceiptCount)) {
+            return res.status(400).json({ error: "stockReceiptCount must be a number" });
+        }
+        const schoolQuery = await admin.firestore().collection('schools')
             .where('Code', '==', req.user.schoolCode)
             .get();
-        await schoolDoc.docs[0].ref.update({
+
+        // Check if school exists
+        if (schoolQuery.empty) {
+            return res.status(404).json({ error: "School not found" });
+        }
+
+        const schoolDoc = schoolQuery.docs[0];
+        const schoolData = schoolDoc.data();
+        // Prepare update data
+        const updateData = {
             divisions: d,
             class: c,
             schoolName,
@@ -307,18 +336,45 @@ router.put('/school', async (req, res) => {
             schoolReceiptHeader,
             busReceiptHeader,
             stockReceiptHeader,
-            // if academic year change than set receipt count to 0
-            ...(academicYear !== schoolDoc.docs[0].data().academicYear ? { tuitionReceiptCount: 0 } : {}),
             location: schoolLocation,
-            feeIdCount,
-            tuitionReceiptCount,
-            busReceiptCount,
-            stockReceiptCount,
+            feeIdCount: feeIdCount || 0,
+            tuitionReceiptCount: tuitionReceiptCount || 0,
+            busReceiptCount: busReceiptCount || 0,
+            stockReceiptCount: stockReceiptCount || 0,
+            mobile,
+            email
+        };
+        // Reset receipt counts if academic year changes
+        // if (academicYear !== schoolData.academicYear) {
+        //     updateData.tuitionReceiptCount = 0;
+        //     updateData.busReceiptCount = 0;
+        //     updateData.stockReceiptCount = 0;
+        //     updateData.feeIdCount = 0;
+        // }
+        await schoolDoc.ref.update(updateData);
+
+        res.json({
+            success: true,
+            message: "School updated successfully",
+            data: {
+                schoolName,
+                academicYear,
+                updatedFields: Object.keys(updateData)
+            }
         });
-        console.log("object")
-        res.json({ message: "School updated successfully" });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Error updating school:", error);
+        // Handle Firestore errors specifically
+        if (error.code === 5 || error.code === 'NOT_FOUND') {
+            return res.status(404).json({ error: "Document not found" });
+        }
+        if (error.code === 3 || error.code === 'INVALID_ARGUMENT') {
+            return res.status(400).json({ error: "Invalid data provided" });
+        }
+        res.status(500).json({
+            error: "Internal server error",
+            message: error.message
+        });
     }
 });
 

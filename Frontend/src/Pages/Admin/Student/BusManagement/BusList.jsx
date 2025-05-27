@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../../../config/firebase";
+import { db } from "../../../../config/firebase";
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { useAuth } from "../../../contexts/AuthContext";
+import { useAuth } from "../../../../contexts/AuthContext";
 import * as XLSX from "xlsx";
 import Swal from "sweetalert2";
 import { jsPDF } from "jspdf";
 import { autoTable } from 'jspdf-autotable'
 import { TriangleAlert, Search, Upload, Settings, Trash2, FileText } from "lucide-react"
-import TableLoader from "../../../components/TableLoader"
-import busAnimation from "../../../assets/busAnimation.gif"
+import TableLoader from "../../../../components/TableLoader"
+import busAnimation from "../../../../assets/busAnimation.gif"
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus } from "react-icons/fa";
 
@@ -49,7 +49,7 @@ function BusList() {
   // Updated fetchBuses to include check for existing buses
   const checkExistingBus = (busNo, numberPlate) => {
     return buses.some(bus =>
-      bus.busNo === busNo || bus.numberPlate === numberPlate
+      bus.busNo == busNo || bus.numberPlate == numberPlate
     );
   };
 
@@ -127,6 +127,7 @@ function BusList() {
       }));
       busList.sort((a, b) => a.busNo.localeCompare(b.busNo, undefined, { numeric: true }));
       setBuses(busList);
+      console.log(busList)
     } catch (error) {
       console.error("Error fetching buses:", error);
     } finally {

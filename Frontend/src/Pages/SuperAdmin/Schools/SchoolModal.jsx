@@ -77,7 +77,9 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
                 feeIdCount: 0,
                 tuitionReceiptCount: 0,
                 busReceiptCount: 0,
-                stockReceiptCount: 0
+                stockReceiptCount: 0,
+                mobile: "",
+                email: "",
             });
 
             await Swal.fire({

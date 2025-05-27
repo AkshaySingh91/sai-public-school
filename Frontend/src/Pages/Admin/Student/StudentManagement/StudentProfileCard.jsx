@@ -84,7 +84,7 @@ export default function StudentProfile({
             <User className="w-10 h-10 text-purple-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 capitalize">
-            {student.fname} {student.lname}
+            {student.fname} {student.fatherName || ""} {student.lname}
           </h2>
           <p className="text-gray-600 mt-1 font-medium">
             Class : <span className="uppercase">{student.class}</span> &ndash; Division : <span className="uppercase">{student.div}</span>

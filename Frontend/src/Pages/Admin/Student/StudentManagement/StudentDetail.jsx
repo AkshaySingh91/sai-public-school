@@ -11,7 +11,7 @@ import {
   getDocs,
   deleteDoc
 } from "firebase/firestore";
-import { db } from "../../../../config/firebase.js";
+import app, { db } from "../../../../config/firebase.js";
 import { useAuth } from "../../../../contexts/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -201,7 +201,7 @@ export function StudentDetail() {
         academicYear: studentData.academicYear,
         paymentMode: schoolData.paymentModes?.[0] || "",
         account: schoolData.accounts?.[0]?.AccountNo || "",
-        feeType: schoolData.feeTypes?.[0] || "",
+        feeType: "",
       }));
 
       // Fetch transactions
@@ -312,7 +312,7 @@ export function StudentDetail() {
     }
 
     // Validate fee type from available options
-    const validFeeTypes = ["TuitionFee", "MessFee", "HostelFee", "BusFee"];
+    const validFeeTypes = ["AdmissionFee", "TuitionFee", "MessFee", "HostelFee", "BusFee"];
     if (!validFeeTypes.includes(newTransaction.feeType)) {
       Swal.fire("Validation Error", "Please select a valid Fee Type", "error");
       return;
@@ -342,14 +342,54 @@ export function StudentDetail() {
           tx.status?.toLowerCase() === 'completed'
         )
         .reduce((sum, tx) => sum + Number(tx.amount), 0);
+      // if we are paying tuition fee than include prev admission fee also 
+      previousPayments = previousPayments + transactions
+        .filter(tx =>
+          (feeType?.toLowerCase() === "tuitionfee") && tx.feeType?.toLowerCase() === "admissionfee" &&
+          tx.academicYear === newTransaction.academicYear &&
+          tx.status?.toLowerCase() === 'completed'
+        )
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+      // check if admission fee already paid
 
+      if (feeType?.toLowerCase() === "admissionfee") {
+        const isAdmissionFeePaid = transactions.find(tx =>
+          tx.feeType?.toLowerCase() === "admissionfee" && tx.academicYear === newTransaction.academicYear && tx.status?.toLowerCase() === 'completed'
+        )
+        if (isAdmissionFeePaid) {
+          Swal.fire("Error", "Admission fee are already paid.", "error");
+          return
+        }
+      }
+      // check if payemnt is admissionfee for new student 
+      if (feeType?.toLowerCase() === "admissionfee") {
+        previousPayments = 0;
+        if (paymentAmount > 1000) {
+          Swal.fire("Error", "Payment amount for Addmission fee should be 1000", "error");
+          return
+        }
+      }
+      if (student.status?.toLowerCase() !== "new" && feeType?.toLowerCase() === "admissionfee") {
+        Swal.fire("Error", "Addmission fee will only paid for new student", "error");
+        return
+      }
+      if (student.type?.toLowerCase() === "dsr" && feeType?.toLowerCase() === "admissionfee") {
+        Swal.fire("Error", "Addmission fee is not applicable for DSR student.", "error");
+        return
+      }
       if (isCurrentYear) {
         // as this is fee from student.allfee is unchangable this adding previousPayments not required  
         const fee = feeType.toLowerCase();
         switch (fee) {
+          // student will  initially pay admission fee
+          case 'admissionfee':
+            initialFee = (student.allFee.tuitionFees?.total || + student.allFee.tuitionFeesDiscount || 0);
+            applicableDiscount = 0;
+            currentBalance = initialFee - applicableDiscount;
+            break;
           case 'tuitionfee':
-            initialFee = (student.allFee.tuitionFees?.total || 0) + (student.allFee.tuitionFeesDiscount || 0);
-            applicableDiscount = student.allFee.tuitionFeesDiscount || 0;
+            initialFee = (student.allFee.tuitionFees?.total || + student.allFee.tuitionFeesDiscount || 0);
+            applicableDiscount = 0;
             currentBalance = initialFee - applicableDiscount;
             break;
           case 'busfee':
@@ -408,7 +448,6 @@ export function StudentDetail() {
         transactionDate: transactionDate.toISOString(),
         feeCategory: feeType.replace('Fee', '') // Tuition/Bus/Mess/Hostel
       };
-
       // 5. Create transaction object
       // if mode !== cheque , than receiptId will be total reciept in this year + 1 
       // check if transaction if of bus or tuition
@@ -485,15 +524,20 @@ export function StudentDetail() {
         allowOutsideClick: false,
         showConfirmButton: false
       });
-      // 7. Update Firestore
       const updatedTransactions = [...transactions, transaction];
+      // 7. Update Firestore
       await updateDoc(doc(db, "students", studentId), {
         transactions: updatedTransactions,
         ...(transaction.status === 'completed' && { allFee: updatedFees })
       });
       // 8. update total recipt if not cheque
+      const schoolsRef = collection(db, "schools");
+      const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) throw new Error("School not found");
+      const schoolDoc = querySnapshot.docs[0];
+
       if (newTransaction.paymentMode.toLowerCase() !== 'cheque') {
-       user: userData
         if (feeType?.toLowerCase() == "busfee") {
           await updateDoc(doc(db, 'schools', schoolDoc.id), {
             busReceiptCount: receiptId
@@ -505,21 +549,7 @@ export function StudentDetail() {
         }
       }
       refresh()
-      // 9. Update local state
-      // setStudent(prev => ({ ...prev, allFee: updatedFees }));
-      // setTransactions(updatedTransactions);
-      // setNewTransaction({
-      //   academicYear: student.academicYear,
-      //   paymentMode: "",
-      //   account: "",
-      //   date: new Date().toISOString().split("T")[0],
-      //   feeType: "",
-      //   amount: "",
-      //   remark: "",
-      // });
-
       Swal.fire("Success!", "Transaction recorded with historical context", "success");
-      // re popullate school data 
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
@@ -534,7 +564,6 @@ export function StudentDetail() {
       } else {
         receiptId = (Number(schoolData.tuitionReceiptCount) || 0) + 1;
       }
-      console.log(receiptId)
       if (!transaction) throw new Error("Transaction not found");
       const updatedTransactions = transactions.map((t) =>
         t.tempReceiptId === tempReceiptId ? {
@@ -635,7 +664,7 @@ export function StudentDetail() {
 
         // 2) Figure out the next class in the sequence
         const curClass = student.class;
-        const idx = classOrder.findIndex((c) => c?.trim() === curClass?.trim());
+        const idx = classOrder.findIndex((c) => c?.trim()?.toLowerCase() === curClass?.trim()?.toLowerCase());
         const nextClass =
           idx >= 0 && idx < classOrder.length - 1
             ? classOrder[idx + 1]?.trim()

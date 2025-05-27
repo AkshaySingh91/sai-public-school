@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { School, Upload, Loader, Instagram } from 'lucide-react';
+import { School, Upload, Loader, Instagram, UserSearch } from 'lucide-react';
 import Swal from "sweetalert2";
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../config/firebase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { auth } from '../../../../config/firebase';
+import { useSchool } from "../../../../contexts/SchoolContext"
 
 const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
 const VITE_PORT = import.meta.env.VITE_PORT;
@@ -12,7 +13,7 @@ const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const SchoolSettings = ({ school, setSchool }) => {
     const { userData } = useAuth();
-
+    const { refresh } = useSchool();
     const [schoolName, setSchoolName] = useState(school.schoolName || "");
     const [academicYear, setAcademicYear] = useState(school.academicYear || "");
     const [schoolLocation, setSchoolLocation] = useState(school.location || {});
@@ -26,6 +27,8 @@ const SchoolSettings = ({ school, setSchool }) => {
     const [tuitionReceiptCount, settuitionReceiptCount] = useState(school.tuitionReceiptCount || 0)
     const [busReceiptCount, setBusReceiptCount] = useState(school.busReceiptCount || 0)
     const [stockReceiptCount, setStockReceiptCount] = useState(school.stockReceiptCount || 0)
+    const [schoolEmail, setSchoolEmail] = useState(school.email || "")
+    const [schoolMobile, setSchoolMobile] = useState(school.mobile || "")
 
     const [logoFile, setLogoFile] = useState(null);
     const [logoUrl, setLogoUrl] = useState(false);
@@ -90,6 +93,8 @@ const SchoolSettings = ({ school, setSchool }) => {
 
         const validPattern = /^(\s*[^,\s][^,]*\s*)(,\s*[^,\s][^,]*\s*)*$/;
         const academicYearPattern = /^\d{2}-\d{2}$/;
+        const mobilePattern = /^\d{10}$/;
+
         if (div.trim() !== '' && !validPattern.test(div)) {
             return Swal.fire({
                 icon: 'error',
@@ -111,7 +116,13 @@ const SchoolSettings = ({ school, setSchool }) => {
                 text: 'Please enter valid academic year: 24-25,25-26, etc.'
             });
         }
-
+        if (schoolMobile && schoolMobile.trim() !== '' && !mobilePattern.test(schoolMobile)) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Invalid input',
+                text: 'Please enter valid school mobile: 1234567890.'
+            });
+        }
         const divisionArr = div
             .split(',')
             .filter(s => s.trim())
@@ -146,6 +157,8 @@ const SchoolSettings = ({ school, setSchool }) => {
             tuitionReceiptCount,
             busReceiptCount,
             stockReceiptCount,
+            email: schoolEmail,
+            mobile: schoolMobile,
         };
 
         let userToken;
@@ -211,7 +224,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                 title: 'Saved!',
                 text: 'School details have been updated successfully.'
             });
-
+            refresh()
         } catch (err) {
             // Replace the loading modal with an error modal
             Swal.fire({
@@ -332,6 +345,34 @@ const SchoolSettings = ({ school, setSchool }) => {
                             required
                         />
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Landmark <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== '') {
+                                    setSchoolLocation({ ...schoolLocation, landmark: e.target.value })
+                                }
+                            }}
+                            value={schoolLocation.landmark || ''}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">PinCode <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            onChange={(e) => {
+                                if (e.target.value.trim() !== '') {
+                                    setSchoolLocation({ ...schoolLocation, pincode: e.target.value })
+                                }
+                            }}
+                            value={schoolLocation.pincode || ''}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            required
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -368,13 +409,11 @@ const SchoolSettings = ({ school, setSchool }) => {
                             Last student FeeId
                         </label>
                         <input
-                            type="text"
+                            type="number"
                             value={feeIdCount}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             onChange={(e) => {
-                                if (e.target.value.trim() !== '' && !isNaN(e.target.value.trim())) {
-                                    setFeeIdCount(Number.parseInt(e.target.value.trim()));
-                                }
+                                setFeeIdCount(Number.parseInt(e.target.value.trim()));
                             }}
                         />
                     </div>
@@ -388,9 +427,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                 type="number"
                                 value={tuitionReceiptCount}
                                 onChange={(e) => {
-                                    if (e.target.value.trim() !== '' && !isNaN(e.target.value.trim())) {
-                                        settuitionReceiptCount(Number.parseInt(e.target.value.trim()))
-                                    }
+                                    settuitionReceiptCount(Number.parseInt(e.target.value.trim()))
                                 }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             />
@@ -403,9 +440,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                 type="number"
                                 value={busReceiptCount}
                                 onChange={(e) => {
-                                    if (e.target.value.trim() !== '' && !isNaN(e.target.value.trim())) {
-                                        setBusReceiptCount(Number.parseInt(e.target.value.trim()))
-                                    }
+                                    setBusReceiptCount(Number.parseInt(e.target.value.trim()))
                                 }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             />
@@ -418,9 +453,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                 type="number"
                                 value={stockReceiptCount}
                                 onChange={(e) => {
-                                    if (e.target.value.trim() !== '' && !isNaN(e.target.value.trim())) {
-                                        setStockReceiptCount(Number.parseInt(e.target.value.trim()))
-                                    }
+                                    setStockReceiptCount(Number.parseInt(e.target.value.trim()))
                                 }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             />
@@ -488,6 +521,34 @@ const SchoolSettings = ({ school, setSchool }) => {
                             }}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                             placeholder="stock receipt header"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            School Email
+                        </label>
+                        <input
+                            type="text"
+                            value={schoolEmail}
+                            onChange={(e) => {
+                                setSchoolEmail(e.target.value)
+                            }}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            placeholder="eg; demo@gmail.com"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            School Mobile
+                        </label>
+                        <input
+                            type="text"
+                            value={schoolMobile}
+                            onChange={(e) => {
+                                setSchoolMobile(e.target.value)
+                            }}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            placeholder="eg; 9822841280"
                         />
                     </div>
                 </div>

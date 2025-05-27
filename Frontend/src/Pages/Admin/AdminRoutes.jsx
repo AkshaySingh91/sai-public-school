@@ -13,16 +13,16 @@ import { StudentDetail } from './Student/StudentManagement/StudentDetail';
 import FeeReceiptPage from './Student/Transactions/FeeReceiptPage';
 import DailyBook from './Student/DailyBook/DailyBook';
 import FeeReportContainer from './Student/FeeManagement/FeeReportContainer';
-import BusList from './Student/BusList';
-import BusDestination from './Student/BusDestination';
-import BusAllocation from './Student/BusAllocation';
-import StockList from './Student/StockList';
-import StockGroup from './Student/StockGroup';
-import StockAllocate from './Student/StockAllocate';
+import BusList from './Student/BusManagement/BusList';
+import BusDestination from './Student/BusManagement/BusDestination';
+import BusAllocation from './Student/BusManagement/BusAllocation';
+import StockList from './Student/StockMangement/StockList';
+import StockGroup from './Student/StockMangement/StockGroup';
+import StockAllocate from './Student/StockMangement/StockAllocate';
 import Settings from "./Settings/Settings"
-import StudentStockAllocation from './Student/StudentStockAllocation';
-import StockFeeReceiptPage from './Student/StockFeeReceiptPage';
-import StockDailyBook from './Student/StockDailyBook';
+import StudentStockAllocation from './Student/StockMangement/StudentStockAllocation';
+import StockFeeReceiptPage from './Student/StockMangement/StockFeeReceiptPage';
+import StockDailyBook from './Student/StockMangement/StockDailyBook';
 import ImportExistingStudent from './Student/StudentManagement/ImportExistingStudent';
 import EmployeeForm from './Employee/EmployeeForm';
 

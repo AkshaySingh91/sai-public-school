@@ -467,7 +467,7 @@ const AddStudentTypeForm = ({
 
     // Add DSS: Half of DS
     const dssFees = {
-      AdmissionFee: Math.round(dsFees.AdmissionFee / 2),
+      AdmissionFee: Math.round(dsFees.AdmissionFee),
       TuitionFee: Math.round(dsFees.TuitionFee / 2),
     };
     onAdd(year, className, "DSS", dssFees);

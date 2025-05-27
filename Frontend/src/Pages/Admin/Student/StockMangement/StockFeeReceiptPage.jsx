@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useSchool } from '../../../contexts/SchoolContext';
+import { db } from '../../../../config/firebase';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { useSchool } from '../../../../contexts/SchoolContext';
 import Swal from 'sweetalert2';
 import StockFeeReceipt from './StockFeeReceipt';
 

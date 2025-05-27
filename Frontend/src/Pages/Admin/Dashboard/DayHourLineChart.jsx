@@ -69,7 +69,7 @@ export default function DayHourLineChart() {
         const student = studentDoc.data();
         (student.transactions || []).forEach(tx => {
           // check if today trans is completed than we consider it as transaction 
-          if (tx.status === "completed" && !isNaN(Number(tx.receiptId))) {
+          if (!isNaN(Number(tx.receiptId)) || (isNaN(Number(tx.receiptId)) && tx.status !== "completed")) {
             const txDate = new Date(tx.timestamp);
             const txDay = txDate.toISOString().split('T')[0];
             const txHour = txDate.getHours();

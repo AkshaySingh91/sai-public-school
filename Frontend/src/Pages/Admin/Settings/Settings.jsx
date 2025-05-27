@@ -52,8 +52,7 @@ const Settings = () => {
       const [profileData, schoolData] = await Promise.all([
         profileRes.json(),
         schoolRes.json(),
-      ]);
-      console.log(profileData)
+      ]); 
       setProfile(profileData);
       setSchool(schoolData);
       setError(null);
@@ -147,9 +146,7 @@ const Settings = () => {
         }
       );
 
-      response = await response.json();
-      console.log("response", response);
-
+      response = await response.json(); 
       // Update profile with new image URL
       setProfile((prev) => ({
         ...prev,

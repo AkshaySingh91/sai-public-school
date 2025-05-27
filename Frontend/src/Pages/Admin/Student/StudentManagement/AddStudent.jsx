@@ -1,7 +1,7 @@
 // src/Pages/Admin/Students/AddStudent.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, addDoc, doc, getDoc, getDocs, where } from 'firebase/firestore';
+import { collection, query, addDoc, doc, getDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../../../../config/firebase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import Swal from 'sweetalert2';
@@ -14,7 +14,7 @@ import { useSchool } from '../../../../contexts/SchoolContext';
 export default function AddStudent() {
   const { userData } = useAuth();
   const navigate = useNavigate();
-  const { school } = useSchool();
+  const { school, refresh } = useSchool();
   const [formData, setFormData] = useState({
     fname: '',
     lname: '',
@@ -94,6 +94,20 @@ export default function AddStudent() {
     };
     try {
       // Calculate base fees
+      function isValidAcademicYear(str) {
+        if (!/^\d{2}-\d{2}$/.test(str)) return false;
+
+        const [first, second] = str.split('-').map(Number);
+        return second === first + 1;
+      }
+      if (!isValidAcademicYear(formData.academicYear)) {
+        return Swal.fire({
+          icon: 'error',
+          title: 'Academic year is invalid',
+          text: "Academic Year should be of type '24-25' where 24 is the year and the second year is the next year",
+          confirmButtonColor: '#6366f1'
+        });
+      }
       const classStructure = await getNewClassFees(formData.class, formData.academicYear)
       const studentType = classStructure.studentType?.find(
         (st) =>
@@ -121,7 +135,7 @@ export default function AddStudent() {
       };
       // Calculate DSS discount if applicable
       let tuitionFeesDiscount = 0;
-      // to calculate dis if student is new than we will subtract it from total of DS ie (tuition+addminssion) else ig current than only subtract from tuition because we dont take addmission fee.
+      // to calculate dis if student is new than we will subtract it from total of DS ie (tuition+addminssion) else ig current than only subtract from tuition because we dont take admissionFee.
       if (formData.type === 'DSR' || formData.type === 'DSS') {
         const dsStructure = classStructure.studentType.find(st => st.name === 'DS');
         if (!dsStructure) {
@@ -138,12 +152,13 @@ export default function AddStudent() {
         const dssTotal = tuitionFees.total;
         tuitionFeesDiscount = Math.max(dsTotal - dssTotal, 0);
       }
-
+      // feeId will total feeId + 1
+      const feeId = (Number(school.feeIdCount) || 0) + 1;
       // Prepare student data with fees
       const studentData = {
         ...formData,
         schoolCode: userData.schoolCode,
-        feeId: `FEE-${nanoid(6).toUpperCase()}`,
+        feeId: feeId,
         allFee: {
           lastYearBalanceFee: 0,
           lastYearDiscount: 0,
@@ -159,9 +174,12 @@ export default function AddStudent() {
         transactions: [],
         createdAt: new Date()
       };
-      // Save to Firestore
       await addDoc(collection(db, 'students'), studentData);
-
+      // update school feeIdCount
+      await updateDoc(doc(db, 'schools', school.id), {
+        feeIdCount: feeId
+      });
+      await refresh()
       Swal.fire({
         icon: 'success',
         title: 'Student Added!',
@@ -303,19 +321,18 @@ export default function AddStudent() {
                   options={school.studentsType}
                   required
                 />
-                <SelectField
+                <InputField
                   icon={<Clock className="w-5 h-5" />}
                   label="Status"
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  options={["new", "current", "inactive"]}
                   required
+                  disabled={true}
                 />
-
                 <InputField
                   label="Academic Year"
                   value={formData.academicYear}
-                  disabled={true}
+                  onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
+                  required
                 />
                 <InputField
                   label="General Regestration No."

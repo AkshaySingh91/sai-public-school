@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { db } from "../../../config/firebase";
+import { db } from "../../../../config/firebase";
 import {
   collection,
   doc,
@@ -8,23 +8,26 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useSchool } from "../../../contexts/SchoolContext";
+import { useAuth } from "../../../../contexts/AuthContext";
+import { useSchool } from "../../../../contexts/SchoolContext";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaFileExcel, FaTimes } from "react-icons/fa";
 import { MdOutlinePictureAsPdf, MdOutlineFileUpload } from "react-icons/md";
-import TableLoader from "../../../components/TableLoader";
+import TableLoader from "../../../../components/TableLoader";
 import Swal from "sweetalert2";
 import {
   ChevronLeft,
   ChevronRight,
+  FileText,
   Search,
   Settings,
   Trash2,
 } from "lucide-react";
+import ShowAddStockModal from "./ShowAddStockModal";
+import ShowStockEditModal from "./ShowStockEditModal";
 
 function StockList() {
   const { userData } = useAuth();
@@ -50,6 +53,7 @@ function StockList() {
     toClass: "",
     category: "All",
   });
+  const [selectedStocks, setSelectedStocks] = useState([]);
 
   // Class names array
   const classNames = school.class?.length
@@ -73,6 +77,7 @@ function StockList() {
   const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredStocks.slice(indexOfFirstItem, indexOfLastItem);
   useEffect(() => {
     const current = filteredStocks.slice(indexOfFirstItem, indexOfLastItem);
     setCurrentStocks(current);
@@ -107,111 +112,120 @@ function StockList() {
       setLoading(false);
     }
   };
+
   const addStock = async () => {
-    if (!validateStock()) return;
+    const VALID_CATEGORIES = ["All", "Boys", "Girls"];
+    const errors = [];
+    const existingStock = stocks.find(s => s.id === editingStockId)
+    if (isEditing && !existingStock) {
+      errors.push("Editing Stock not found");
+    }
+    const newItem = isEditing ? { ...(existingStock || {}), ...newStock } : newStock;
+
+    // 1. Generate composite key
+    const compositeKey = [
+      newItem.itemName?.toLowerCase().trim(),
+      newItem.fromClass?.toLowerCase().trim(),
+      newItem.toClass?.toLowerCase().trim(),
+      newItem.category?.toLowerCase().trim(),
+      userData.schoolCode
+    ].join("|");
+
+    // 2. Field validations
+    if (!newItem.itemName?.trim()) errors.push("Item Name is required");
+    if (isNaN(newItem.quantity)) errors.push("Quantity must be a number");
+    if (isNaN(newItem.purchasePrice)) errors.push("Purchase Price must be a number");
+    if (isNaN(newItem.sellingPrice)) errors.push("Selling Price must be a number");
+    if (newItem.quantity <= 0) errors.push("Quantity must be greater than 0");
+    if (newItem.purchasePrice <= 0) errors.push("Purchase Price must be greater than 0");
+    if (newItem.sellingPrice <= 0) errors.push("Selling Price must be greater than 0");
+    if (newItem.sellingPrice < newItem.purchasePrice) errors.push("Selling Price cannot be less than Purchase Price");
+
+    // 3. Class validation
+    if (!classNames.includes(newItem.fromClass)) errors.push(`Invalid From Class. Valid classes: ${classNames.join(", ")}`);
+    if (!classNames.includes(newItem.toClass)) errors.push(`Invalid To Class. Valid classes: ${classNames.join(", ")}`);
+    if (classNames.indexOf(newItem.fromClass) > classNames.indexOf(newItem.toClass)) {
+      errors.push("From Class must be lower than To Class");
+    }
+
+    // 4. Category validation
+    if (!VALID_CATEGORIES.includes(newItem.category)) {
+      errors.push(`Invalid Category. Valid options: ${VALID_CATEGORIES.join(", ")}`);
+    }
+
+    // 5. Duplicate check
+    const isDuplicate = currentStocks.some(item => {
+      const existingKey = [
+        item.itemName.toLowerCase().trim(),
+        item.fromClass.toLowerCase().trim(),
+        item.toClass.toLowerCase().trim(),
+        item.category.toLowerCase().trim(),
+        item.schoolCode
+      ].join("|");
+
+      return isEditing
+        ? existingKey === compositeKey && item.id !== editingStockId
+        : existingKey === compositeKey;
+    });
+
+    if (isDuplicate) errors.push("This item already exists for the selected classes and category");
+
+    // 6. Handle errors
+    if (errors.length > 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        html: errors.join("<br/>"),
+        width: 700,
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+
+    // 7. Proceed with write operation
     try {
       const batch = writeBatch(db);
+      const stockData = {
+        ...newItem,
+        quantity: Number(newItem.quantity),
+        purchasePrice: Number(newItem.purchasePrice),
+        sellingPrice: Number(newItem.sellingPrice),
+        schoolCode: userData.schoolCode,
+        [isEditing ? "updatedAt" : "createdAt"]: new Date().toISOString()
+      };
 
       if (isEditing) {
-        // 🔍 Find the className of the existing stock from currentStocks
-        const existingStock = currentStocks.find(
-          (s) => s.id === editingStockId
-        );
-        console.log(existingStock, newStock)
-
-        // Case 1: Class range is unchanged (i.e., only one class and it matches old class)
-        // if (fromIdx === toIdx && classNames[fromIdx] === existingClassName) {
-        //   const stockRef = doc(db, "allStocks", editingStockId);
-        //   await updateDoc(stockRef, {
-        //     ...newStock,
-        //     quantity: parseInt(newStock.quantity),
-        //     purchasePrice: parseFloat(newStock.purchasePrice),
-        //     sellingPrice: parseFloat(newStock.sellingPrice),
-        //     updatedAt: new Date().toISOString(),
-        //   });
-
-        //   // Update UI
-        //   setCurrentStocks((prev) =>
-        //     prev.map((s) =>
-        //       s.id === editingStockId ? { ...s, ...newStock } : s
-        //     )
-        //   );
-        // } else {
-        //   // Case 2: Class range has changed → delete and recreate
-        //   const oldRef = doc(db, "allStocks", editingStockId);
-        //   batch.delete(oldRef);
-
-        //   for (let i = fromIdx; i <= toIdx; i++) {
-        //     const newDocRef = doc(collection(db, "allStocks"));
-        //     batch.set(newDocRef, {
-        //       ...newStock,
-        //       quantity: parseInt(newStock.quantity),
-        //       purchasePrice: parseFloat(newStock.purchasePrice),
-        //       sellingPrice: parseFloat(newStock.sellingPrice),
-        //       className: classNames[i],
-        //       createdAt: new Date().toISOString(),
-        //       schoolCode: userData.schoolCode,
-        //     });
-        //   }
-
-        //   await batch.commit();
-        //   fetchStocks(); // refresh list
-        // }
         const stockRef = doc(db, "allStocks", editingStockId);
-        await updateDoc(stockRef, {
-          ...existingStock,
-          itemName: newStock.itemName,
-          quantity: parseInt(newStock.quantity),
-          purchasePrice: parseFloat(newStock.purchasePrice),
-          sellingPrice: parseFloat(newStock.sellingPrice),
-          category: newStock.category,
-          updatedAt: new Date().toISOString(),
-          fromClass: newStock.fromClass,
-          toClass: newStock.toClass,
-        });
-
-        setCurrentStocks((prev) =>
-          prev.map((s) =>
-            s.id === editingStockId ? { ...s, ...newStock } : s
-          )
-        );
-
-        // await batch.commit();
-        fetchStocks(); // refresh list
-        // Reset editing state
-        setIsEditing(false);
-        setEditingStockId(null);
+        batch.update(stockRef, stockData);
       } else {
-        // ➕ Add new stock for selected class range
         const stockRef = doc(collection(db, "allStocks"));
-        batch.set(stockRef, {
-          ...newStock,
-          quantity: parseInt(newStock.quantity),
-          purchasePrice: parseFloat(newStock.purchasePrice),
-          sellingPrice: parseFloat(newStock.sellingPrice),
-          createdAt: new Date().toISOString(),
-          schoolCode: userData.schoolCode,
-        });
-        //  for (let i = fromIdx; i <= toIdx; i++) {
-        //   const stockRef = doc(collection(db, "allStocks"));
-        //   batch.set(stockRef, {
-        //     ...newStock,
-        //     quantity: parseInt(newStock.quantity),
-        //     purchasePrice: parseFloat(newStock.purchasePrice),
-        //     sellingPrice: parseFloat(newStock.sellingPrice),
-        //     className: classNames[i],
-        //     createdAt: new Date().toISOString(),
-        //     schoolCode: userData.schoolCode,
-        //   });
-        // }
-        await batch.commit();
+        batch.set(stockRef, stockData);
       }
 
-      // ✅ Reset form and refresh
+      await batch.commit();
+
+      // 8. Success handling
+      Swal.fire({
+        icon: "success",
+        title: isEditing ? "Stock Updated!" : "Stock Added!",
+        showConfirmButton: false,
+        timer: 1500
+      });
+
       resetForm();
       fetchStocks();
+      if (isEditing) {
+        setIsEditing(false);
+        setEditingStockId(null);
+      }
+
     } catch (error) {
-      alert("Error adding/updating stock: " + error.message);
+      Swal.fire({
+        icon: "error",
+        title: "Operation Failed",
+        text: error.message,
+        confirmButtonColor: "#2563eb",
+      });
     }
   };
 
@@ -256,13 +270,9 @@ function StockList() {
     if (!file) return;
     setLoading(true);
     try {
-      // 1. Load existing items for duplicate-check
-      const existingKeys = new Set(
-        currentStocks
-          .map(d =>
-            `${d.itemName.toLowerCase().trim()}|${d.FromClass}|${d.ToClass}`
-          )
-      );
+      // 1. Load existing items for duplicate-check 
+      const existingKeys = new Set(currentStocks.map(d =>
+        `${d.itemName.toLowerCase()}|${d.fromClass.toLowerCase()}|${d.toClass.toLowerCase()}|${d.category?.toLowerCase()}`));
       // 2. Read workbook
       const dataBinary = await file.arrayBuffer();
       const wb = XLSX.read(dataBinary, { type: "array" });
@@ -300,10 +310,18 @@ function StockList() {
         }
         throw new Error(msg);
       }
-
       // 4. Row-level validation & batch collection
       const errors = [];
       const batch = writeBatch(db);
+      const uniqueRows = new Set(
+        rows.map(row =>
+          `${row.ItemName?.toString().toLowerCase().trim()}`
+        )
+      );
+      console.log(uniqueRows)
+      if (uniqueRows.size !== rows.length) {
+        errors.push("Duplicate items  are not allowed.");
+      }
       rows.forEach((row, idx) => {
         const rowNum = idx + 2; // header is row 1
         const iName = row.ItemName?.toString().trim();
@@ -311,8 +329,8 @@ function StockList() {
         const pp = Number(row.PurchasePrice);
         const sp = Number(row.SellingPrice);
         const cat = row.Category?.toString().trim();
-        const fromC = row.FromClass;
-        const toC = row.ToClass;
+        const fromC = row.FromClass?.toString().trim();
+        const toC = row.ToClass?.toString().trim();
 
         // a) required
         if (!iName) errors.push(`Row ${rowNum}: ItemName is required`);
@@ -321,6 +339,11 @@ function StockList() {
         if (isNaN(sp)) errors.push(`Row ${rowNum}: SellingPrice must be a number`);
         if (!VALID_CATEGORIES.includes(cat))
           errors.push(`Row ${rowNum}: Category must be one of ${VALID_CATEGORIES.join(", ")}`);
+        // check if fron& to classes are exist 
+        if (!classNames.includes(fromC))
+          errors.push(`Row ${rowNum}: FromClass is from this only  ${classNames.join(", ")}`);
+        if (!classNames.includes(toC))
+          errors.push(`Row ${rowNum}: ToClass is from this only  ${classNames.join(", ")}`);
 
         const fromIdx = classNames.indexOf(fromC);
         const toIdx = classNames.indexOf(toC);
@@ -333,15 +356,14 @@ function StockList() {
           errors.push(`Row ${rowNum}: SellingPrice (${sp}) cannot be less than PurchasePrice (${pp})`);
 
         // c) duplicate in file
-        const key = `${iName.toLowerCase()}|${fromC}|${toC}`;
+        const key = `${iName.toLowerCase()}|${fromC.toLowerCase()}|${toC.toLowerCase()}|${cat.toLowerCase()}`
         if (batch._writes?.some(w => w._document?.key.path.segments.includes(key))) {
           errors.push(`Row ${rowNum}: Duplicate entry in the sheet`);
         }
         // d) duplicate in DB
         if (existingKeys.has(key)) {
-          errors.push(`Row ${rowNum}: Already exists in database`);
+          errors.push(`Row ${rowNum}: Item already exists in the database`);
         }
-
         // if row clean, queue it
         if (!errors.find(msg => msg.startsWith(`Row ${rowNum}:`))) {
           const newDoc = doc(collection(db, "allStocks"));
@@ -414,7 +436,32 @@ function StockList() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Stocks");
     XLSX.writeFile(workbook, "stock-list.xlsx");
   };
+  const downloadExcelTemplate = async () => {
+    const result = await Swal.fire({
+      title: "Stock list upload templete",
+      text: "In this templete you can add Stock list and upload it to our system",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#7c3aed",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, download it!",
+    });
+    if (!result.isConfirmed) return
 
+    const headers = [{
+      ItemName: '',
+      Quantity: '',
+      PurchasePrice: '',
+      SellingPrice: '',
+      Category: '',
+      FromClass: '',
+      ToClass: ''
+    }];
+    const worksheet = XLSX.utils.json_to_sheet(headers);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+    XLSX.writeFile(workbook, "stock-template.xlsx");
+  };
   const exportToPDF = () => {
     const doc = new jsPDF();
 
@@ -490,7 +537,121 @@ function StockList() {
       }
     }
   };
+  const toggleSelectStock = (id) => {
+    setSelectedStocks((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+  const toggleSelectAll = (e) => {
+    setSelectedStocks(e.target.checked ? currentItems.map((s) => s.id) : []);
+  };
+  const handleBatchDelete = async () => {
+    try {
+      const selected = stocks.filter((s) =>
+        selectedStocks.includes(s.id) &&
+        s.schoolCode === userData.schoolCode // Initial filter
+      );
 
+      // Confirm deletion
+      const { isConfirmed } = await Swal.fire({
+        title: `Delete ${selected.length} students?`,
+        html: `
+          <div class="text-center">
+            <p class="text-xl">Stocks to delete: ${selected.length}</p>
+            <p class="mt-2 text-sm text-red-600">This will permanently remove stocks from your school!</p>
+          </div>
+        `,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Delete Permanently",
+        cancelButtonText: "Cancel",
+        showLoaderOnConfirm: true,
+      });
+
+      if (!isConfirmed) return;
+
+      // Show progress dialog
+      Swal.fire({
+        title: "Deleting Students...",
+        html: `
+          <div class="progress-container">
+            <div class="progress-bar bg-red-500 h-2 rounded" style="width: 0%"></div>
+            <div class="progress-text mt-2">0/${selected.length}</div>
+            <div class="current-stock mt-2 text-sm text-gray-600"></div>
+          </div>
+        `,
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      let processed = 0;
+      const total = selected.length;
+      const errors = [];
+
+      for (const [index, stock] of selected.entries()) {
+        try {
+          // Double-check school code and ID
+          if (stock.schoolCode !== userData.schoolCode || !selectedStocks.includes(stock.id)) {
+            throw new Error("Unauthorized deletion attempt blocked");
+          }
+          // Update progress
+          const progress = Math.floor((index / total) * 100);
+          Swal.getHtmlContainer().querySelector(".progress-bar").style.width = `${progress}%`;
+          Swal.getHtmlContainer().querySelector(".progress-text").textContent = `${index + 1}/${total}`;
+          Swal.getHtmlContainer().querySelector(".current-stock").textContent =
+            `Deleting: ${stock.itemName}`;
+
+          // Perform deletion
+          await deleteDoc(doc(db, "allStocks", stock.id));
+          processed++;
+
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`Error deleting ${stock.itemName}:`, error);
+          errors.push({
+            stock: `${stock.itemName}`,
+            error: error.message
+          });
+        }
+      }
+
+      // Final updates
+      await fetchStocks();
+      setSelectedStocks([]);
+
+      if (errors.length === 0) {
+        await Swal.fire({
+          title: "Deletion Complete!",
+          html: `<p>Successfully deleted ${processed} stocks.</p>`,
+          icon: "success",
+          timer: 2000,
+        });
+      } else {
+        await Swal.fire({
+          title: "Partial Deletion",
+          html: `
+            <p>Deleted ${processed} students successfully.</p>
+            <p class="text-red-600">${errors.length} errors occurred.</p>
+            <ul class="text-sm text-left mt-2">
+              ${errors.map((e) => `<li>${e.stock}: ${e.error}</li>`).join("")}
+            </ul>
+          `,
+          icon: "warning",
+          confirmButtonText: "Okay",
+        });
+      }
+    } catch (error) {
+      console.error("Batch delete failed:", error);
+      Swal.fire({
+        title: "Deletion Failed",
+        html: `<p class="text-red-600">${error.message}</p>`,
+        icon: "error",
+      });
+    }
+  };
   return (
     <div className="sm:p-6 p-4 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
       {loading ? (
@@ -520,6 +681,16 @@ function StockList() {
                   <MdOutlineFileUpload className="w-5 h-5" />
                   Bulk Upload
                 </motion.button>
+                {/* New Template Buttons */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={downloadExcelTemplate}
+                  className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 whitespace-nowrap rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
+                >
+                  <FileText className="w-4 h-4" />
+                  Excel Template
+                </motion.button>
               </div>
 
               <div className="ml-auto flex items-center sm:gap-3 gap-3 w-full sm:w-auto justify-between ">
@@ -541,6 +712,15 @@ function StockList() {
                 >
                   <MdOutlinePictureAsPdf className="w-4 h-4" />
                   PDF
+                </motion.button>
+                {/* deleted one or multiple stocks */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  onClick={handleBatchDelete}
+                  disabled={selectedStocks.length === 0}
+                  className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                >
+                  Delete Stocks
                 </motion.button>
               </div>
             </div>
@@ -564,6 +744,14 @@ function StockList() {
               <table className="min-w-full divide-y divide-purple-100 table-fixed">
                 <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-sm">
                   <tr>
+                    <th className="p-3 w-12 text-center">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                        checked={selectedStocks.length === currentItems.length && currentItems.length > 0}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
                     {[
                       "Item Name",
                       "From-Class",
@@ -592,6 +780,14 @@ function StockList() {
                       transition={{ delay: index * 0.05 }}
                       className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
                     >
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                          checked={selectedStocks.includes(stock.id)}
+                          onChange={() => toggleSelectStock(stock.id)}
+                        />
+                      </td>
                       <td className="px-6 py-3 text-center align-middle font-medium text-violet-900 capitalize">
                         {stock.itemName}
                       </td>
@@ -672,267 +868,23 @@ function StockList() {
             </div>
           </div>
 
-          {/* Add Stock Modal */}
-          <AnimatePresence>
-            {showModal && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-                onClick={() => {
-                  // either we have click on add or edit 
-                  if (isEditing) {
-                    resetForm();
-                    setIsEditing(false);
-                    setShowModal(false)
-                  } else {
-                    setShowModal(false)
-                  }
-                }}
-              >
-                <motion.div
-                  initial={{ scale: 0.95 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0.95 }}
-                  className="bg-white rounded-2xl p-8 max-w-md w-full space-y-6 shadow-2xl border border-purple-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex justify-between items-center pb-4 border-b border-purple-100">
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
-                      Add New Stock
-                    </h2>
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="text-purple-500 hover:text-purple-700 transition-colors"
-                    >
-                      <FaTimes className="text-xl" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder="Item Name"
-                      className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
-                      value={newStock.itemName}
-                      onChange={(e) =>
-                        setNewStock({ ...newStock, itemName: e.target.value })
-                      }
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <input
-                        type="number"
-                        placeholder="Quantity"
-                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
-                        value={newStock.quantity}
-                        onChange={(e) =>
-                          setNewStock({ ...newStock, quantity: e.target.value })
-                        }
-                      />
-                      <select
-                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 appearance-none"
-                        value={newStock.category}
-                        onChange={(e) =>
-                          setNewStock({ ...newStock, category: e.target.value })
-                        }
-                      >
-                        <option value="All">All Categories</option>
-                        <option value="Boys">Boys</option>
-                        <option value="Girls">Girls</option>
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <input
-                        type="number"
-                        placeholder="Purchase Price"
-                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
-                        value={newStock.purchasePrice}
-                        onChange={(e) =>
-                          setNewStock({
-                            ...newStock,
-                            purchasePrice: e.target.value,
-                          })
-                        }
-                      />
-                      <input
-                        type="number"
-                        placeholder="Selling Price"
-                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 transition-all"
-                        value={newStock.sellingPrice}
-                        onChange={(e) =>
-                          setNewStock({
-                            ...newStock,
-                            sellingPrice: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <select
-                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 appearance-none"
-                        value={newStock.fromClass}
-                        onChange={(e) =>
-                          setNewStock({
-                            ...newStock,
-                            fromClass: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">From Class</option>
-                        {classNames.map((cls, idx) => (
-                          <option key={idx} value={cls}>
-                            {cls}
-                          </option>
-                        ))}
-                      </select>
-
-                      <select
-                        className="w-full p-3 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-purple-50 appearance-none"
-                        value={newStock.toClass}
-                        onChange={(e) =>
-                          setNewStock({ ...newStock, toClass: e.target.value })
-                        }
-                      >
-                        <option value="">To Class</option>
-                        {classNames.map((cls, idx) => (
-                          <option key={idx} value={cls}>
-                            {cls}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4 border-t border-purple-100">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      onClick={() => setShowModal(false)}
-                      className="px-6 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-colors"
-                    >
-                      Cancel
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      onClick={addStock}
-                      className="px-6 py-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl hover:from-purple-700 hover:to-violet-700 shadow-md transition-all"
-                    >
-                      {isEditing ? "Update Stock" : "Add Stock"}
-                    </motion.button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Excel Upload Modal */}
-          <AnimatePresence>
-            {showExcelModal && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-                onClick={() => setShowExcelModal(false)}
-              >
-                <motion.div
-                  initial={{ scale: 0.95 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0.95 }}
-                  className="bg-white rounded-2xl p-6 max-w-3xl w-full space-y-4 shadow-2xl border border-purple-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex justify-between items-center pb-4 border-b border-purple-100">
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                      Bulk Upload Template
-                    </h2>
-                    <button
-                      onClick={() => setShowExcelModal(false)}
-                      className="text-purple-500 hover:text-purple-700 transition-colors"
-                    >
-                      <FaTimes className="text-xl" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-600 text-center">
-                      Column names should follow this format{" "}
-                      <span className="text-purple-600">(*required)</span>
-                    </p>
-
-                    <div className="overflow-x-auto rounded-xl border border-purple-100">
-                      <table className="min-w-full divide-y divide-purple-100 text-sm">
-                        <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
-                          <tr>
-                            {[
-                              "ItemName",
-                              "Quantity",
-                              "PurchasePrice",
-                              "SellingPrice",
-                              "Category",
-                              "FromClass",
-                              "ToClass",
-                            ].map((header, index) => (
-                              <th
-                                key={index}
-                                className="px-4 py-2.5 text-left font-medium border-r border-purple-500/30 last:border-r-0"
-                              >
-                                {header}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-purple-100">
-                          <tr>
-                            <td className="px-4 py-2.5 font-medium text-violet-900">
-                              School Bag
-                            </td>
-                            <td className="px-4 py-2.5 text-center text-purple-800">
-                              50
-                            </td>
-                            <td className="px-4 py-2.5 text-center text-purple-800">
-                              300
-                            </td>
-                            <td className="px-4 py-2.5 text-center text-emerald-800">
-                              400
-                            </td>
-                            <td className="px-4 py-2.5 text-center">
-                              <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-xs">
-                                All
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5 text-center text-purple-800">
-                              Nursery
-                            </td>
-                            <td className="px-4 py-2.5 text-center text-purple-800">
-                              3rd
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <motion.label
-                      whileHover={{ scale: 1.02 }}
-                      className="block w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl text-center cursor-pointer hover:from-purple-700 hover:to-violet-700 shadow-md transition-all"
-                    >
-                      {uploading ? "Uploading..." : "Choose Excel File"}
-                      <input
-                        type="file"
-                        accept=".xls,.xlsx"
-                        onChange={handleExcelUpload}
-                        className="hidden"
-                        disabled={uploading}
-                      />
-                    </motion.label>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <ShowAddStockModal
+            classNames={classNames}
+            showModal={showModal}
+            isEditing={isEditing}
+            newStock={newStock}
+            resetForm={resetForm}
+            setIsEditing={setIsEditing}
+            setShowModal={setShowModal}
+            setNewStock={setNewStock}
+            addStock={addStock}
+          />
+          <ShowStockEditModal
+            showExcelModal={showExcelModal}
+            uploading={uploading}
+            handleExcelUpload={handleExcelUpload}
+            setShowExcelModal={setShowExcelModal}
+          />
         </>
       )}
     </div>
