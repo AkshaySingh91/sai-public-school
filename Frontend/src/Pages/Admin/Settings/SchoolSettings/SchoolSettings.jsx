@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { School, Upload, Loader, Instagram, UserSearch } from 'lucide-react';
 import Swal from "sweetalert2";
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../../config/firebase';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { auth } from '../../../../config/firebase';
 import { useSchool } from "../../../../contexts/SchoolContext"
+import { auth, db } from '../../../../config/firebase'; // Ensure auth is imported correctly
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { doc, writeBatch, getDoc } from "firebase/firestore";
 
 const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
 const VITE_PORT = import.meta.env.VITE_PORT;
 const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const SchoolSettings = ({ school, setSchool }) => {
-    const { userData } = useAuth();
+    // this school is use to get the school id
+    const { school: s } = useSchool();
+
+    const { userData, currentUser } = useAuth();
     const { refresh } = useSchool();
     const [schoolName, setSchoolName] = useState(school.schoolName || "");
     const [academicYear, setAcademicYear] = useState(school.academicYear || "");
@@ -29,11 +32,19 @@ const SchoolSettings = ({ school, setSchool }) => {
     const [stockReceiptCount, setStockReceiptCount] = useState(school.stockReceiptCount || 0)
     const [schoolEmail, setSchoolEmail] = useState(school.email || "")
     const [schoolMobile, setSchoolMobile] = useState(school.mobile || "")
-
-    const [logoFile, setLogoFile] = useState(null);
-    const [logoUrl, setLogoUrl] = useState(false);
-
-
+    // file upload
+    const storage = getStorage();
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const [uploading, setUploading] = useState(false);
+    const validateFile = (file) => {
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            throw new Error('Only JPG, PNG, and WEBP images are allowed');
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            throw new Error('File size exceeds 5MB limit');
+        }
+    };
     const checkIfClassFeeStructurePresent = async (newClass) => {
         try {
             const fsRef = doc(db, "feeStructures", userData.schoolCode);
@@ -195,30 +206,7 @@ const SchoolSettings = ({ school, setSchool }) => {
             if (!resDetails.ok) {
                 const errorData = await resDetails.json();
                 throw new Error(errorData.error || 'Failed to update school details');
-            }
-
-            // 2) If there's a new logo, upload it
-            if (logoFile) {
-                const formData = new FormData();
-                formData.append('logo', logoFile);
-
-                const resLogo = await
-                    fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/school/logo` : `${VITE_DOMAIN_PROD}/api/admin/settings/school/logo`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                Authorization: `Bearer ${userToken}`
-                            },
-                            body: formData
-                        });
-
-                if (!resLogo.ok) {
-                    const errorData = await resLogo.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Failed to upload logo');
-                }
-            }
-
-            // If we reach here, everything succeeded
+            } 
             Swal.fire({
                 icon: 'success',
                 title: 'Saved!',
@@ -247,17 +235,101 @@ const SchoolSettings = ({ school, setSchool }) => {
             setClasses(e.target.value.trim())
         }
     }
-    const handleLogoUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setLogoUrl(reader.result);
+    const handleLogoUpload = async (file) => {
+        if (!file) return;
+
+        try {
+            setUploading(true);
+            validateFile(file);
+
+            const timestamp = Date.now();
+            const fileExt = file.name.split('.').pop();
+            const newFileName = `admin/${currentUser.uid}/${timestamp}.${fileExt}`;
+            const storageRef = ref(storage, newFileName);
+            // Show progress dialog
+            let progressDialog;
+            const showProgress = (progress) => {
+                progressDialog = Swal.fire({
+                    title: 'Uploading...',
+                    html: `<div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progress}%"></div>
+              </div>
+              <div class="mt-2">${Math.round(progress)}% Complete</div>`,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                });
             };
-            reader.readAsDataURL(file);
-            setLogoFile(e.target.files[0])
+
+            // Handle existing image deletion
+            let oldImageDeleted = false;
+            if (school.logoUrl) {
+                try {
+                    await deleteObject(ref(storage, school.logoImagePath));
+                    oldImageDeleted = true;
+                } catch (deleteErr) {
+                    console.warn('Old image deletion warning:', deleteErr);
+                    if (deleteErr.code !== 'storage/object-not-found') throw deleteErr;
+                }
+            }
+
+            // Upload with progress tracking
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    showProgress(progress);
+                },
+                (error) => {
+                    Swal.close();
+                    throw error;
+                }
+            );
+
+            await uploadTask;
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            // Atomic Firestore update
+            const batch = writeBatch(db);
+            const userRef = doc(db, 'schools', s.id);
+            batch.update(userRef, {
+                logoUrl: downloadURL,
+                logoImagePath: newFileName,
+                updatedAt: new Date().toISOString()
+            });
+
+            await batch.commit();
+
+            // Update local state
+            setSchool(prev => ({
+                ...prev,
+                logoUrl: downloadURL,
+                logoImagePath: newFileName
+            }));
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Logo Image Updated!',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        } catch (err) {
+            console.error('Upload Error:', err);
+            // Handle specific storage errors
+            let errorMessage = err.message;
+            if (err.code === 'storage/canceled') {
+                errorMessage = 'Upload was canceled';
+            } else if (err.code === 'storage/retry-limit-exceeded') {
+                errorMessage = 'Upload failed after multiple attempts';
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Upload Failed',
+                html: `<div class="text-red-600">${errorMessage}</div>`,
+            });
+        } finally {
+            setUploading(false);
         }
-    }
+    };
     return (
         <form onSubmit={handleSubmit} className="space-y-8 max-w-3xl mx-auto">
             {/* School Name Section */}
@@ -561,9 +633,9 @@ const SchoolSettings = ({ school, setSchool }) => {
                     <div className="w-full">
                         <label className="block text-sm font-medium text-gray-700 mb-3">School Logo</label>
                         <div className="flex items-center gap-6">
-                            <div className={`relative ${!logoUrl ? 'bg-gray-50' : ''} border-2 border-dashed border-gray-300 rounded-xl p-4 w-32 h-32 flex items-center justify-center transition-colors hover:border-purple-500`}>
-                                {logoUrl ? (
-                                    <img src={logoUrl} className="w-full h-full object-contain" alt="School Logo" />
+                            <div className={`relative ${!school.logoUrl ? 'bg-gray-50' : ''} border-2 border-dashed border-gray-300 rounded-xl p-4 w-32 h-32 flex items-center justify-center transition-colors hover:border-purple-500`}>
+                                {school.logoUrl ? (
+                                    <img src={school.logoUrl} className="w-full h-full object-contain" alt="School Logo" />
                                 ) : (
                                     <div className="text-center">
                                         <Upload size={24} className="text-gray-400 mx-auto mb-2" />
@@ -573,7 +645,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                 <input
                                     type="file"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    onChange={handleLogoUpload}
+                                    onChange={(e) => handleLogoUpload(e.target.files[0])}
                                     accept="image/*"
                                 />
                             </div>

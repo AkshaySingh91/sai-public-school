@@ -16,20 +16,11 @@ function StockGroup() {
   const { school } = useSchool();
   const [expandedRow, setExpandedRow] = useState(null);
   const [loading, setLoading] = useState(false);
-  const classOrder = school?.class?.length ? school.class : [
-    "Nursery",
-    "JRKG",
-    "SRKG",
-    "1st",
-    "2nd",
-    "3rd",
-    "4th",
-    "5th",
-    "6th",
-    "7th",
-    "8th",
-    "9th",
-  ];
+  const classOrder = (school.class || [
+    "nursery", "jrkg", "srkg", "1st", "2nd", "3rd",
+    "4th", "5th", "6th", "7th", "8th", "9th"
+  ]).map(c => c && c?.trim()?.toLowerCase());
+
   const [aggregatedData, setAggregatedData] = useState([]);
 
   useEffect(() => {
@@ -55,9 +46,9 @@ function StockGroup() {
     const aggregation = classOrder.reduce((acc, className) => {
       ['Boys', 'Girls'].forEach(gender => {
         const classItems = data.filter(item => {
-          const fromIdx = classOrder.indexOf(item.fromClass);
-          const toIdx = classOrder.indexOf(item.toClass);
-          const classIdx = classOrder.indexOf(className);
+          const fromIdx = classOrder.indexOf(item?.fromClass?.toLowerCase()?.trim());
+          const toIdx = classOrder.indexOf(item.toClass?.toLowerCase()?.trim());
+          const classIdx = classOrder.indexOf(className?.toLowerCase()?.trim());
           return fromIdx <= classIdx && toIdx >= classIdx &&
             (item.category?.toLowerCase()?.trim() === gender?.toLowerCase()?.trim() || item.category?.toLowerCase()?.trim() === 'all');
         });
@@ -77,27 +68,10 @@ function StockGroup() {
       });
       return acc;
     }, []);
-    console.log(aggregation)
     setAggregatedData(aggregation);
   };
   const handleRowClick = (index) => {
     setExpandedRow(expandedRow === index ? null : index);
-  };
-  const StockStatusBadge = ({ quantity }) => {
-    const statusConfig = {
-      0: { text: 'Out of Stock', color: 'bg-red-100 text-red-700' },
-      10: { text: 'Low Stock', color: 'bg-amber-100 text-amber-700' },
-      default: { text: 'In Stock', color: 'bg-green-100 text-green-700' }
-    };
-
-    const config = quantity === 0 ? statusConfig[0] :
-      quantity <= 10 ? statusConfig[10] : statusConfig.default;
-
-    return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${config.color}`}>
-        {config.text}
-      </span>
-    );
   };
   if (loading) {
     return (

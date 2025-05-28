@@ -281,6 +281,7 @@ function BusList() {
   const totalPages = Math.ceil(filteredBuses.length / itemsPerPage);
   // Export to Excel
   const exportToExcel = () => {
+    console.log(buses)
     const headers = {
       BusNo: '',
       NumberPlate: '',
@@ -290,7 +291,7 @@ function BusList() {
       Status: '',
       InsuranceDate: ''
     };
-    const data = buses.length < 0
+    const data = buses.length > 0
       ? buses.map(b => ({
         BusNo: b.busNo,
         NumberPlate: b.numberPlate,

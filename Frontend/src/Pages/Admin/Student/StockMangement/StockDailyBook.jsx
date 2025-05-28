@@ -61,11 +61,12 @@ export default function StockDailyBook() {
         const studentData = studentDoc.data();
         const studentInfo = {
           id: studentDoc.id,
-          name: `${studentData.fname} ${studentData.lname || ""} ${studentData.lname}`,
+          fname: studentData.fname,
+          fatherName: studentData.fatherName,
+          lname: studentData.lname,
           class: studentData.class,
           gender: studentData.gender,
         };
-
         // Process stock transactions
         (studentData.StockPaymentDetail || []).forEach((stockTx) => {
           const txDate = new Date(stockTx.date);
@@ -80,14 +81,12 @@ export default function StockDailyBook() {
               (sum, item) => sum + (Number(item.total) || 0),
               0
             );
-
-            const itemsList = stockTx.items
-              .map((item) => `${item?.itemName?.toUpperCase()}`)
-              .join(", ");
-
+            const itemsList = stockTx.items.reduce((acc, item) => `${acc}, ${item.itemName}`, "").slice(2);
             allTx.push({
               studentId: studentDoc.id,
-              studentName: studentInfo.name,
+              fname: studentInfo.fname,
+              lname: studentInfo.lname,
+              fatherName: studentInfo.fatherName,
               date: stockTx.date,
               items: itemsList,
               totalQuantity,
@@ -97,13 +96,12 @@ export default function StockDailyBook() {
               status: "completed",
               class: studentInfo.class,
               gender: studentInfo.gender,
+              remark: stockTx?.remark,
             });
           }
         });
       });
-
       allTx.sort((a, b) => new Date(b.date) - new Date(a.date));
-      console.log(allTx)
       setStockTransactions(allTx);
       setLoading(false);
     };
@@ -118,9 +116,10 @@ export default function StockDailyBook() {
   }, [stockTransactions, page]);
 
   const exportExcel = () => {
+    console.log(stockTransactions)
     const wsData = stockTransactions.map((t) => ({
       Date: new Date(t.date).toLocaleString(),
-      Student: t.studentName,
+      Student: `${t.fname} ${t.fatherName} ${t.lname}`.toUpperCase(),
       Class: t.class,
       Gender: t.gender,
       Items: t.items,
@@ -129,6 +128,7 @@ export default function StockDailyBook() {
       Account: t.account,
       "Receipt ID": t.receiptId,
       Status: t.status,
+      Remark: t.remark,
     }));
 
     const wb = XLSX.utils.book_new();
@@ -302,11 +302,19 @@ export default function StockDailyBook() {
                         <td className="px-4 py-3 text-gray-700 break-words font-medium">
                           {new Date(t.date).toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-violet-900 capitalize">
-                          {t.studentName}
+                        {/* Name */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-900 capitalize">
+                              {t.fname || '-'} {t.lname || ''}
+                            </p>
+                            <p className="text-xs text-gray-500 capitalize">
+                              {t.fatherName || 'Guardian not specified'}
+                            </p>
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{t.class}</td>
-                        <td className="px-4 py-3 text-gray-600">{t.gender}</td>
+                        <td className="px-4 py-3 text-gray-600 capitalize">{t.class}</td>
+                        <td className="px-4 py-3 text-gray-600 capitalize">{t.gender}</td>
                         <td className="px-4 py-3 text-violet-900 font-medium max-w-[150px] truncate">
                           {t.items}
                         </td>
@@ -336,32 +344,6 @@ export default function StockDailyBook() {
                 </table>
               </div>
 
-              {/* Updated Pagination */}
-              {/* <div className="mt-6 flex items-center justify-between px-4">
-                                <div className="text-sm text-violet-800/90">
-                                    Showing {page * perPage - perPage + 1} to{" "}
-                                    {Math.min(page * perPage, stockTransactions.length)} of{" "}
-                                    {stockTransactions.length} entries
-                                </div>
-                                <div className="flex space-x-2">
-                                    <button
-                                        onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                                        disabled={page === 1}
-                                        className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <ChevronLeft className="w-5 h-5 mr-1" />
-                                        Previous
-                                    </button>
-                                    <button
-                                        onClick={() => setPage((p) => Math.min(p + 1, pageCount))}
-                                        disabled={page === pageCount}
-                                        className="flex items-center px-4 py-2 text-sm font-medium text-violet-800 bg-violet-100/80 border border-violet-200 rounded-xl hover:bg-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Next
-                                        <ChevronRight className="w-5 h-5 ml-1" />
-                                    </button>
-                                </div>
-                            </div> */}
               <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-3 px-4">
                 <div className="text-sm text-violet-800/90 text-center md:text-left">
                   Showing {page * perPage - perPage + 1} to{" "}

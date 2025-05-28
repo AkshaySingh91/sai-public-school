@@ -77,7 +77,7 @@ export default function StudentProfile({
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4 }}
-      className="md:w-1/3 space-y-6 sticky top-6 h-fit overflow-y-auto"    >
+      className="md:min-w-[28%] md:max-w-[30%] space-y-6 sticky top-6 h-fit overflow-y-auto overflow-x-hidden">
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
@@ -138,7 +138,7 @@ export default function StudentProfile({
             onClick={goToNextAcademicYear}
             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition-all"
           >
-            <Save className="w-5 h-5" /> Next Academic Year
+            <Save className="w-5 h-5" /> Promote Student
           </button>
           <button
             onClick={handleStudentDelete}

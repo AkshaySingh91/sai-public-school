@@ -119,7 +119,6 @@ export default function SchoolMetricsCards() {
 
           // we sum of all those that are collected from external system only "completed" one
           (s.transactions || []).forEach((t) => {
-            console.log(t.status)
             if (t?.status?.toLowerCase() === "completed")
               metricsData.collectedFees += Number(t.amount) || 0;
           });

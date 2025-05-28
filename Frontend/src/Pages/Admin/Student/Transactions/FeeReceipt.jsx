@@ -91,24 +91,8 @@ function humanize(str) {
 }
 
 export default function FeeReceipt({ student, school, transaction }) {
-  const {
-    feeType,
-    amount: txAmount,
-    paymentMode,
-    account,
-    remark = "",
-    academicYear: txYear,
-    historicalSnapshot,
-    timestamp,
-  } = transaction;
-  const {
-    academicYear: currAcademicYear,
-    feeId,
-    fname,
-    lname,
-    class: cls,
-    div,
-  } = student;
+  const { feeType, amount: txAmount, paymentMode, account, remark = "", academicYear: txYear, historicalSnapshot, timestamp, } = transaction;
+  const { academicYear: currAcademicYear, feeId, fname, lname, class: cls, div, } = student;
   // Determine fee context
   const isPrevYear = txYear !== currAcademicYear;
   const feeCategory =
@@ -131,7 +115,7 @@ export default function FeeReceipt({ student, school, transaction }) {
     remainingBefore = 0,
     remainingAfter = 0,
   } = historicalSnapshot || {};
-
+  console.log(historicalSnapshot, transaction)
   // Build receipt rows based on fee type
   const rows = [];
   const showDiscount = ["bus", "tuition"].includes(feeCategory.toLowerCase());

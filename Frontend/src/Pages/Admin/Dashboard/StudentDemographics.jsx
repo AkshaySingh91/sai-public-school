@@ -30,7 +30,6 @@ export default function StudentDemographics() {
                     const snap = await getDocs(q);
                     return { type, count: snap.size };
                 }));
-                console.log(typeCounts)
                 setStudentTypes(typeCounts);
 
                 // Fetch class division counts

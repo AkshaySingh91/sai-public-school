@@ -624,7 +624,7 @@ export function StudentDetail() {
       setTransactions(updatedTransactions);
       fetchData()
       Swal.fire("Success!", "Transaction status updated", "success");
-      // re popullate school data 
+      // On popullate school data 
       refresh()
     } catch (error) {
       Swal.fire("Error", error.message, "error");
@@ -781,7 +781,7 @@ export function StudentDetail() {
       loading ?
         <StudentDetailsLoader /> :
         <div className="py-6 max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-6 relative">
+          <div className="flex flex-col md:flex-row md:gap-4 relative justify-evenly">
             <StudentProfile
               student={student}
               formData={formData}
@@ -837,8 +837,8 @@ export function StudentDetail() {
                       formData={formData}
                       setFormData={setFormData}
                       studentId={student}
-                      handleFeeUpdate={handleFeeUpdate}
                       schoolData={schoolData}
+                      fetchStudent={fetchData}
                     />
                   </motion.div>
                 )}

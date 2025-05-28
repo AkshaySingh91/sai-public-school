@@ -36,7 +36,8 @@ export function SchoolProvider({ children }) {
                     id: doc.id,
                     ...doc.data()
                 });
-            } else {
+            }
+             else {
                 setError("School not found");
                 setSchool(null);
             }

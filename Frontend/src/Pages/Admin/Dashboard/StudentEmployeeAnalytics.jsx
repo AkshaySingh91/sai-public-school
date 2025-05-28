@@ -22,23 +22,15 @@ export default function StudentEmployeeAnalytics() {
                 query(
                     collection(db, "students"),
                     where("schoolCode", "==", userData.schoolCode),
-                    where("status", "==", "new"),
-                    ...(selectedClass ? [where("class", "==", selectedClass.toLowerCase())] : [])
-                ),
-                query(
-                    collection(db, "students"),
-                    where("schoolCode", "==", userData.schoolCode),
-                    where("status", "==", "current"),
                     ...(selectedClass ? [where("class", "==", selectedClass.toLowerCase())] : [])
                 )
             ];
-
-            const [newStudentsSnap, currentStudentsSnap] = await Promise.all([
-                getDocs(studentQueries[0]),
-                getDocs(studentQueries[1])
+            const [newStudentsSnap] = await Promise.all([
+                getDocs(studentQueries[0])
             ]);
 
-            const studentsSnap = [...newStudentsSnap.docs, ...currentStudentsSnap.docs];
+            const studentsSnap = [...newStudentsSnap.docs];
+
             const sexes = { male: 0, female: 0, other: 0 };
             studentsSnap.forEach(doc => {
                 const g = (doc.data().gender || '').toLowerCase();

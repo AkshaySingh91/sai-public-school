@@ -1,90 +1,158 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2"
 import {
-  User, VenusAndMars, Mail, Phone, GraduationCapIcon, Hash, CalendarDays, Ticket, HomeIcon, CreditCardIcon, Utensils, Bus, HeartPulseIcon, MapPin, IndianRupee, BadgePercent, CheckCircle, FileTextIcon
+  User, VenusAndMars, Mail, Phone, GraduationCapIcon, Hash, CalendarDays, Ticket, HomeIcon, CreditCardIcon, Utensils, Bus, HeartPulseIcon, MapPin, IndianRupee, BadgePercent, CheckCircle, FileTextIcon,
+  XCircle
 } from "lucide-react";
 import { InputField } from "../InputField";
 import { SelectField } from "../SelectField";
 import { db } from "../../../../config/firebase";
-import {
-  doc,
-  getDoc,
-  collection,
-  getDocs,
-  updateDoc,
-} from "firebase/firestore";
-export default function PersonalInfo({
-  formData,
-  setFormData,
-  studentId,
-  handleFeeUpdate, schoolData,
-}) {
-  // State variables
+import { doc, query, where, collection, getDocs, updateDoc, } from "firebase/firestore";
+import { useAuth } from "../../../../contexts/AuthContext";
+
+export default function PersonalInfo({ formData, setFormData, studentId, schoolData, fetchStudent }) {
   const [destinationOptions, setDestinationOptions] = useState([]);
   const [busOptions, setBusOptions] = useState([]);
-  const [selectedBus, setSelectedBus] = useState(formData.busNoPlate || "");
+  const [selectedBus, setSelectedBus] = useState((formData.busStop && formData.busStop !== "" && formData.busNoPlate && formData.busNoPlate !== "") ? formData.busStop.toUpperCase() : "");
   const [busDiscount, setBusDiscount] = useState(formData?.allFee?.busFeeDiscount || 0);
-  const [busFee, setBusFee] = useState(0);
-  const [showBusSection, setShowBusSection] = useState(
-    formData.busStop && formData.busStop !== "Not Preferred"
-  );
+  const [busFee, setBusFee] = useState(formData?.allFee?.busFee || 0);
   const [busDiscountRemark, setBusDiscountRemark] = useState(formData.busDiscountRemark || "")
-  // Fetch destinations
+  const hasBusPreference = !!formData.busStop && formData.busStop;
+  const { userData } = useAuth();
+
   useEffect(() => {
-    const fetchDestinations = async () => {
+    const fetchData = async () => {
       try {
-        const snapshot = await getDocs(collection(db, "allDestinations"));
-        const destinations = snapshot.docs.map((doc) => ({
+        const destQuery = query(
+          collection(db, 'allDestinations'),
+          where('schoolCode', '==', userData.schoolCode)
+        );
+        const destSnapshot = await getDocs(destQuery);
+        const destinations = destSnapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data(),
+          ...doc.data()
         }));
         setDestinationOptions(destinations);
+
+        // Fetch buses if student has existing preference
+        if (hasBusPreference) {
+          const busQuery = query(
+            collection(db, "allBuses"),
+            where("schoolCode", "==", userData.schoolCode),
+          );
+          const busSnapshot = await getDocs(busQuery);
+          // it will show all that bus that go to student bus stop
+          const buses = busSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })).filter(b => b.destinations && b.destinations.length && b.destinations.find(d => d.name?.toLowerCase() === formData.busStop?.toLowerCase()));
+
+          setBusOptions(buses);
+          // it is that bus which will go to student bus stop
+          const currentBus = buses.find(b => b.numberPlate?.toLowerCase() === formData.busNoPlate?.toLowerCase());
+          setSelectedBus(currentBus);
+        }
       } catch (err) {
-        console.error("Error fetching destinations:", err);
+        console.error("Error fetching data:", err);
       }
     };
-    fetchDestinations();
-  }, []);
+    fetchData();
+  }, [userData.schoolCode, hasBusPreference]);
+
   // Handle bus preference change
   const handleTransportPreference = async (value) => {
-    const isTransportPreferred = value !== "Not Preferred";
-    setShowBusSection(isTransportPreferred);
+    if (value === "Not Preferred") {
+      await removeBusPreference();
+    } else {
+      // Check if destination exists
+      const destinationExists = destinationOptions.some(
+        d => d.name === value
+      );
 
-    if (!isTransportPreferred) {
-      await updateStudentTransport({
-        busStop: "",
+      if (!destinationExists) {
+        Swal.fire('Error!', 'Selected destination does not exist', 'error');
+        return;
+      }
+
+      // Always set the bus stop regardless of bus availability
+      setFormData(prev => ({
+        ...prev,
+        busStop: value,
         busNoPlate: "",
-        busFee: 0,
-        busDiscount: 0
-      });
+        allFee: { ...prev.allFee, busFee: 0, busFeeDiscount: 0 }
+      }));
+
+      // Now handle bus availability check
+      try {
+        const buses = await fetchBusesForDestination(value);
+
+        if (buses.length === 0) {
+          Swal.fire({
+            title: 'No Buses Available',
+            text: 'This destination has no assigned buses',
+            icon: 'warning',
+            confirmButtonColor: '#2563eb'
+          });
+        }
+
+        // Reset bus selection even if no buses found
+        setSelectedBus(null);
+        setBusFee(0);
+        setBusDiscount(0);
+        setBusOptions(buses);
+      } catch (err) {
+        console.error("Error fetching buses:", err);
+        Swal.fire('Error!', 'Failed to load bus information', 'error');
+      }
     }
   };
+
+  // Helper function to fetch buses
+  const fetchBusesForDestination = async (destination) => {
+    const busQuery = query(
+      collection(db, "allBuses"),
+      where("schoolCode", "==", userData.schoolCode)
+    );
+    const busSnapshot = await getDocs(busQuery);
+    return busSnapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(b => b.destinations?.some(
+        d => d.name?.toLowerCase() === destination?.toLowerCase()
+      ));
+  };
   // Handle bus stop selection
-  const handleBusStopChange = async (e) => {
-    const selectedName = e.target.value;
-    setFormData({ ...formData, busStop: selectedName });
-
+  const handleBusStopChange = async (selectedName) => {
     try {
-      // Reset related fields
-      setSelectedBus(null);
-      setBusFee(0);
-      setBusDiscount(0);
-
-      // Fetch buses for selected destination
-      const busSnapshot = await getDocs(collection(db, "allBuses"));
-      const buses = busSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(bus =>
-          bus.destinations?.some(dest => dest.name === selectedName)
-        );
+      const busQuery = query(
+        collection(db, "allBuses"),
+        where("schoolCode", "==", userData.schoolCode),
+      );
+      const busSnapshot = await getDocs(busQuery);
+      // it will show all that bus that go to student bus stop
+      const buses = busSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).filter(b => b.destinations && b.destinations.length && b.destinations.find(d => d.name?.toLowerCase() === formData.busStop?.toLowerCase()));
 
       setBusOptions(buses);
-
-      // Update student document
-      if (studentId) {
-        await updateDoc(doc(db, "students", studentId.id), {
+      setBusFee(0);
+      setBusDiscount(0);
+      // if atleast 1 bus go on that place than assign 1st bus as default
+      console.log(buses)
+      if (buses.length) {
+        setFormData(prev => ({
+          ...prev,
           busStop: selectedName,
-          busNoPlate: ""
+          busNoPlate: buses[0].numberPlate,
+          allFee: { ...prev.allFee, busFee: 0, busFeeDiscount: 0 }
+        }));
+        setSelectedBus(buses[0]);
+      } else {
+        Swal.fire({
+          title: 'No Buses Available',
+          text: 'This destination has no assigned buses',
+          icon: 'warning',
+          confirmButtonColor: '#2563eb'
         });
       }
     } catch (err) {
@@ -93,97 +161,130 @@ export default function PersonalInfo({
   };
 
   // Handle bus selection
-  const handleBusSelection = async (e) => {
-    const busId = e.target.value;
+  const handleBusSelection = async (busId) => {
     const bus = busOptions.find(b => b.id === busId);
+    if (!bus) return;
+
+    const destination = bus.destinations.find(d => d.name === formData.busStop);
+    const fee = destination?.fee || 0;
+
     setSelectedBus(bus);
+    setBusFee(fee);
+    setBusDiscount(0);
 
-    if (bus && formData.busStop) {
-      const destination = bus.destinations.find(d => d.name === formData.busStop);
-      if (destination) {
-        const fee = destination.fee || 0;
-        setBusFee(fee);
+    const updatedFees = {
+      ...formData.allFee,
+      busFee: fee,
+      busFeeDiscount: 0
+    };
 
-        // Update fees immediately
-        const updatedFees = {
-          ...formData.allFee,
-          busFee: fee - busDiscount,
-          busFeeDiscount: busDiscount
-        };
+    setFormData(prev => ({
+      ...prev,
+      busNoPlate: bus.numberPlate,
+      allFee: updatedFees
+    }));
+  };
 
-        setFormData({ ...formData, allFee: updatedFees });
+  // Remove bus preference
+  const removeBusPreference = async () => {
+    const result = await Swal.fire({
+      title: 'Remove Bus Preference?',
+      text: 'This will reset all transport-related information',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      confirmButtonText: 'Yes, remove it'
+    });
 
-        // Update student document
-        await updateStudentTransport({
-          busNoPlate: bus.numberPlate,
-          busFee: fee,
-          busDiscount
-        });
+    if (result.isConfirmed) {
+      try {
+        if (studentId?.id) {
+          await updateDoc(doc(db, "students", studentId.id), {
+            busStop: null,
+            busNoPlate: null,
+            busDiscountRemark: "",
+            allFee: {
+              ...formData.allFee,
+              busFee: 0,
+              busFeeDiscount: 0
+            }
+          });
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          busStop: "",
+          busNoPlate: "",
+          busDiscountRemark: "",
+          allFee: { ...prev.allFee, busFee: 0, busFeeDiscount: 0 }
+        }));
+
+        setBusOptions([]);
+        setSelectedBus(null);
+        setBusFee(0);
+        setBusDiscount(0);
+
+        Swal.fire('Removed!', 'Bus preference has been removed.', 'success');
+      } catch (err) {
+        Swal.fire('Error!', 'Failed to remove bus preference', 'error');
       }
     }
   };
-  // Update bus details in Firestore
-  const updateStudentTransport = async (data) => {
-    if (!studentId) return;
 
-    try {
-      const studentRef = doc(db, "students", studentId.id);
-      await updateDoc(studentRef, {
-        busStop: formData.busStop,
-        busNoPlate: data.busNoPlate || "",
-        allFee: {
-          ...formData.allFee,
-          busFee: data.busFee - data.busDiscount,
-          busFeeDiscount: data.busDiscount
-        },
-        busDiscountRemark
-      });
-    } catch (err) {
-      console.error("Error updating bus details:", err);
-    }
-  };
-
-  // Handle discount change
+  // Handle discount changes
   const handleDiscountChange = (value) => {
     const discount = Math.min(Math.max(0, value), busFee);
     setBusDiscount(discount);
 
-    const updatedFees = {
-      ...formData.allFee,
-      busFee: busFee - discount,
-      busFeeDiscount: discount
-    };
-
-    setFormData({ ...formData, allFee: updatedFees });
+    setFormData(prev => ({
+      ...prev,
+      allFee: {
+        ...prev.allFee,
+        busFee: busFee - discount,
+        busFeeDiscount: discount
+      }
+    }));
   };
 
-  // Submit bus details
+  // Submit transport details
   const submitTransportDetails = async () => {
     if (!selectedBus || !formData.busStop) return;
+    const result = await Swal.fire({
+      title: 'Add new bus Details?',
+      text: 'This will reset all transport-related information',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: 'blue',
+      confirmButtonText: 'Yes, Update it'
+    });
 
-    try {
-      await updateStudentTransport({
-        busNoPlate: selectedBus.numberPlate,
-        busFee,
-        busDiscount
-      });
+    if (result.isConfirmed) {
+      try {
+        if (studentId?.id) {
+          await updateDoc(doc(db, "students", studentId.id), {
+            busStop: formData.busStop,
+            busNoPlate: selectedBus.numberPlate,
+            allFee: {
+              ...formData.allFee,
+              busFee: busFee - busDiscount,
+              busFeeDiscount: busDiscount
+            },
+            busDiscountRemark
+          });
+        }
 
-      Swal.fire({
-        title: 'Success!',
-        text: 'Bus details updated successfully',
-        icon: 'success',
-        confirmButtonColor: '#2563eb'
-      });
-    } catch (err) {
-      Swal.fire({
-        title: 'Error!',
-        text: 'Failed to update bus details',
-        icon: 'error',
-        confirmButtonColor: '#2563eb'
-      });
+        fetchStudent()
+        Swal.fire({
+          title: 'Success!',
+          text: 'Transport details updated',
+          icon: 'success',
+          confirmButtonColor: '#2563eb'
+        });
+      } catch (err) {
+        Swal.fire('Error!', 'Failed to update transport details', 'error');
+      }
     }
   };
-
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -370,7 +471,6 @@ export default function PersonalInfo({
             />
 
           </div>
-
         </Section>
 
         <Section title="Additional Details">
@@ -411,102 +511,138 @@ export default function PersonalInfo({
             <fieldset className="border-2 border-blue-100 rounded-xl p-4 bg-blue-50/30">
               <legend className="text-blue-600 font-medium px-2">Bus Information</legend>
               <div className="space-y-4">
-                <SelectField
-                  icon={<Bus />}
-                  label="Bus Preference"
-                  options={['Not Preferred', ...destinationOptions.map(d => d.name)]}
-                  value={formData.busStop || 'Not Preferred'}
-                  onChange={(e) => {
-                    handleTransportPreference(e.target.value);
-                    handleBusStopChange(e);
-                  }}
-                />
+                <div className="space-y-2">
+                  <label className="flex items-center text-sm font-medium text-gray-700">
+                    <Bus className="w-4 h-4 mr-2 text-gray-500" />
+                    Bus Preference
+                  </label>
+                  <select
+                    value={hasBusPreference ? formData.busStop?.toUpperCase() : 'Not Preferred'}
+                    onChange={(e) => handleTransportPreference(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Not Preferred">Not Preferred</option>
+                    {destinationOptions.map((dest) => (
+                      <option key={dest.id} value={dest.name}>
+                        {dest.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                {showBusSection && (
-                  <div className="grid gap-4">
-                    {/* Current Bus Display */}
-                    {formData.busNoPlate && (
-                      <div className="bg-blue-100 p-3 rounded-lg">
-                        <p className="text-sm font-medium text-blue-800">
-                          Current Assignment:&nbsp;
-                          <span className="underline font-semibold">{formData.busStop}</span> via <span className="underline font-semibold">{formData.busNoPlate}</span>
-                        </p>
-                      </div>
-                    )}
+                {hasBusPreference && (
+                  <>
+                    <div className="flex justify-between items-center bg-blue-100 p-3 rounded-lg">
+                      <p className="text-sm font-medium text-blue-800">
+                        Assignment: {' '}
+                        <span className="font-semibold uppercase underline">
+                          {formData.busStop}
+                        </span> via {' '}
+                        <span className="font-semibold uppercase underline">
+                          {formData.busNoPlate}
+                        </span>
+                      </p>
+                      <button
+                        onClick={removeBusPreference}
+                        className="flex items-center text-red-600 hover:text-red-700 text-sm"
+                      >
+                        <XCircle className="w-4 h-4 mr-1" />
+                        Remove Bus
+                      </button>
+                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <SelectField
-                        icon={<MapPin />}
-                        label="Select Destination"
-                        options={destinationOptions
-                          .filter(d => d.name !== "Not Preferred")
-                          .map(d => ({
-                            value: d.name,
-                            label: d.name,
-                            // Show current selection first
-                            selected: d.name === formData.busStop
-                          }))}
-                        value={formData.busStop}
-                        onChange={handleBusStopChange}
-                      />
+                    <div className="space-y-2">
+                      <label className="flex items-center text-sm font-medium text-gray-700">
+                        <MapPin className="w-4 h-4 mr-2 text-gray-500" />
+                        Select Destination
+                      </label>
+                      <select
+                        value={formData.busStop?.toUpperCase()}
+                        onChange={(e) => handleBusStopChange(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        {destinationOptions.map((dest) => (
+                          <option key={dest.id} value={dest.name}>
+                            {dest.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                      <SelectField
-                        icon={<Bus />}
-                        label="Available Buses"
-                        options={busOptions.map(bus => ({
-                          value: bus.id,
-                          label: `${bus.busNo} (${bus.numberPlate}) - ${bus.driverName}`,
-                          // Preselect if matches student's current bus
-                          selected: bus.numberPlate === formData.busNoPlate
-                        }))}
-                        value={selectedBus?.id || ""}
-                        onChange={handleBusSelection}
-                      />
+                    <div className="space-y-2">
+                      <label className="flex items-center text-sm font-medium text-gray-700">
+                        <Bus className="w-4 h-4 mr-2 text-gray-500" />
+                        Available Buses
+                      </label>
+                      <select
+                        value={selectedBus?.id || ''}
+                        onChange={(e) => handleBusSelection(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select bus</option>
+                        {busOptions.map((bus) => (
+                          <option key={bus.id} value={bus.id}>
+                            {bus.busNo} ({bus.numberPlate}) - {bus.driverName}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     {selectedBus && (
-                      <div className="flex flex-col gap-4">
+                      <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                          <InputField
-                            icon={<IndianRupee />}
-                            label="Bus Fee"
-                            value={busFee}
-                            readOnly
-                            className="bg-gray-50"
-                          />
-                          <InputField
-                            icon={<BadgePercent />}
-                            label="Apply Discount"
-                            type="number"
-                            value={busDiscount}
-                            onChange={(e) => handleDiscountChange(Number(e.target.value))}
-                            min="0"
-                            max={busFee}
-                          />
+                          <div className="space-y-2">
+                            <label className="flex items-center text-sm font-medium text-gray-700">
+                              <IndianRupee className="w-4 h-4 mr-2 text-gray-500" />
+                              Bus Fee
+                            </label>
+                            <input
+                              type="number"
+                              value={busFee}
+                              readOnly
+                              className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="flex items-center text-sm font-medium text-gray-700">
+                              <BadgePercent className="w-4 h-4 mr-2 text-gray-500" />
+                              Discount
+                            </label>
+                            <input
+                              type="number"
+                              value={busDiscount}
+                              onChange={(e) => handleDiscountChange(Number(e.target.value))}
+                              min="0"
+                              max={busFee}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                            />
+                          </div>
                         </div>
-                        <div className="remark">
-                          <InputField
-                            icon={<FileTextIcon />}
-                            label="Remark"
+
+                        <div className="space-y-2">
+                          <label className="flex items-center text-sm font-medium text-gray-700">
+                            <FileTextIcon className="w-4 h-4 mr-2 text-gray-500" />
+                            Discount Remark
+                          </label>
+                          <input
                             type="text"
                             value={busDiscountRemark}
-                            onChange={(e) => {
-                              setBusDiscountRemark(e.target.value)
-                            }}
-                            min="0"
-                            max={busFee}
+                            onChange={(e) => setBusDiscountRemark(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                           />
                         </div>
+
                         <button
-                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                           onClick={submitTransportDetails}
+                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                         >
                           <CheckCircle className="w-5 h-5" />
-                          Update Bus Details
+                          Update Transport Details
                         </button>
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             </fieldset>

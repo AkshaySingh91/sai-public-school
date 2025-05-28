@@ -47,8 +47,8 @@ function StockList() {
   const [newStock, setNewStock] = useState({
     itemName: "",
     quantity: "",
-    purchasePrice: "",
-    sellingPrice: "",
+    purchasePrice: 0,
+    sellingPrice: 0,
     fromClass: "",
     toClass: "",
     category: "All",
@@ -134,10 +134,10 @@ function StockList() {
     // 2. Field validations
     if (!newItem.itemName?.trim()) errors.push("Item Name is required");
     if (isNaN(newItem.quantity)) errors.push("Quantity must be a number");
-    if (isNaN(newItem.purchasePrice)) errors.push("Purchase Price must be a number");
+    // if (isNaN(newItem.purchasePrice)) errors.push("Purchase Price must be a number");
     if (isNaN(newItem.sellingPrice)) errors.push("Selling Price must be a number");
     if (newItem.quantity <= 0) errors.push("Quantity must be greater than 0");
-    if (newItem.purchasePrice <= 0) errors.push("Purchase Price must be greater than 0");
+    // if (newItem.purchasePrice <= 0) errors.push("Purchase Price must be greater than 0");
     if (newItem.sellingPrice <= 0) errors.push("Selling Price must be greater than 0");
     if (newItem.sellingPrice < newItem.purchasePrice) errors.push("Selling Price cannot be less than Purchase Price");
 
@@ -229,18 +229,6 @@ function StockList() {
     }
   };
 
-  const validateStock = () => {
-    const { itemName, quantity, fromClass, toClass } = newStock;
-    if (!itemName || !quantity || !fromClass || !toClass) {
-      alert("Please fill all required fields");
-      return false;
-    }
-    if (classNames.indexOf(fromClass) > classNames.indexOf(toClass)) {
-      alert("Invalid class range");
-      return false;
-    }
-    return true;
-  };
   const resetForm = () => {
     setNewStock({
       itemName: "",
@@ -318,7 +306,6 @@ function StockList() {
           `${row.ItemName?.toString().toLowerCase().trim()}`
         )
       );
-      console.log(uniqueRows)
       if (uniqueRows.size !== rows.length) {
         errors.push("Duplicate items  are not allowed.");
       }
@@ -350,7 +337,7 @@ function StockList() {
         if (fromIdx > toIdx) errors.push(`Row ${rowNum}: FromClass must be less than ToClass`);
         // b) logical checks
         if (qty <= 0) errors.push(`Row ${rowNum}: Quantity must be > 0`);
-        if (pp <= 0) errors.push(`Row ${rowNum}: PurchasePrice must be > 0`);
+        // if (pp <= 0) errors.push(`Row ${rowNum}: PurchasePrice must be > 0`);
         if (sp <= 0) errors.push(`Row ${rowNum}: SellingPrice must be > 0`);
         if (sp < pp)
           errors.push(`Row ${rowNum}: SellingPrice (${sp}) cannot be less than PurchasePrice (${pp})`);
@@ -423,7 +410,7 @@ function StockList() {
       ? stocks.map(stock => ({
         ItemName: stock.itemName,
         Quantity: stock.quantity,
-        PurchasePrice: stock.purchasePrice,
+        PurchasePrice: stock.purchasePrice || "",
         SellingPrice: stock.sellingPrice,
         Category: stock.category,
         FromClass: stock.fromClass,

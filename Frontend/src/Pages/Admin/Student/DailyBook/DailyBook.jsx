@@ -3,22 +3,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { db } from "../../../../config/firebase";
-import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
-import {
-  FileText,
-  File,
-  ChevronLeft,
-  ChevronRight,
-  Receipt,
-  User,
-  CheckCircle,
-  Clock,
-  DollarSign,
-} from "lucide-react";
+import { FileText, File, ChevronLeft, ChevronRight, Receipt, User, CheckCircle } from "lucide-react";
+import { useSchool } from "../../../../contexts/SchoolContext"
 
 const SkeletonLoader = () => (
   <div className="animate-pulse space-y-4">
@@ -33,6 +23,7 @@ const SkeletonLoader = () => (
 );
 
 export default function DailyBook() {
+  const { school } = useSchool();
   const { userData } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,8 +41,30 @@ export default function DailyBook() {
   );
   const [toDate, setToDate] = useState(new Date());
   const perPage = 8;
-  const [totalPaid, setTotalPaid] = useState(0);
-  const [totalStudent, setTotalStudent] = useState(0);
+  // Filters state
+  const [statusFilter, setStatusFilter] = useState('All status');
+  const [feeTypeFilter, setFeeTypeFilter] = useState('All feeType');
+  const [paymentModeFilter, setPaymentModeFilter] = useState('All payment');
+
+  // Memoized filtered transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      const statusMatch = statusFilter?.toLowerCase()?.trim() === 'all status' || t.status?.toLowerCase()?.trim() === statusFilter?.toLowerCase()?.trim();
+      const feeTypeMatch = feeTypeFilter?.toLowerCase()?.trim() === 'all feetype' || t.feeType?.toLowerCase()?.trim() === feeTypeFilter?.toLowerCase()?.trim();
+      const paymentModeMatch = paymentModeFilter?.toLowerCase()?.trim() === 'all payment' || t.paymentMode?.toLowerCase()?.trim() === paymentModeFilter?.toLowerCase()?.trim();
+
+      return statusMatch && feeTypeMatch && paymentModeMatch;
+    });
+  }, [transactions, statusFilter, feeTypeFilter, paymentModeFilter]);
+
+  const totalPaid = useMemo(() =>
+    filteredTransactions.reduce((sum, tnx) => sum + (Number(tnx.amount) || 0), 0),
+    [filteredTransactions]
+  );
+  const totalStudent = useMemo(() =>
+    new Set(filteredTransactions.map(t => t.studentId)).size,
+    [filteredTransactions]
+  );
 
   useEffect(() => {
     const fetchDaily = async () => {
@@ -80,25 +93,19 @@ export default function DailyBook() {
 
       allTx.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setTransactions(allTx);
-      console.log(allTx)
-      setLoading(false);
-      // update total student, total paid
-      // const paid = allTx.reduce((sum, tnx) => tnx.status === "completed" ? (sum + (Number(tnx.amount) || 0)) : sum, 0);
-      const paid = allTx.reduce((sum, tnx) => sum + (Number(tnx.amount) || 0), 0);
-      setTotalPaid(paid);
-      setTotalStudent(allTx.length)
+      setLoading(false)
     };
     fetchDaily();
   }, [userData.schoolCode, fromDate, toDate]);
 
-  const pageCount = Math.ceil(transactions.length / perPage);
+  const pageCount = Math.ceil(filteredTransactions.length / perPage);
   const pageData = useMemo(() => {
     const start = (page - 1) * perPage;
-    return transactions.slice(start, start + perPage);
-  }, [transactions, page]);
+    return filteredTransactions.slice(start, start + perPage);
+  }, [filteredTransactions, page]);
 
   const exportExcel = () => {
-    const wsData = transactions.map((t) => ({
+    const wsData = filteredTransactions.map((t) => ({
       Date: new Date(t.date).toLocaleString(),
       Year: t.academicYear,
       Student: t.studentName,
@@ -117,56 +124,72 @@ export default function DailyBook() {
   };
 
   const exportPDF = () => {
-    const doc = new jsPDF();
-    const headers = [
-      [
-        "Date",
-        "Year",
-        "Student",
-        "FeeType",
-        "Amount",
-        "Mode",
-        "Account",
-        "Remark",
-        "ReceiptID",
-        "Status",
-      ],
-    ];
-    const rows = transactions.map((t) => [
-      new Date(t.date).toLocaleString(),
-      t.academicYear,
-      t.studentName,
-      t.feeType,
-      `₹${t.amount}`,
-      t.paymentMode,
-      t.account,
-      t.remark || "-",
-      t.receiptId,
-      t.status || "pending",
-    ]);
+    {
+      const doc = new jsPDF();
+      const headers = [
+        [
+          "Date",
+          "Year",
+          "Student",
+          "FeeType",
+          "Amount",
+          "Mode",
+          "Account",
+          "Remark",
+          "ReceiptID",
+          "Status",
+        ],
+      ];
+      const rows = filteredTransactions.map((t) => [
+        new Date(t.date).toLocaleString(),
+        t.academicYear,
+        t.studentName,
+        t.feeType,
+        `₹${t.amount}`,
+        t.paymentMode,
+        t.account,
+        t.remark || "-",
+        t.receiptId,
+        t.status || "pending",
+      ]);
 
-    autoTable(doc, {
-      head: headers,
-      body: rows,
-      theme: "grid",
-      headStyles: {
-        fillColor: [103, 58, 183],
-        textColor: 255,
-        fontStyle: "bold",
-        halign: "center",
-      },
-      styles: {
-        fontSize: 9,
-        cellPadding: 1.5,
-        overflow: "linebreak",
-      },
-      margin: { top: 20 },
-    });
-    doc.save("DailyBook.pdf");
-  };
+      autoTable(doc, {
+        head: headers,
+        body: rows,
+        theme: "grid",
+        headStyles: {
+          fillColor: [103, 58, 183],
+          textColor: 255,
+          fontStyle: "bold",
+          halign: "center",
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 1.5,
+          overflow: "linebreak",
+        },
+        margin: { top: 20 },
+      });
+      doc.save("DailyBook.pdf");
+    };
+  }
+  // Get unique filter options
+  const statusOptions = useMemo(() =>
+    ['All status', ...new Set(transactions.map(t => t.status))],
+    [transactions]
+  );
 
+  const feeTypeOptions = useMemo(() =>
+    ['All feeType', ...new Set(transactions.map(t => t.feeType))],
+    [transactions]
+  );
+
+  const paymentModeOptions = useMemo(() =>
+    ['All payment ', ...(school?.paymentModes || [])],
+    [school]
+  );
   return (
-    <div className="sm:p-6 p-2 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
+    <div className="sm:p-4 p-2 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="sm:bg-white rounded-2xl shadow-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -251,6 +274,41 @@ export default function DailyBook() {
                 >
                   Show
                 </button>
+                <div className="filter-group">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="border-2 border-purple-200 w-full rounded-xl p-2 text-sm text-purple-900 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
+                  >
+                    {statusOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <select
+                    value={feeTypeFilter}
+                    onChange={(e) => setFeeTypeFilter(e.target.value)}
+                    className="border-2 border-purple-200 w-full rounded-xl p-2 text-sm text-purple-900 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
+                  >
+                    {feeTypeOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <select
+                    value={paymentModeFilter}
+                    onChange={(e) => setPaymentModeFilter(e.target.value)}
+                    className="border-2 border-purple-200 w-full rounded-xl p-2 text-sm text-purple-900 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
+                  >
+                    {paymentModeOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Table container: already overflow-x-auto, so fine for responsiveness */}
