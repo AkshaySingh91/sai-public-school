@@ -4,7 +4,7 @@ import { db } from '../../../../config/firebase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useSchool } from '../../../../contexts/SchoolContext';
 import { motion } from 'framer-motion';
-import { Search, Download, ChevronDown, X, Users, CheckCircle, Clock, DollarSign, Filter, Bus } from 'lucide-react';
+import { Search, Download, ChevronDown, X, Users, CheckCircle, Clock, DollarSign, Filter, Bus, Vault } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import { autoTable } from "jspdf-autotable"
@@ -24,7 +24,7 @@ const BusAllocation = () => {
     busStop: 'All',
     class: 'All',
     division: 'All',
-    studentType: 'All',
+    studentsType: 'All',
     status: 'All',
     searchQuery: ''
   });
@@ -42,7 +42,7 @@ const BusAllocation = () => {
         // 1) Students with a bus number
         const studentsQ = query(
           collection(db, "students"),
-          where("schoolCode", "==", userData.schoolCode)
+          where("schoolCode", "==", school.Code)
         );
         const studentsSnap = await getDocs(studentsQ);
         const filtered = studentsSnap.docs
@@ -71,13 +71,15 @@ const BusAllocation = () => {
     };
 
     fetchData();
-  }, [userData.schoolCode]);
+  }, [userData, school.Code]);
 
   // Filtered students memoization
   const filteredStudents = useMemo(() => {
+    console.log(filters)
     return students.filter(student => {
       const matchesFilters = Object.entries(filters).every(([key, value]) => {
         if (value === 'All' || !value) return true;
+        console.log(key, student?.type?.toLowerCase(), value.toLowerCase())
         switch (key) {
           case 'searchQuery':
             const searchTerms = value.toLowerCase().split(' ');
@@ -95,7 +97,7 @@ const BusAllocation = () => {
           case 'busStop':
             return student?.busStop?.toLowerCase() === value.toLowerCase();
 
-          case 'studentType':
+          case 'studentsType':
             return student?.type?.toLowerCase() === value.toLowerCase();
           case 'division':
             return student?.div?.toLowerCase() === value.toLowerCase();
@@ -319,9 +321,9 @@ const BusAllocation = () => {
                 />
                 <FilterSelect
                   label="Student Type"
-                  options={['All', ...(school?.studentTypes || ["DSS", "DS", "DSR"])]}
-                  value={filters.studentType}
-                  onChange={(v) => handleFilterChange('studentType', v)}
+                  options={['All', ...(school?.studentsType || ["DSS", "DS", "DSR"])]}
+                  value={filters.studentsType}
+                  onChange={(v) => handleFilterChange('studentsType', v)}
                 />
                 <FilterSelect
                   label="Status"

@@ -6,44 +6,45 @@ import { db } from '../../../../config/firebase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import Swal from 'sweetalert2';
 import { nanoid } from 'nanoid';
-import { User, Users, BookOpen, GraduationCap, Calendar, Clock, Wallet, Hash } from 'lucide-react';
+import { User, Users, BookOpen, GraduationCap, Calendar, Clock, Wallet, Hash, ReceiptRussianRuble } from 'lucide-react';
 import { SelectField } from '../SelectField';
 import { InputField } from "../InputField"
 import { useSchool } from '../../../../contexts/SchoolContext';
-
+import showStudentSummary from "./ShowStudentSummary"
 export default function AddStudent() {
   const { userData } = useAuth();
   const navigate = useNavigate();
   const { school, refresh } = useSchool();
   const [formData, setFormData] = useState({
-    fname: '',
-    lname: '',
-    fatherName: '',
-    motherName: '',
-    class: '',
-    div: '',
-    type: '',
-    gender: '',
-    dob: '',
-    academicYear: school?.academicYear || "",
+    fname: 'fname',
+    fatherName: 'father',
+    lname: 'lname',
+    motherName: 'mother',
+    class: '3rd',
+    div: 'A',
+    type: 'DSS',
+    gender: 'Male',
+    dob: "2025-05-29",
+    academicYear: school?.academicYear || "25-26",
     penNo: "",
     grNo: "",
     saralId: "",
-    status: "new"
+    status: "new",
+    fatherMobile: ""
   });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Fetch school data
 
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    const getNewClassFees = async (newClass, targetAcademicYear) => {
+    // setSubmitting(true);
+    const getNewClassFees = async (newClass, targetAcademicYear, englishMedium) => {
       try {
         const fsRef = doc(db, "feeStructures", userData.schoolCode);
         const fsSnap = await getDoc(fsRef);
-
         if (!fsSnap.exists()) {
           console.error("Fee structure document not found");
           return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
@@ -51,7 +52,6 @@ export default function AddStudent() {
 
         const structures = fsSnap.data().structures || [];
         let yearStructure = structures.find((s) => s.year === targetAcademicYear);
-
         // Fallback to latest available structure if target year not found
         if (!yearStructure && structures.length > 0) {
           // Sort structures by academic year in descending order
@@ -75,23 +75,23 @@ export default function AddStudent() {
           console.warn("No fee structures available");
           return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
         }
-
-        // Rest of the original logic remains the same
-        const classStructure = yearStructure.classes?.find(
+        // here we will get class
+        let classStructure = yearStructure.classes?.find(
           (c) => c.name?.trim().toLowerCase() === newClass.trim().toLowerCase()
         );
-
-        if (!classStructure) {
+        if (!classStructure || !classStructure.studentType || !classStructure.studentType.length) {
           console.warn(`No fee structure found for class ${newClass}`);
           return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
         }
-
+        // herer we will filter based on division
+        classStructure = classStructure.studentType.filter(c => (c.englishMedium === undefined && englishMedium) || c.englishMedium === englishMedium)
         return classStructure;
       } catch (error) {
         console.error("Error fetching fee structure:", error);
         return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
       }
     };
+
     try {
       // Calculate base fees
       function isValidAcademicYear(str) {
@@ -108,16 +108,19 @@ export default function AddStudent() {
           confirmButtonColor: '#6366f1'
         });
       }
-      const classStructure = await getNewClassFees(formData.class, formData.academicYear)
-      const studentType = classStructure.studentType?.find(
+      const classStructure = await getNewClassFees(formData.class, formData.academicYear, formData.div?.toLowerCase() !== "semi")
+      const studentType = classStructure?.find(
         (st) =>
           st.name?.trim().toLowerCase() === formData.type?.trim().toLowerCase()
       );
       if (!studentType) {
-        console.warn(`No fee structure found for student type ${formData.type}`);
-        return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
+        return Swal.fire({
+          icon: 'error',
+          title: `No fee structure found for student type ${formData.type}`,
+          confirmButtonColor: '#6366f1'
+        });
       }
-      // very important if student is new than we dont have to assign addmission fee only tuition fee required
+
       const feeStructure = studentType.feeStructure || {};
       let AdmissionFee = 0;
       let tuitionFee = 0;
@@ -136,8 +139,10 @@ export default function AddStudent() {
       // Calculate DSS discount if applicable
       let tuitionFeesDiscount = 0;
       // to calculate dis if student is new than we will subtract it from total of DS ie (tuition+addminssion) else ig current than only subtract from tuition because we dont take admissionFee.
-      if (formData.type === 'DSR' || formData.type === 'DSS') {
-        const dsStructure = classStructure.studentType.find(st => st.name === 'DS');
+      if (formData.type?.toLowerCase() === 'dsr' || formData.type?.toLowerCase() === 'dss') {
+        console.log(studentType, classStructure)
+        const dsStructure = classStructure.find(st => st.name?.toLowerCase() === 'ds');
+        console.log(dsStructure)
         if (!dsStructure) {
           throw new Error('DS fee structure not found for discount calculation');
         }
@@ -152,9 +157,11 @@ export default function AddStudent() {
         const dssTotal = tuitionFees.total;
         tuitionFeesDiscount = Math.max(dsTotal - dssTotal, 0);
       }
+      console.log({ tuitionFeesDiscount })
       // feeId will total feeId + 1
       const feeId = (Number(school.feeIdCount) || 0) + 1;
       // Prepare student data with fees
+      // from here we have verified all data correctly mostly fees calc 
       const studentData = {
         ...formData,
         schoolCode: userData.schoolCode,
@@ -164,7 +171,11 @@ export default function AddStudent() {
           lastYearDiscount: 0,
           lastYearBusFee: 0,
           lastYearBusFeeDiscount: 0,
-          tuitionFees,
+          tuitionFees: {
+            AdmissionFee: AdmissionFee,
+            tuitionFee: tuitionFee,
+            total: AdmissionFee + tuitionFee,
+          },
           tuitionFeesDiscount,
           busFee: 0,
           busFeeDiscount: 0,
@@ -318,7 +329,7 @@ export default function AddStudent() {
                   label="Student Type"
                   value={formData.type}
                   onChange={e => setFormData({ ...formData, type: e.target.value })}
-                  options={school.studentsType}
+                  options={(school.studentsType || []).map(t => t?.toLowerCase())}
                   required
                 />
                 <InputField
@@ -327,6 +338,12 @@ export default function AddStudent() {
                   value={formData.status}
                   required
                   disabled={true}
+                />
+                <InputField
+                  label="Father Mobile"
+                  value={formData.fatherMobile}
+                  onChange={(e) => setFormData({ ...formData, fatherMobile: e.target.value })}
+                  required
                 />
                 <InputField
                   label="Academic Year"

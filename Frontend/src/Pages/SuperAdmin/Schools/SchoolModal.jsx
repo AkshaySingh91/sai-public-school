@@ -13,11 +13,11 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
             district: "",
             taluka: ""
         },
-        paymentMode: ["Cash", "Online", "Cheque"],
+        paymentModes: ["Cash", "Online", "Cheque"],
         feeTypes: ["AdmissionFee", "TuitionFee"],
         academicYear: "2024-2025",
         class: "Nursery,JRKG,SRKG,1st,2nd,3rd,4th,5th,6th,7th,8th,9th",
-        divisions: "A,B,C,E,SEMI",
+        divisions: "A,B,C,D,E,SEMI",
         studentsType: "DS,DSR,DSS",
         schoolReceiptHeader: "",
         busReceiptHeader: "",
@@ -68,7 +68,7 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
                 Code: schoolCode,
                 students: [],
                 accounts: [],
-                paymentMode: parseArrayInput(formData.paymentMode.join(',')),
+                paymentModes: parseArrayInput(formData.paymentModes.join(',')),
                 feeTypes: parseArrayInput(formData.feeTypes.join(',')),
                 class: parseArrayInput(formData.class),
                 divisions: parseArrayInput(formData.divisions),
@@ -288,8 +288,8 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
                                 <input
                                     type="text"
                                     required
-                                    value={formData.paymentMode}
-                                    onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value.split(',') })}
+                                    value={formData.paymentModes}
+                                    onChange={(e) => setFormData({ ...formData, paymentModes: e.target.value.split(',') })}
                                     className="w-ful border rounded-lg px-2 py-1  focus:ring-2 focus:ring-indigo-500"
                                 />
                             </div>

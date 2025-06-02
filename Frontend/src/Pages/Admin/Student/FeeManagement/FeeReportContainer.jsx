@@ -1,13 +1,15 @@
 // FeeReportsContainer.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../../config/firebase";
 import OutstandingFee from "../OutstandingFees/OutstandingFee";
 import StudentFeeDetails from "./StudentFeeDetails";
+import { useSchool } from "../../../../contexts/SchoolContext";
 
 export default function FeeReportsContainer() {
   const { userData } = useAuth();
+  const { school } = useSchool();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [classActiveTab, setClassActiveTab] = useState("active");
@@ -20,52 +22,49 @@ export default function FeeReportsContainer() {
   const [selectedDiv, setSelectedDiv] = useState("All");
   const itemsPerPage = 10;
 
+  // only check prev year not eairler transactions
+  function getPrevYear(year) {
+    const years = year?.split("-") || ["00"];
+    return years.map((y) => parseInt(y) || 0);
+  }
   // Fetch students
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const q = query(
+        collection(db, "students"),
+        where("schoolCode", "==", school.Code)
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc) => {
+        const raw = doc.data();
+        return {
+          id: doc.id,
+          ...raw,
+          normalizedStatus: ["new", "current", "rollover"].includes(raw.status?.toLowerCase())
+            ? "active"
+            : "inactive", //new
+        };
+      });
+      setStudents(data);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        setLoading(true);
-        const q = query(
-          collection(db, "students"),
-          where("schoolCode", "==", userData.schoolCode)
-        );
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => {
-          const raw = doc.data();
-          return {
-            id: doc.id,
-            ...raw,
-            normalizedStatus: ["new", "current"].includes(raw.status)
-              ? "active"
-              : raw.status, //new
-          };
-        });
-        setStudents(data);
-      } catch (error) {
-        console.error("Error fetching students:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStudents();
-  }, [userData.schoolCode]);
-
+    if (school.Code) fetchStudents();
+  }, [school.Code, userData]);
   // here we calc all stude LYBF+LYTF, orignal = SF+TF+MF+HF+SFD+TFD, discount = SFD+TFD, outstanding = pending SF+MF+TF+HF, paid = paid SF+HF+MF+TF
   const processStudentData = (student) => {
     const fees = student.allFee || {};
-    const transactions = student.transactions || [];
 
-    // only check prev year not eairler transactions
-    function getPrevYear(year) {
-      const years = year?.split("-") || ["00"];
-      return years.map((y) => parseInt(y) || 0);
-    }
-
-    const lastYearTransactions = transactions.filter((t) => {
+    const lastYearTransactions = (student.transactions || []).filter((t) => {
       const [startYear, endYear] = getPrevYear(student.academicYear);
-      // console.log({ startYear, endYear }, `${startYear - 1}-${endYear - 1}`)
       return t.academicYear === `${startYear - 1}-${endYear - 1}`;
     });
+    const currentYearTransactions = (student.transactions || []).filter((tx) => tx.academicYear === student.academicYear && tx.status === "completed");
     // consider only completed payment "t.status === "completed""
     const lastYearTuitionPaid = lastYearTransactions
       .filter((t) => (t?.feeType?.toLowerCase() === "tuitionfee" || t?.feeType?.toLowerCase() === "admissionfee" || t?.feeType?.toLowerCase() === "hostelfee" || t?.feeType?.toLowerCase() === "messfee") && t?.status?.toLowerCase() === "completed")
@@ -74,130 +73,119 @@ export default function FeeReportsContainer() {
     const lastYearBusPaid = lastYearTransactions
       .filter((t) => t?.feeType?.toLowerCase() === "busfee" && t?.status?.toLowerCase() === "completed")
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    // from here we got last year paid amount use to visulize chart
 
-    // console.log({ lastYearTuitionPaid })
-    // console.log({ lastYearBusPaid })
+    const feesDetails = {
+      lastYearBusPaid,
+      lastYearTuitionPaid,
+      lastYear: 0,
+      tuitionFeeWithDiscount: 0,
+      tuitionFeeDiscount: 0,
+      netTuitionFee: 0,
+      tuitionFeePaid: 0,
+      tuitionFeePending: 0,
+      busFeeWithDiscount: 0,
+      busFeeDiscount: 0,
+      netBusFee: 0,
+      busFeePaid: 0,
+      busFeePending: 0,
+      totalPaid: 0,
+      totalPending: 0,
+    }
 
-    const currentYearTransactions = transactions.filter(
-      (t) => t.academicYear === student.academicYear
-    );
+    feesDetails.lastYear += (fees.lastYearBusFee || 0) + (fees.lastYearBalanceFee || 0);
+    feesDetails.tuitionFeeWithDiscount += (fees.tuitionFeesDiscount || 0) + (fees?.tuitionFees?.total || 0);
+    feesDetails.tuitionFeeDiscount += (fees.tuitionFeesDiscount || 0)
+    feesDetails.netTuitionFee += (feesDetails.tuitionFeeWithDiscount - feesDetails.tuitionFeeDiscount);
+    // now we have to use transction sum with academic year to calculate fees detail
+    feesDetails.tuitionFeePaid += currentYearTransactions.filter((t) => (t?.feeType?.toLowerCase() === "tuitionfee" || t?.feeType?.toLowerCase() === "admissionfee" || t?.feeType?.toLowerCase() === "hostelfee" || t?.feeType?.toLowerCase() === "messfee"))
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || 0;
+    feesDetails.tuitionFeePending += feesDetails.netTuitionFee - feesDetails.tuitionFeePaid;
 
-    const tuitionFeeNet = fees.tuitionFees?.total || 0;
-    const busFeeNet = fees.busFee || 0;
-
-    // this is total all type of fees paid by student
-    const currentYearPaid = {
-      schoolFee: currentYearTransactions
-        .filter((t) => (t?.feeType?.toLowerCase() === "tuitionfee" || t?.feeType?.toLowerCase() === "admissionfee") && t?.status?.toLowerCase() === "completed")
-        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-      busFee: currentYearTransactions
-        .filter((t) => t?.feeType?.toLowerCase() === "busfee" && t?.status?.toLowerCase() === "completed")
-        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-      messFee: currentYearTransactions
-        .filter((t) => t?.feeType?.toLowerCase() === "messfee" && t?.status?.toLowerCase() === "completed")
-        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-      hostelFee: currentYearTransactions
-        .filter((t) => t?.feeType?.toLowerCase() === "hostelfee" && t?.status?.toLowerCase() === "completed")
-        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
-    };
-    // this is total fees for current year of student 
-    const totalFees =
-      tuitionFeeNet +
-      busFeeNet +
-      (fees.messFee || 0) +
-      (fees.hostelFee || 0);
-
-    const totalPaid = Object.values(currentYearPaid).reduce(
-      (sum, val) => sum + val,
-      0);
-    const totalDiscount =
-      (fees.tutionFeesDiscount || 0) + (fees.busFeeDiscount || 0);
-
-    const busFeePaid = currentYearTransactions
-      .filter((t) => t?.feeType?.toLowerCase() === "busfee" && t?.status?.toLowerCase() === "completed")
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const tutionFeePaid = totalPaid - busFeePaid;
+    feesDetails.busFeeWithDiscount += (fees.busFee || 0) + (fees.busFeeDiscount || 0);
+    feesDetails.busFeeDiscount += (fees.busFeeDiscount || 0);
+    feesDetails.netBusFee += (feesDetails.busFeeWithDiscount - feesDetails.busFeeDiscount);
+    feesDetails.busFeePaid += currentYearTransactions.filter((t) => t?.feeType?.toLowerCase() === "busfee")
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || 0;
+    feesDetails.busFeePending += (feesDetails.netBusFee - feesDetails.busFeePaid);
+    feesDetails.totalPaid += feesDetails.tuitionFeePaid + feesDetails.busFeePaid;
+    feesDetails.totalPending += feesDetails.tuitionFeePending + feesDetails.busFeePending + feesDetails.lastYear;
 
     return {
       ...student,
-      lastYearTuitionBalance: fees.lastYearBalanceFee || 0,
-      lastYearBusFee: fees.lastYearBusFee || 0,
-      currentYearPaid,
-      currentYearTotals: {
-        schoolFee: tuitionFeeNet,
-        busFee: busFeeNet,
-        messFee: fees.messFee || 0,
-        hostelFee: fees.hostelFee || 0,
-      },
-      totalFees: totalFees + totalDiscount, //add discount
-      totalDiscount,
-      afterDiscount: totalFees,
-      paid: totalPaid,
-      outstanding: totalFees - totalPaid,
-      lastYearTuitionPaid, //use to visulize chart
-      lastYearBusPaid, //use to visulize chart
-      tutionFeeNet: totalFees - busFeeNet, // use in excel total tuition fee it inc mess, hostel also
-      tutionFeePaid, // use in excel it is total tuition paid fee ic hostel, mess
-      totalTransportFee: busFeeNet + (fees?.busFeeDiscount || 0), // use in excel it is bus with discount
-      busFeeNet, // use in excel it is bus without discount
-      busFeePaid, // use in excel it is bus fee paid by stu
+      feesDetails,
     };
   };
-
+  // after fetching all student we need to cal fee data for each student
   const { activeRows, inactiveRows } = useMemo(() => {
     const processStudents = (statusFilter) => {
       const classMap = new Map();
       students
         .filter((s) => s.normalizedStatus === statusFilter)
         .forEach((student) => {
+          const studentFees = processStudentData(student);  // Reuse your working function
           const cls = student.class || "Unknown";
           const existing = classMap.get(cls) || {
-            lastYear: 0,
-            original: 0,
-            discount: 0,
-            paid: 0,
+            lastYear: 0, //it will inc last year balance + last year transport
+            tuitionFeeWithDiscount: 0,
+            tuitionFeeDiscount: 0,
+            netTuitionFee: 0,
+            tuitionFeePaid: 0,
+            tuitionFeePending: 0,
+            busFeeWithDiscount: 0,
+            busFeeDiscount: 0,
+            netBusFee: 0,
+            busFeePaid: 0,
+            busFeePending: 0,
+            totalPaid: 0,
+            totalPending: 0,
             count: 0,
           };
-          const fees = student.allFee || {};
+          // Accumulate the individual student's fees
+          classMap.set(cls, {
+            lastYear: existing.lastYear + studentFees.feesDetails.lastYear,
+            tuitionFeeWithDiscount: existing.tuitionFeeWithDiscount + studentFees.feesDetails.tuitionFeeWithDiscount,
+            tuitionFeeDiscount: existing.tuitionFeeDiscount + studentFees.feesDetails.tuitionFeeDiscount,
+            netTuitionFee: existing.netTuitionFee + studentFees.feesDetails.netTuitionFee,
+            tuitionFeePaid: existing.tuitionFeePaid + studentFees.feesDetails.tuitionFeePaid,
+            tuitionFeePending: existing.tuitionFeePending + studentFees.feesDetails.tuitionFeePending,
+            busFeeWithDiscount: existing.busFeeWithDiscount + studentFees.feesDetails.busFeeWithDiscount,
+            busFeeDiscount: existing.busFeeDiscount + studentFees.feesDetails.busFeeDiscount,
+            netBusFee: existing.netBusFee + studentFees.feesDetails.netBusFee,
+            busFeePaid: existing.busFeePaid + studentFees.feesDetails.busFeePaid,
+            busFeePending: existing.busFeePending + studentFees.feesDetails.busFeePending,
+            totalPaid: existing.totalPaid + studentFees.feesDetails.totalPaid,
+            totalPending: existing.totalPending + studentFees.feesDetails.totalPending,
+            count: existing.count + 1,
+          });
+          // const studentThisYearTransaction = (student.transactions || []).filter((tx) => tx.academicYear === student.academicYear && tx.status === "completed");
 
-          existing.lastYear +=
-            (fees.lastYearBusFee || 0) + (fees.lastYearBalanceFee || 0);
+          // existing.lastYear += (fees.lastYearBalanceFee || 0) + (fees.lastYearBusFee || 0);
+          // existing.tuitionFeeWithDiscount += (fees.tuitionFeesDiscount || 0) + (fees?.tuitionFees?.total || 0);
+          // existing.tuitionFeeDiscount += (fees.tuitionFeesDiscount || 0)
+          // existing.netTuitionFee += (existing.tuitionFeeWithDiscount - existing.tuitionFeeDiscount);
+          // // now we have to use transction sum with academic year to calculate fees detail
+          // existing.tuitionFeePaid += studentThisYearTransaction.filter((t) => (t?.feeType?.toLowerCase() === "tuitionfee" || t?.feeType?.toLowerCase() === "admissionfee" || t?.feeType?.toLowerCase() === "hostelfee" || t?.feeType?.toLowerCase() === "messfee"))
+          //   .reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || 0,
+          //   existing.tuitionFeePending += existing.netTuitionFee - existing.tuitionFeePaid;
 
-          existing.original +=
-            (fees.tuitionFees?.total || 0) +
-            (fees.busFee || 0) +
-            (fees.messFee || 0) +
-            (fees.hostelFee || 0) +
-            (fees.busFeeDiscount || 0) +
-            (fees.tutionFeesDiscount || 0);
+          // existing.busFeeWithDiscount += (fees.busFee || 0) + (fees.busFeeDiscount || 0);
+          // existing.busFeeDiscount += (fees.busFeeDiscount || 0);
+          // existing.netBusFee += (existing.busFeeWithDiscount - existing.busFeeDiscount);
+          // existing.busFeePaid += studentThisYearTransaction.filter((t) => t?.feeType?.toLowerCase() === "busfee")
+          //   .reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || 0;
+          // existing.busFeePending += (existing.netBusFee - existing.busFeePaid);
+          // existing.totalPaid += existing.tuitionFeePaid + existing.busFeePaid;
+          // existing.totalPending += existing.tuitionFeePending + existing.busFeePending + existing.lastYear;
 
-          existing.discount +=
-            (fees.tutionFeesDiscount || 0) + (fees.busFeeDiscount || 0);
-          //    if payment is completed ie  t.status === "completed")
-          const paid = (student.transactions || [])
-            .filter(
-              (t) =>
-                t.academicYear === student.academicYear &&
-                t.status === "completed"
-            )
-            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-          existing.paid += paid;
-          existing.count += 1;
+          // existing.count += 1;
           // till here existing will give single student all fees
           // very imp
-          classMap.set(cls, existing);
+          // classMap.set(cls, existing);
         });
-
-      return Array.from(classMap.entries()).map(([cls, data], index) => ({
-        no: index + 1,
-        class: cls,
-        students: data.count,
-        lastYear: data.lastYear,
-        original: data.original,
-        discount: data.discount,
-        afterDiscount: data.original - data.discount,
-        paid: data.paid,
-        outstanding: data.original - data.discount - data.paid,
+      return Array.from(classMap.entries()).map(([classname, data]) => ({
+        class: classname,
+        ...data
       }));
     };
 
@@ -215,13 +203,13 @@ export default function FeeReportsContainer() {
       .filter((s) => {
         const searchLower = searchTerm.toLowerCase();
         const classFilter =
-          selectedClass === "All" ? true : s.class === selectedClass;
-        const divFilter = selectedDiv === "All" ? true : s.div === selectedDiv;
+          selectedClass === "All" ? true : s.class?.toLowerCase() === selectedClass?.toLowerCase();
+        const divFilter = selectedDiv === "All" ? true : s.div?.toLowerCase() === selectedDiv?.toLowerCase();
 
         return (
           (s.fname.toLowerCase().includes(searchLower) ||
             s.lname.toLowerCase().includes(searchLower) ||
-            s.feeId.toLowerCase().includes(searchLower) ||
+            // toString(s.feeId.toLowerCase().includes(searchLower) ||
             s.div.toLowerCase().includes(searchLower)) &&
           classFilter &&
           divFilter
@@ -298,6 +286,7 @@ export default function FeeReportsContainer() {
             selectedDiv={selectedDiv}
             setSelectedClass={setSelectedClass}
             setSelectedDiv={setSelectedDiv}
+            fetchStudents={fetchStudents} //call when student delete to refresh data 
           />
         </div>
       </div>

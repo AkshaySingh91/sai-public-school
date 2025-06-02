@@ -15,13 +15,13 @@ export default function StudentEmployeeAnalytics() {
     const [selectedClass, setSelectedClass] = useState('');
 
     useEffect(() => {
-        if (!userData?.schoolCode) return;
+        const code = school.Code;
+        if (!code) return;
         const fetchData = async () => {
-            const code = userData.schoolCode;
             const studentQueries = [
                 query(
                     collection(db, "students"),
-                    where("schoolCode", "==", userData.schoolCode),
+                    where("schoolCode", "==", code),
                     ...(selectedClass ? [where("class", "==", selectedClass.toLowerCase())] : [])
                 )
             ];
@@ -58,7 +58,7 @@ export default function StudentEmployeeAnalytics() {
         };
 
         fetchData();
-    }, [userData, selectedClass]);
+    }, [userData, selectedClass, school]);
 
     if (loading) {
         return <div className="text-center py-8">Loading analytics…</div>;

@@ -8,7 +8,6 @@ import { useSchool } from '../../../contexts/SchoolContext';
 export default function StudentDemographics() {
     const { userData } = useAuth();
     const { school } = useSchool();
-    // const [school, setSchool] = useState(null);
     const [studentTypes, setStudentTypes] = useState([]);
     const [classStrength, setClassStrength] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -16,31 +15,30 @@ export default function StudentDemographics() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!userData?.schoolCode) return;
-
+            if (!school?.Code) return;
             try {
                 // Fetch student type counts 
                 const types = school.studentsType && school.studentsType.length ? school.studentsType.map(t => t.toLowerCase()) : [];
                 const typeCounts = await Promise.all(types.map(async (type) => {
                     const q = query(
                         collection(db, 'students'),
-                        where('schoolCode', '==', userData.schoolCode),
-                        where('type', '==', type)
+                        where('schoolCode', '==', school.Code),
+                        where('type', 'in', [type?.toLowerCase(), type?.toUpperCase()])
                     );
                     const snap = await getDocs(q);
                     return { type, count: snap.size };
                 }));
                 setStudentTypes(typeCounts);
-
+                console.log(typeCounts)
                 // Fetch class division counts
                 const classes = school.class || [];
                 const strengthData = await Promise.all(classes.map(async (cls) => {
                     const divisionCounts = await Promise.all(divisions.map(async (div) => {
                         const q = query(
                             collection(db, 'students'),
-                            where('schoolCode', '==', userData.schoolCode),
-                            where('class', '==', cls?.toLowerCase()),
-                            where('div', '==', div?.toLowerCase())
+                            where('schoolCode', '==', school.Code),
+                            where('class', 'in', [cls?.toLowerCase(), cls?.toUpperCase()]),
+                            where('div', 'in', [div?.toLowerCase(), div?.toUpperCase()])
                         );
                         const snap = await getDocs(q);
                         return snap.size > 0 ? snap.size : '-';
@@ -51,7 +49,7 @@ export default function StudentDemographics() {
 
                     return { class: cls, divisions: divisionCounts, total };
                 }));
-                ({ strengthData })
+                console.log(strengthData)
                 setClassStrength(strengthData);
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -60,7 +58,7 @@ export default function StudentDemographics() {
             }
         };
         fetchData();
-    }, [userData]);
+    }, [userData, school]);
 
     if (loading) {
         return (

@@ -30,7 +30,7 @@ function StockGroup() {
         const snapshot = await getDocs(collection(db, "allStocks"));
         const data = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(item => item.schoolCode === userData.schoolCode);
+          .filter(item => item.schoolCode === school.Code);
 
         processAggregatedData(data);
       } catch (error) {
@@ -40,7 +40,7 @@ function StockGroup() {
       }
     };
     fetchStockData();
-  }, []);
+  }, [userData, school.Code]);
   // Process data into class-gender groups
   const processAggregatedData = (data) => {
     const aggregation = classOrder.reduce((acc, className) => {

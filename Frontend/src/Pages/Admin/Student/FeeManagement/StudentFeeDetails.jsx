@@ -1,22 +1,24 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Download,
   FileText,
-  UserCheck,
   UserX,
-  Search,
   ArrowUp,
   ArrowDown,
 } from "react-feather";
+import { MoreVertical, Trash2, Eye, UserCheck, Search } from 'lucide-react';
 import { ChevronDown } from "react-feather";
 import * as XLSX from "xlsx";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../../../../config/firebase";
+import clsx from 'clsx';
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { PieChart, FeeBar } from "./FeeVisualizations";
-import { useAuth } from "../../../../contexts/AuthContext";
 import { useSchool } from "../../../../contexts/SchoolContext"
+import { deleteDoc, doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "../../../../config/firebase";
+import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import { useAuth } from "../../../../contexts/AuthContext";
 
 const StudentFeeDetails = ({
   loading,
@@ -38,148 +40,243 @@ const StudentFeeDetails = ({
   selectedDiv,
   setSelectedClass,
   setSelectedDiv,
+  fetchStudents,
 }) => {
-  const { userData } = useAuth();
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const { school } = useSchool();
   const division = school.divisions && school.divisions.length ? school.divisions : ["A", "B", "C", "D", "SEMI"]
-  // useEffect(() => {
-  //   const fetchSchoolClasses = async () => {
-  //     if (userData?.schoolCode) {
-  //       const schoolQuery = query(
-  //         collection(db, "schools"),
-  //         where("Code", "==", userData.schoolCode)
-  //       );
-  //       const schoolSnapshot = await getDocs(schoolQuery);
-  //       if (schoolSnapshot.empty) {
-  //         throw new Error("School not found");
-  //       }
-  //       const schoolData = schoolSnapshot.docs[0].data();
-  //       setSchool({
-  //         id: schoolSnapshot.docs[0].id,
-  //         ...schoolData,
-  //       });
-  //     }
-  //   };
-  //   fetchSchoolClasses();
-  // }, [userData?.schoolCode]);
-
-  const handleClassChange = (e) => {
-    const options = e.target.options;
-    const selected = [];
-    for (let i = 0; i < options.length; i++) {
-      if (options[i].selected) {
-        selected.push(options[i].value);
-      }
-    }
-    setSelectedClass(selected);
-    setCurrentPage(1);
-  };
-  const handleDivChange = (e) => {
-    setSelectedDiv(e.target.value);
-    setCurrentPage(1);
-  };
-
+  const [openActionMenu, setOpenActionMenu] = useState(null);
+  const navigate = useNavigate();
   const handleRowClick = (studentId) => {
-    console.log(currentItems.find(s => s.id === studentId))
-
     setSelectedStudentId((prev) => (prev === studentId ? null : studentId));
   };
-  const exportExcel = useCallback(() => {
-    const excelStudentData = filteredAllStudents.map((student) => {
-      return {
-        "Academic Year": student.academicYear,
-        "Fee ID": student.feeId,
-        "Student Type": student.type,
-        Name: `${student.fname} ${student.lname}`,
-        Class: student.class,
-        Division: student.div,
-        // updated fee data this will show all fee informaion in excel
-        "Last Year Pending":
-          (student?.lastYearTuitionBalance || 0) +
-          (student?.lastYearBusFee || 0),
-        "Tution Fee": student?.tutionFeeNet || 0,
-        "TutionFee Paid": student?.tutionFeePaid || 0,
-        "Pending TutionFee ":
-          (student?.tutionFeeNet || 0) - (student?.tutionFeePaid || 0),
-        TotalTransportFee: student?.totalTransportFee || 0,
-        NetTransportFee: student?.busFeeNet || 0,
-        "busFee paid": student?.busFeePaid || 0,
-        "Pending busFee ":
-          student?.busFeeNet - (student?.busFeePaid || 0),
-        "Total paid":
-          (student?.tutionFeePaid || 0) + (student?.busFeePaid || 0),
-        Outstanding:
-          ((student?.busFeeNet || 0) + student?.tutionFeeNet || 0) -
-          ((student?.busFeePaid || 0) + (student?.tutionFeePaid || 0)),
-      };
+
+  const exportStudentFeeExcel = useCallback(() => {
+    // 1) Define columns
+    const fixedCols = ['Name', 'Class', 'Div', 'Fee Id'];
+    const numericCols = [
+      'Last Year Balance',
+      'Tuition Fee (With Discount)',
+      'Tuition Discount',
+      'Net Tuition Fee',
+      'Tuition Paid',
+      'Tuition Pending',
+      'Bus Fee (With Discount)',
+      'Bus Discount',
+      'Net Bus Fee',
+      'Bus Paid',
+      'Bus Pending',
+      'Total Paid',
+      'Total Pending'
+    ];
+    const header = [...fixedCols, ...numericCols];
+
+    // 2) Map each student to a row object
+    const data = currentItems.map(student => ({
+      Name: [student.fname || "", student.fatherName || "", student.lname || ""]
+        .filter(Boolean)
+        .map(word =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        )
+        .join(' '),
+      Class: student.class?.toUpperCase() || '',
+      Div: student.div?.toUpperCase() || '',
+      'Fee Id': student.feeId || '',
+      'Last Year Balance': Number(student.feesDetails.lastYear) || 0,
+      'Tuition Fee (With Discount)': Number(student.feesDetails.tuitionFeeWithDiscount) || 0,
+      'Tuition Discount': Number(student.feesDetails.tuitionFeeDiscount) || 0,
+      'Net Tuition Fee': Number(student.feesDetails.netTuitionFee) || 0,
+      'Tuition Paid': Number(student.feesDetails.tuitionFeePaid) || 0,
+      'Tuition Pending': Number(student.feesDetails.tuitionFeePending) || 0,
+      'Bus Fee (With Discount)': Number(student.feesDetails.busFeeWithDiscount) || 0,
+      'Bus Discount': Number(student.feesDetails.busFeeDiscount) || 0,
+      'Net Bus Fee': Number(student.feesDetails.netBusFee) || 0,
+      'Bus Paid': Number(student.feesDetails.busFeePaid) || 0,
+      'Bus Pending': Number(student.feesDetails.busFeePending) || 0,
+      'Total Paid': Number(student.feesDetails.totalPaid) || 0,
+      'Total Pending': Number(student.feesDetails.totalPending) || 0
+    }));
+
+    // 3) Compute totals
+    const totalsRow = {
+      Name: 'TOTAL',
+      Class: '',
+      Div: '',
+      'Fee Id': ''
+    };
+    numericCols.forEach(col => {
+      totalsRow[col] = data.reduce((sum, r) => sum + (r[col] || 0), 0);
     });
 
-    const data = excelStudentData;
+    // 4) Append and build sheet
+    const dataWithTotals = [...data, totalsRow];
+    const ws = XLSX.utils.json_to_sheet(dataWithTotals, {
+      header,
+      skipHeader: false
+    });
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Fee Details");
-    XLSX.writeFile(workbook, `Student_Fees_${studentActiveTab}.xlsx`);
-  }, [filteredAllStudents, studentActiveTab]);
+    // 5) Style totals row
+    const totalRowIndex = dataWithTotals.length; // 0-based (header=0, rows 1…n, totals at index n)
+    header.forEach((colName, colIdx) => {
+      const addr = XLSX.utils.encode_cell({ r: totalRowIndex, c: colIdx });
+      if (!ws[addr]) {
+        const v = totalsRow[colName];
+        ws[addr] = { t: typeof v === 'string' ? 's' : 'n', v };
+      }
+      ws[addr].s = {
+        font: { bold: true },
+        border: { top: { style: 'medium', color: { rgb: '000000' } } }
+      };
+    });
+    // Extend the sheet range
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    range.e.r = totalRowIndex;
+    ws['!ref'] = XLSX.utils.encode_range(range);
 
-  const exportPDF = useCallback(() => {
-    const doc = new jsPDF();
-    doc.text(`${studentActiveTab.toUpperCase()} Student Fee Details`, 14, 16);
+    // 6) Export
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Student Fees');
+    XLSX.writeFile(wb, `Student_Fees_${studentActiveTab}.xlsx`);
+  }, [currentItems, studentActiveTab]);
+
+
+  const exportStudentFeePDF = useCallback(() => {
+    // 1) Define columns
+    const fixedCols = ['Name', 'Class', 'Div', 'Fee Id'];
+    const numericCols = [
+      'Last Year Balance',
+      'Tuition Fee (With Discount)',
+      'Tuition Discount',
+      'Net Tuition Fee',
+      'Tuition Paid',
+      'Tuition Pending',
+      'Bus Fee (With Discount)',
+      'Bus Discount',
+      'Net Bus Fee',
+      'Bus Paid',
+      'Bus Pending',
+      'Total Paid',
+      'Total Pending'
+    ];
+    const header = [...fixedCols, ...numericCols];
+
+    // 2) Build table body rows
+    const body = currentItems.map(student => [
+      [student.fname || "", student.fatherName || "", student.lname || ""]
+        .filter(Boolean)
+        .map(word =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        )
+        .join(' '),
+      student.class?.toUpperCase() || '',
+      student.div?.toUpperCase() || '',
+      student.feeId || '',
+      Number(student.feesDetails.lastYear) || 0,
+      Number(student.feesDetails.tuitionFeeWithDiscount) || 0,
+      Number(student.feesDetails.tuitionFeeDiscount) || 0,
+      Number(student.feesDetails.netTuitionFee) || 0,
+      Number(student.feesDetails.tuitionFeePaid) || 0,
+      Number(student.feesDetails.tuitionFeePending) || 0,
+      Number(student.feesDetails.busFeeWithDiscount) || 0,
+      Number(student.feesDetails.busFeeDiscount) || 0,
+      Number(student.feesDetails.netBusFee) || 0,
+      Number(student.feesDetails.busFeePaid) || 0,
+      Number(student.feesDetails.busFeePending) || 0,
+      Number(student.feesDetails.totalPaid) || 0,
+      Number(student.feesDetails.totalPending) || 0
+    ]);
+
+    // 3) Compute total row
+    const totals = ['TOTAL', '', '', ''];
+    numericCols.forEach((_, i) => {
+      const idx = fixedCols.length + i;
+      const sum = body.reduce((acc, row) => acc + Number(row[idx] || 0), 0);
+      totals.push(sum);
+    });
+
+    // 4) Generate PDF
+    const doc = new jsPDF({ unit: 'pt' });
+    doc.setFontSize(12);
+    doc.text(`Student Fee Summary: ${studentActiveTab.toUpperCase()}`, 40, 40);
+
     autoTable(doc, {
-      startY: 25,
-      head: [
-        [
-          "Name",
-          "Class",
-          "Fee ID",
-          "Last Year ",
-          "Total Fees",
-          "Discount",
-          "Net Fees",
-          "Paid",
-          "Outstanding",
-        ],
-      ],
-      body: filteredAllStudents.map((s) => [
-        `${s.fname} ${s.lname}`,
-        `${s.class} - ${s.div}`,
-        s.feeId,
-        !isNaN(Number(s.lastYearBalance))
-          ? Number(s.lastYearBalance).toLocaleString()
-          : "0",
-        !isNaN(Number(s.totalFees))
-          ? Number(s.totalFees).toLocaleString()
-          : "0",
-        !isNaN(Number(s.totalDiscount))
-          ? Number(s.totalDiscount).toLocaleString()
-          : "0",
-        !isNaN(Number(s.afterDiscount))
-          ? Number(s.afterDiscount).toLocaleString()
-          : "0",
-        !isNaN(Number(s.paid)) ? Number(s.paid).toLocaleString() : "0",
-        !isNaN(Number(s.outstanding))
-          ? Number(s.outstanding).toLocaleString()
-          : "0",
-      ]),
+      startY: 60,
+      head: [header],
+      body,
+      foot: [totals],
+      styles: {
+        fontSize: 4,
+        cellPadding: 4,
+        overflow: 'linebreak',
+        halign: 'right'
+      },
       headStyles: {
         fillColor: [103, 58, 183],
         textColor: 255,
-        fontStyle: "bold",
-        halign: "center",
+        fontStyle: 'bold',
+        halign: 'center'
       },
-      styles: {
-        fontSize: 8,
-        cellPadding: 1.5,
-        overflow: "linebreak",
+      footStyles: {
+        fontStyle: 'bold',
+        halign: 'right',
+        lineWidth: 0.5,
+        lineColor: 0
       },
-      margin: { top: 20 },
+      columnStyles: {
+        // Left-align the first four columns
+        0: { halign: 'left' },
+        1: { halign: 'left' },
+        2: { halign: 'left' },
+        3: { halign: 'left' }
+      },
+      margin: { left: 40, right: 40 }
     });
+
     doc.save(`Student_Fees_${studentActiveTab}.pdf`);
-  }, [filteredAllStudents, studentActiveTab]);
+  }, [currentItems, studentActiveTab]);
 
+  const handleAction = async (action, student) => {
+    console.log(action, student)
+    switch (action) {
+      case 'StudentProfile':
+        navigate(`/student/${student.id}`)
+        break;
+      case 'StockTransactions':
+        navigate(`/stockallocate/${student.id}`)
+        break;
+      case 'DeleteStudent':
+        await deleteStudent(student.id)
+        break;
+    }
+  };
+  const deleteStudent = async (studentId) => {
+    if (!studentId) {
+      return Swal.fire('Error', "studentId not Exist.", 'error');
+    }
+    const studentDoc = await getDoc(doc(db, 'students', studentId));
+    if (!studentDoc.exists()) {
+      return Swal.fire('Error', "Student not Exist.", 'error');
+    };
+    const result = await Swal.fire({
+      title: 'Delete Student?',
+      text: `This will remove student details & related transaction.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7e22ce',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, delete it!',
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await deleteDoc(doc(db, 'students', studentId));
+      await fetchStudents()
+      Swal.fire('Deleted!', 'Student has been removed.', 'success');
+
+    } catch (err) {
+      Swal.fire('Error', err.message, 'error');
+    }
+  };
   if (loading) return <LoadingSkeleton />;
-
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
       {/* Header */}
@@ -194,13 +291,13 @@ const StudentFeeDetails = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={exportExcel}
+              onClick={exportStudentFeeExcel}
               className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-purple-600 transition-colors"
             >
               <Download className="w-4 h-4" />
             </button>
             <button
-              onClick={exportPDF}
+              onClick={exportStudentFeePDF}
               className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-purple-600 transition-colors"
             >
               <FileText className="w-4 h-4" />
@@ -325,23 +422,26 @@ const StudentFeeDetails = ({
           <thead className="bg-gray-50">
             <tr>
               {[
-                "Student",
-                "Class",
-                "Div",
-                "Fee ID",
-                "L .Y Pending",
-                "Total Fees",
-                "Discount",
-                "Net Fees",
-                "Total Paid",
-                "Balance",
+                { id: 'name', label: 'Name' },
+                { id: 'class', label: 'Class' },
+                { id: 'feeId', label: 'FeeId' },
+                { id: 'lastYear', label: 'L.Y. Bal' },
+                { id: 'netTuitionFee', label: 'Net Tuition' },
+                { id: 'tuitionFeePaid', label: 'TuitionFee Paid' },
+                { id: 'tuitionFeePending', label: 'TuitionFee Pending' },
+                { id: 'netBusFe', label: 'Net BusFee' },
+                { id: 'busFeePaid', label: 'BusFee Paid' },
+                { id: 'busFeePending', label: 'BusFee Pending' },
+                { id: 'totalPaid', label: 'Total Paid' },
+                { id: 'totalPending', label: 'Total Pending' },
+                { id: 'action', label: 'Action' },
               ].map((header, idx) => (
                 <th
-                  key={header}
+                  key={header.id}
                   className={`px-3 py-2.5 text-left font-medium text-gray-700 ${idx === 0 ? "pl-4" : ""
                     } ${idx === 8 ? "pr-4" : ""}`}
                 >
-                  {header}
+                  {header.label}
                 </th>
               ))}
             </tr>
@@ -351,57 +451,54 @@ const StudentFeeDetails = ({
             {currentItems.map((student) => (
               <React.Fragment key={student.id}>
                 <tr
-                  className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => handleRowClick(student.id)}
-                >
-                  <td className="px-3 py-2.5 pl-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 bg-purple-50 rounded-full flex items-center justify-center text-xs text-purple-600">
-                        {student.fname[0]}
-                        {student.lname[0]}
-                      </div>
-                      <span className="font-medium capitalize">
-                        {student.fname} {student.fatherName || ""} {student.lname}
-                      </span>
+                  key={student.class} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                  <td className="px-2 py-3 whitespace-nowrap">
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900 capitalize">
+                        {student.fname || '-'} {student.lname || ''}
+                      </p>
+                      <p className="text-xs text-gray-500 capitalize">
+                        {student.fatherName || 'Guardian not specified'}
+                      </p>
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 text-gray-600">{student.class}</td>
-                  <td className="px-3 py-2.5 text-gray-600 uppercase">{student.div}</td>
-                  <td className="px-3 py-2.5 font-mono text-purple-600">
-                    {student.feeId}
+                  <td className="px-2 py-3 pl-6 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 whitespace-nowrap capitalize">
+                    {student.class || ""}-
+                    <span className="uppercase"> {student.div || ""}</span>
                   </td>
-                  <td className="px-3 py-2.5">
-                    {formatCurrency(
-                      (student?.lastYearTuitionBalance || 0) +
-                      (student?.lastYearBusFee || 0)
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {formatCurrency(student?.totalFees || 0)}
-                  </td>
-                  <td className="px-3 py-2.5 text-red-600">
-                    -{formatCurrency(student?.totalDiscount || 0)}
-                  </td>
-                  <td className="px-3 py-2.5 font-medium">
-                    {formatCurrency(student?.afterDiscount || 0)}
-                  </td>
-                  <td className="px-3 py-2.5 text-green-600">
-                    {formatCurrency(student?.paid || 0)}
-                  </td>
-                  <td className="px-3 py-2.5 pr-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${student.outstanding > 0
-                        ? "bg-red-100 text-red-700"
-                        : "bg-green-100 text-green-700"
-                        }`}
-                    >
-                      {formatCurrency(Math.abs(student?.outstanding || 0))}
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-gray-600">{student.feeId || ""}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-gray-600">{formatCurrency(student?.feesDetails?.lastYear || 0)}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-black bg-">{formatCurrency(student?.feesDetails?.netTuitionFee || 0)}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-green-600">{formatCurrency(student?.feesDetails?.tuitionFeePaid || 0)}</td>
+                  <td className={`whitespace-nowrap px-2 py-3 text-sm ${(student?.feesDetails?.tuitionFeePending || 0) > 0 ? "text-red-600" : "text-green-600"} `}>{formatCurrency(student?.feesDetails?.tuitionFeePending || 0)}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-black">{formatCurrency(student?.feesDetails?.netBusFee || 0)}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-green-600">{formatCurrency(student?.feesDetails?.busFeePaid || 0)}</td>
+                  <td className={`whitespace-nowrap px-2 py-3 text-sm ${(student?.feesDetails?.tuitionFeePending || 0) > 0 ? "text-red-600" : "text-green-600"} `}>{formatCurrency(student?.feesDetails?.busFeePending || 0)}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-green-600">{formatCurrency(student?.feesDetails?.totalPaid || 0)}</td>
+                  <td className="whitespace-nowrap px-2 py-3 pr-6 text-sm font-medium text-center">
+                    <span className={clsx(
+                      (student?.feesDetails?.totalPending || 0) > 0 ? 'text-red-600' : 'text-green-600',
+                      'font-semibold'
+                    )}>
+                      {formatCurrency(Math.abs(student?.feesDetails?.totalPending || 0))}
+                      {(student?.feesDetails?.totalPending || 0) > 0 ? ' ▼' : ' ▲'}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-green-600 "
+                    onClick={e => e.stopPropagation()}       // ← prevent row-click
+                  >
+                    <ActionMenu
+                      student={student}
+                      onAction={handleAction}
+                      isOpen={openActionMenu === student.id}
+                      onToggle={(isOpen) => setOpenActionMenu(isOpen ? student.id : null)}
+                    />
                   </td>
                 </tr>
                 {selectedStudentId === student.id && (
                   <tr className="bg-gray-50 transition-all">
-                    <td colSpan={9} className="p-4">
+                    <td colSpan={12} className="p-4 ">
                       <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                           {/* Last Year Balances */}
@@ -412,19 +509,19 @@ const StudentFeeDetails = ({
                             <div className="flex gap-4">
                               <PieChart
                                 title="School Balance"
-                                paid={student.lastYearBusPaid}
+                                paid={student?.feesDetails?.lastYearTuitionPaid || 0}
                                 total={
-                                  (Number(student?.lastYearTuitionBalance) || 0) +
-                                  (Number(student?.lastYearTuitionPaid) || 0)
+                                  (Number(student?.feesDetails?.lastYearTuitionPaid) || 0) +
+                                  (Number(student?.allFee?.lastYearBalanceFee) || 0)
                                 }
                                 color="#7e22ce"
                               />
                               <PieChart
                                 title="Bus Balance"
-                                paid={Number(student?.allFee?.lastYearBusPaid) || 0}
+                                paid={Number(student?.feesDetails?.lastYearBusPaid) || 0}
                                 total={
-                                  (Number(student?.lastYearBusBalance) || 0) +
-                                  (Number(student?.lastYearBusPaid) || 0)
+                                  (Number(student?.feesDetails?.lastYearBusPaid) || 0) +
+                                  (Number(student?.allFee?.lastYearBusFee) || 0)
                                 }
                                 color="#3b82f6"
                               />
@@ -438,28 +535,14 @@ const StudentFeeDetails = ({
                             </h3>
                             <FeeBar
                               label="School Fees"
-                              paid={student.currentYearPaid.schoolFee}
-                              total={student.currentYearTotals.schoolFee}
+                              paid={student?.feesDetails?.tuitionFeePaid}
+                              total={Number(student?.feesDetails?.netTuitionFee) || 0}
                             />
                             <FeeBar
                               label="Bus Fees"
-                              paid={student.currentYearPaid.busFee}
-                              total={student.currentYearTotals.busFee}
+                              paid={student?.feesDetails?.busFeePaid}
+                              total={Number(student?.feesDetails?.netBusFee) || 0}
                             />
-                            {student.currentYearTotals.messFee > 0 && (
-                              <FeeBar
-                                label="Mess Fees"
-                                paid={student.currentYearPaid.messFee}
-                                total={student.currentYearTotals.messFee}
-                              />
-                            )}
-                            {student.currentYearTotals.HostelFee > 0 && (
-                              <FeeBar
-                                label="Hostel Fees"
-                                paid={student.currentYearPaid.hostelFee}
-                                total={student.currentYearTotals.hostelFee}
-                              />
-                            )}
                           </div>
                         </div>
                       </div>
@@ -525,30 +608,6 @@ const Pagination = ({
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    // <div className="flex items-center justify-between">
-    //     <div className="text-sm text-gray-600">
-    //         Showing {startItem} to {endItem} of {totalItems} results
-    //     </div>
-    //     <div className="flex gap-1">
-    //         <button
-    //             onClick={() => onPageChange(currentPage - 1)}
-    //             disabled={currentPage === 1}
-    //             className="px-4 py-2 rounded-md bg-white border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-    //         >
-    //             Previous
-    //         </button>
-    //         <span className="px-4 py-2 text-gray-600">
-    //             Page {currentPage} of {totalPages}
-    //         </span>
-    //         <button
-    //             onClick={() => onPageChange(currentPage + 1)}
-    //             disabled={currentPage === totalPages}
-    //             className="px-4 py-2 rounded-md bg-white border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-    //         >
-    //             Next
-    //         </button>
-    //     </div>
-    // </div>
     <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0 px-4 py-3">
       <div className="text-sm text-gray-600 text-center sm:text-left">
         Showing {startItem} to {endItem} of {totalItems} results
@@ -572,6 +631,81 @@ const Pagination = ({
           Next
         </button>
       </div>
+    </div>
+  );
+};
+
+
+const ActionMenu = ({ student, onAction, isOpen, onToggle }) => {
+  const menuRef = useRef(null);
+  const { userData } = useAuth();
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        onToggle(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen, onToggle]);
+
+  const menuItems = [
+    {
+      icon: UserCheck,
+      label: 'Student Profile',
+      action: 'StudentProfile',
+      color: 'text-green-600 hover:text-green-700 hover:bg-green-50'
+    },
+    {
+      icon: Eye,
+      label: 'Stock Details',
+      action: 'StockTransactions',
+      color: 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+    },
+    {
+      icon: Trash2,
+      label: 'Delete Student',
+      action: 'DeleteStudent',
+      color: 'text-red-600 hover:text-red-700 hover:bg-red-50'
+    }
+  ].filter((menu) => {
+    if (userData.role === "superadmin" && menu.action === "StockTransactions") {
+      return true;
+    } else if (userData.role !== "superadmin") {
+      return true
+    } return false;
+  });
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => onToggle(!isOpen)}
+        className="p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/20 cursor-pointer"
+      >
+        <MoreVertical className="w-4 h-4 text-gray-500" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-48 bg-white/95 backdrop-blur-lg border border-white/20 rounded-xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="p-2">
+            {menuItems.map((item) => (
+              <button
+                key={item.action}
+                onClick={() => {
+                  onAction(item.action, student);
+                  onToggle(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer font-medium rounded-lg transition-all duration-200 ${item.color}`}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

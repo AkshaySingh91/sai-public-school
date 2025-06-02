@@ -12,6 +12,7 @@ import {
   CartesianGrid,
   ResponsiveContainer
 } from 'recharts';
+import { useSchool } from '../../../contexts/SchoolContext';
 
 const BIN_DEFS = [
   { label: '7–10 AM', start: 7, end: 10 },
@@ -24,6 +25,7 @@ const BIN_DEFS = [
 
 export default function DayHourLineChart() {
   const { userData } = useAuth();
+  const { school } = useSchool();
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -46,12 +48,12 @@ export default function DayHourLineChart() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!userData?.schoolCode || !selectedDate) return;
+    if (!school?.Code || !selectedDate) return;
 
     try {
       const schoolQuery = query(
         collection(db, 'schools'),
-        where('Code', '==', userData.schoolCode)
+        where('Code', '==', school.Code)
       );
       const schoolSnap = await getDocs(schoolQuery);
 
@@ -59,7 +61,7 @@ export default function DayHourLineChart() {
 
       const studentsQuery = query(
         collection(db, 'students'),
-        where('schoolCode', '==', userData.schoolCode),
+        where('schoolCode', '==', school.Code),
         where('academicYear', '==', schoolSnap.docs[0].data().academicYear)
       );
 
@@ -91,7 +93,7 @@ export default function DayHourLineChart() {
     } finally {
       setLoading(false);
     }
-  }, [userData, last7Days, selectedDate]);
+  }, [userData, school, last7Days, selectedDate]);
 
   useEffect(() => {
     fetchData();

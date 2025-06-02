@@ -206,7 +206,7 @@ const SchoolSettings = ({ school, setSchool }) => {
             if (!resDetails.ok) {
                 const errorData = await resDetails.json();
                 throw new Error(errorData.error || 'Failed to update school details');
-            } 
+            }
             Swal.fire({
                 icon: 'success',
                 title: 'Saved!',
@@ -341,6 +341,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             School Name <span className="text-red-500">*</span>
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={schoolName || ''}
                             onChange={(e) => {
@@ -360,6 +361,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             Academic Year <span className="text-red-500">*</span>
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={academicYear || ''}
                             onChange={(e) => setAcademicYear(e.target.value)}
@@ -378,6 +380,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">State <span className="text-red-500">*</span></label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={schoolLocation.state || ''}
                             onChange={(e) => {
@@ -392,6 +395,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">District <span className="text-red-500">*</span></label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             onChange={(e) => {
                                 if (e.target.value.trim() !== '') {
@@ -406,6 +410,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Taluka <span className="text-red-500">*</span></label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             onChange={(e) => {
                                 if (e.target.value.trim() !== '') {
@@ -420,6 +425,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Landmark <span className="text-red-500">*</span></label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             onChange={(e) => {
                                 if (e.target.value.trim() !== '') {
@@ -434,6 +440,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">PinCode <span className="text-red-500">*</span></label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             onChange={(e) => {
                                 if (e.target.value.trim() !== '') {
@@ -469,6 +476,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             All Classes (comma separated, in order)
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={classes}
                             onChange={handleClasses}
@@ -481,6 +489,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             Last student FeeId
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="number"
                             value={feeIdCount}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
@@ -496,6 +505,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                 Total tuition Receipt Count
                             </label>
                             <input
+                                disabled={userData.role === "superadmin"}
                                 type="number"
                                 value={tuitionReceiptCount}
                                 onChange={(e) => {
@@ -509,6 +519,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                 Total Bus Receipt Count
                             </label>
                             <input
+                                disabled={userData.role === "superadmin"}
                                 type="number"
                                 value={busReceiptCount}
                                 onChange={(e) => {
@@ -522,6 +533,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                 Total Stock Receipt Count
                             </label>
                             <input
+                                disabled={userData.role === "superadmin"}
                                 type="number"
                                 value={stockReceiptCount}
                                 onChange={(e) => {
@@ -552,6 +564,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             Display Header for <span className='font-bold'>School Receipt</span>
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={schoolReceiptHeader}
                             onChange={(e) => {
@@ -568,6 +581,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             Display Header for <span className='font-bold'>Transport Receipt</span>
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={busReceiptHeader}
                             onChange={(e) => {
@@ -584,6 +598,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             Display Header for <span className='font-bold'>Stock Receipt</span>
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={stockReceiptHeader}
                             onChange={(e) => {
@@ -600,6 +615,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             School Email
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={schoolEmail}
                             onChange={(e) => {
@@ -614,6 +630,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                             School Mobile
                         </label>
                         <input
+                            disabled={userData.role === "superadmin"}
                             type="text"
                             value={schoolMobile}
                             onChange={(e) => {
@@ -643,6 +660,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                     </div>
                                 )}
                                 <input
+                                    disabled={userData.role === "superadmin"}
                                     type="file"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     onChange={(e) => handleLogoUpload(e.target.files[0])}
@@ -662,14 +680,17 @@ const SchoolSettings = ({ school, setSchool }) => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end">
-                <button
-                    type="submit"
-                    className="px-8 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all font-medium text-sm"
-                >
-                    Save School Details
-                </button>
-            </div>
+            {
+                userData.role !== "superadmin" &&
+                <div className="flex justify-end">
+                    <button
+                        type="submit"
+                        className="px-8 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all font-medium text-sm"
+                    >
+                        Save School Details
+                    </button>
+                </div>
+            }
         </form>
     );
 };

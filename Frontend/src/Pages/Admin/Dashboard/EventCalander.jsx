@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Upload, Calendar as CalendarIcon, Home } from 'lucide-react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isAfter, differenceInDays } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isAfter } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
-
+import { useSchool } from '../../../contexts/SchoolContext';
+import Swal from "sweetalert2"
 const EventCalendar = () => {
     // Add state for tracking file upload
     const [uploading, setUploading] = useState(false);
     const [fileKey, setFileKey] = useState(Date.now());
     const { userData } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [school, setSchool] = useState(null);
     const [events, setEvents] = useState([]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newEvent, setNewEvent] = useState({ title: '', date: '' });
@@ -21,48 +21,31 @@ const EventCalendar = () => {
     const [error, setError] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [showExcelModal, setShowExcelModal] = useState(false);
-
     const currentEvents = events.filter(e =>
         isSameDay(parseISO(e.date), selectedDate) &&
         e.academicYear === school?.academicYear
     );
+    const { school } = useSchool();
 
     const nextEvent = events
-
         .filter(e => isAfter(parseISO(e.date), selectedDate))
         .sort((a, b) => parseISO(a.date) - parseISO(b.date))[0];
 
     useEffect(() => {
-        const fetchSchool = async () => {
-            try {
-                if (!userData?.schoolCode) return;
-                const schoolQuery = query(
-                    collection(db, "schools"),
-                    where("Code", "==", userData.schoolCode)
-                );
-                const snapshot = await getDocs(schoolQuery);
-
-                if (snapshot.empty) {
-                    setError("School not found");
-                    return;
-                }
-
-                const schoolData = snapshot.docs[0].data();
-                setSchool({
-                    id: snapshot.docs[0].id,
-                    ...schoolData,
-                    events: schoolData.events?.filter(e => e.academicYear === schoolData.academicYear) || []
-                });
-                setEvents(schoolData.events?.filter(e => e.academicYear === schoolData.academicYear) || []);
-            } catch (err) {
-                setError("Failed to load school data");
-            } finally {
-                setLoading(false);
+        try {
+            if (school.events && school.events.length) {
+                setEvents(school.events?.filter(e => e.academicYear === school.academicYear) || []);
             }
-        };
-
-        fetchSchool();
-    }, [userData?.schoolCode]);
+        } catch (error) {
+            Swal.fire({
+                icon: "error",
+                title: "error",
+                text: error.message
+            })
+        } finally {
+            setLoading(false)
+        }
+    }, [school.Code, userData]);
 
     const handleTodayClick = () => {
         const today = new Date();
@@ -320,7 +303,7 @@ const EventCalendar = () => {
                         <Upload size={16} />
                         Bulk Upload
                     </button>
-                </div> 
+                </div>
                 {/* Add Event Form */}
                 <div className="mt-4 border-t pt-4">
                     <AnimatePresence>

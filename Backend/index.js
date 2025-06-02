@@ -45,9 +45,11 @@ const initializeApp = async () => {
 
         // Import routes after Firebase initialization
         const { default: settingsRouter } = await import('./Routes/settings.js');
+        const { default: superadminSettings } = await import('./Routes/superadminSettings.js');
 
         // Apply routes
         app.use('/api/admin/settings', verifyAccountant, fetchSchool, settingsRouter);
+        app.use('/api/superadmin/settings', verifyAccountant, fetchSchool, superadminSettings);
 
         // Superadmin route
         app.post('/api/superadmin/schools/create-accountant', async (req, res) => {

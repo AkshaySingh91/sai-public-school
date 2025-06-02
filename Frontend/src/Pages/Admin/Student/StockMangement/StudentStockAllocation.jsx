@@ -91,7 +91,7 @@ const StudentStockAllocation = () => {
                     })
                     .filter(item => {
                         // Check if student's class falls within the item's class range
-                         const inClassRange = studentClassIndex >= item.fromIndex &&
+                        const inClassRange = studentClassIndex >= item.fromIndex &&
                             studentClassIndex <= item.toIndex;
                         // Check category match
                         const categoryMatch = item.category?.toLowerCase()?.trim() === "all" ||
@@ -347,7 +347,7 @@ const StudentStockAllocation = () => {
                                                 <table className="w-full">
                                                     <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white">
                                                         <tr>
-                                                            {["Select", "Item Name", "Unit Price", "Stock Status", "Available Qty", "Order Qty"].map((header, idx) => (
+                                                            {[userData.role !== "superadmin" ? "Select" : "", "Item Name", "Unit Price", "Stock Status", "Available Qty", "Order Qty"].filter(Boolean).map((header, idx) => (
                                                                 <th
                                                                     key={idx}
                                                                     className="px-3 py-2 text-left text-sm font-semibold first:rounded-tl-xl last:rounded-tr-xl whitespace-nowrap"
@@ -379,25 +379,28 @@ const StudentStockAllocation = () => {
                                                                     key={item.id}
                                                                     className={getRowClasses()}
                                                                 >
-                                                                    <td className="px-2 py-1 text-xs">
-                                                                        <div className="relative">
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={item.selected}
-                                                                                onChange={() => handleSelectItem(item.id)}
-                                                                                disabled={isOutOfStock}
-                                                                                className={`h-5 w-5 rounded border-2 focus:ring-2 focus:ring-offset-2 transition-all ${isOutOfStock
-                                                                                    ? 'border-red-300 bg-red-100 cursor-not-allowed opacity-50'
-                                                                                    : 'border-purple-300 text-purple-600 focus:ring-purple-500 hover:border-purple-400'
-                                                                                    }`}
-                                                                            />
-                                                                            {isOutOfStock && (
-                                                                                <div className="absolute -top-1 -right-1">
-                                                                                    <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
+                                                                    {
+                                                                        userData.role !== "superadmin" &&
+                                                                        <td className="px-2 py-1 text-xs">
+                                                                            <div className="relative">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={item.selected}
+                                                                                    onChange={() => handleSelectItem(item.id)}
+                                                                                    disabled={isOutOfStock}
+                                                                                    className={`h-5 w-5 rounded border-2 focus:ring-2 focus:ring-offset-2 transition-all ${isOutOfStock
+                                                                                        ? 'border-red-300 bg-red-100 cursor-not-allowed opacity-50'
+                                                                                        : 'border-purple-300 text-purple-600 focus:ring-purple-500 hover:border-purple-400'
+                                                                                        }`}
+                                                                                />
+                                                                                {isOutOfStock && (
+                                                                                    <div className="absolute -top-1 -right-1">
+                                                                                        <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </td>
+                                                                    }
 
                                                                     <td className="px-2 py-1 text-xs">
                                                                         <div className="font-medium text-purple-900 uppercase">

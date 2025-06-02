@@ -92,7 +92,7 @@ function humanize(str) {
 
 export default function FeeReceipt({ student, school, transaction }) {
   const { feeType, amount: txAmount, paymentMode, account, remark = "", academicYear: txYear, historicalSnapshot, timestamp, } = transaction;
-  const { academicYear: currAcademicYear, feeId, fname, lname, class: cls, div, } = student;
+  const { academicYear: currAcademicYear, feeId, fname, lname, class: cls, div, fatherName } = student;
   // Determine fee context
   const isPrevYear = txYear !== currAcademicYear;
   const feeCategory =
@@ -109,11 +109,11 @@ export default function FeeReceipt({ student, school, transaction }) {
 
   // Extract from historical snapshot
   const {
-    initialFee = 0,
-    applicableDiscount = 0,
-    previousPayments = 0,
-    remainingBefore = 0,
-    remainingAfter = 0,
+    initialFee = 0,// it it fee after discount need to pay by student
+    applicableDiscount = 0,  // discount given to student
+    previousPayments = 0, // payment done by student before this payment
+    remainingBefore = 0,  //fee remain before this payment
+    remainingAfter = 0,   //fee remain after this payment
   } = historicalSnapshot || {};
   console.log(historicalSnapshot, transaction)
   // Build receipt rows based on fee type
@@ -125,13 +125,14 @@ export default function FeeReceipt({ student, school, transaction }) {
   if (applicableDiscount) {
     totalFeeWithDiscount = initialFee + applicableDiscount;
   }
+  // this will show total fee with discount
   rows.push({
     label: `${isPrevYear ? "Last Year " : ""}${humanize(feeCategory)} Fee`,
     amt: feeType?.toLowerCase().includes("admission")
       ? student?.allFee?.tuitionFees?.AdmissionFee : totalFeeWithDiscount,
     // amt: initialFee,
   });
-
+  // this will show discount given
   if (applicableDiscount) {
     rows.push({
       label: `${isPrevYear ? "Last Year " : ""}${humanize(
@@ -142,7 +143,7 @@ export default function FeeReceipt({ student, school, transaction }) {
 
     rows.push({
       label: "Net Fee After Discount",
-      amt: totalFeeWithDiscount - applicableDiscount,
+      amt: initialFee,
       highlight: true,
     });
   }
@@ -157,8 +158,6 @@ export default function FeeReceipt({ student, school, transaction }) {
   // Current Payment
   rows.push({
     label: "This Payment",
-    // label: feeType?.toLowerCase().includes("admission")
-    //   ? "Admission Fee" : "This Payment",
     amt: txAmount,
     mode: paymentMode,
     account,
@@ -166,7 +165,7 @@ export default function FeeReceipt({ student, school, transaction }) {
     highlight: true,
   });
 
-  // Outstanding
+  // Outstanding very imp!
   rows.push({
     label: "Outstanding fee",
     amt: feeType?.toLowerCase().includes("admission")
@@ -226,14 +225,19 @@ export default function FeeReceipt({ student, school, transaction }) {
             <div className="p-2 border-b border-gray-200 grid grid-cols-2 text-xs ">
               <div>
                 <p className="font-bold">Receipt ID: {transaction.receiptId}</p>
-                <p>Fee ID: {feeId}</p>
-                <p>
-                  Name: {fname} {lname}
+                <p className="capitalize">
+                  Name: {lname} {fname} {fatherName}
                 </p>
+                <p>Contact : {student.fatherMobile || ""}</p>
+                {
+                  student.email && student.email.trim() ?
+                    <p>email : {student.email || ""}</p> : null
+                }
                 <p>Academic Year: {txYear}</p>
               </div>
-              <div className="text-right">
-                <p className="">
+              <div className="text-right ">
+                <p className="font-semibold">Fee ID: {feeId}</p>
+                <p className="capitalize">
                   Class: {cls} - {div}
                 </p>
                 <p>Date: {new Date(timestamp).toLocaleDateString()}</p>

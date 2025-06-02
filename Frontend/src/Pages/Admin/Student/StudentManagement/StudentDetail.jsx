@@ -27,7 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ReceiptText, History } from 'lucide-react'
 
 
-export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, student) => {
+export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, student, englishMedium) => {
   try {
     const fsRef = doc(db, "feeStructures", schoolCode);
     const fsSnap = await getDoc(fsRef);
@@ -86,11 +86,11 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
       }
     }
 
-    const classStructure = yearStructure.classes?.find(
-      (c) => c.name?.trim().toLowerCase() === newClass.trim().toLowerCase()
+    let classStructure = yearStructure.classes?.find(
+      (c) => c.name?.trim().toLowerCase() === newClass?.trim()?.toLowerCase()
     );
-
-    if (!classStructure) {
+    console.log(classStructure)
+    if (!classStructure || !classStructure.studentType || !classStructure.studentType.length) {
       console.warn(`No fee structure found for class ${newClass}`);
       return {
         originalFees: {
@@ -105,11 +105,15 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
         }
       }
     }
-    const studentType = classStructure.studentType?.find(
-      (st) =>
-        st.name?.trim().toLowerCase() === student.type?.trim().toLowerCase()
-    );
+    // it is for semi student
+    // if this condition is false it means student next class does not have semi fee structure thus normal fees will assign
+    if (!englishMedium && classStructure.studentType.find(c => c.englishMedium === englishMedium) && classStructure.studentType.find(c => c.name?.toLowerCase() === student.type?.toLowerCase())) {
+      classStructure = classStructure.studentType.filter(c => c.englishMedium === englishMedium)
+    }
 
+    const studentType = classStructure.studentType?.find(
+      (st) => st.name?.trim().toLowerCase() === student.type?.trim().toLowerCase()
+    );
     if (!studentType) {
       console.warn(`No fee structure found for student type ${student.type}`);
       return {
@@ -137,6 +141,18 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
     const originalFeeStructure = originalFees.feeStructure || {};
     const originalAdmissionFee = Number(originalFeeStructure.AdmissionFee) || 0;
     const originalTutuionFee = Number(originalFeeStructure.TuitionFee) || 0;
+    console.log({
+      originalFees: {
+        AdmissionFee: originalAdmissionFee,
+        tuitionFee: originalTutuionFee,
+        total: originalAdmissionFee + originalTutuionFee,
+      },
+      studentFees: {
+        AdmissionFee: AdmissionFee,
+        tuitionFee: tuitionFee,
+        total: AdmissionFee + tuitionFee,
+      }
+    });
 
     return {
       originalFees: {
@@ -166,6 +182,7 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
     }
   }
 };
+
 export function StudentDetail() {
   const { studentId } = useParams();
   const { userData } = useAuth();
@@ -224,6 +241,7 @@ export function StudentDetail() {
       await goToNextAcademicYear();
       return;
     }
+    console.log("object2", formData)
     try {
       await updateDoc(doc(db, "students", studentId), formData);
       Swal.fire("Success!", "Student details updated", "success");
@@ -331,7 +349,6 @@ export function StudentDetail() {
       // 1. Determine fee context and initial values
       let initialFee = 0;
       let applicableDiscount = 0;
-      let currentBalance = 0;
 
       // 1. Calculate previous payments, it will usefull to check if transaction is valid or not
       let previousPayments = 0;
@@ -383,27 +400,23 @@ export function StudentDetail() {
         switch (fee) {
           // student will  initially pay admission fee
           case 'admissionfee':
-            initialFee = (student.allFee.tuitionFees?.total || + student.allFee.tuitionFeesDiscount || 0);
+            // initial fee is total fee need to pay without discount
+            initialFee = (student.allFee.tuitionFees?.total || 0);
             applicableDiscount = 0;
-            currentBalance = initialFee - applicableDiscount;
             break;
           case 'tuitionfee':
-            initialFee = (student.allFee.tuitionFees?.total || + student.allFee.tuitionFeesDiscount || 0);
-            applicableDiscount = 0;
-            currentBalance = initialFee - applicableDiscount;
+            initialFee = (student.allFee.tuitionFees?.total || 0);
+            applicableDiscount = student.allFee.tuitionFeesDiscount;
             break;
           case 'busfee':
-            initialFee = (student.allFee.busFee || 0) + (student.allFee.busFeeDiscount || 0);
+            initialFee = (student.allFee.busFee || 0);
             applicableDiscount = student.allFee.busFeeDiscount || 0;
-            currentBalance = initialFee - applicableDiscount;
             break;
           case 'messfee':
             initialFee = student.allFee.messFee || 0;
-            currentBalance = initialFee;
             break;
           case 'hostelfee':
             initialFee = student.allFee.hostelFee || 0;
-            currentBalance = initialFee;
             break;
         }
       } else if (isPrevAcademicYear) {
@@ -411,14 +424,13 @@ export function StudentDetail() {
         switch (fee) {
           // last year fees input field change thus to know what is initial we have to add previousPayments
           case 'tuitionfee':
-            initialFee = previousPayments + (student.allFee.lastYearBalanceFee || 0) + (student.allFee.lastYearDiscount || 0);
+            // initial fee is total fee need to pay without discount
+            initialFee = previousPayments + (student.allFee.lastYearBalanceFee || 0);
             applicableDiscount = student.allFee.lastYearDiscount || 0;
-            currentBalance = initialFee - applicableDiscount;
             break;
           case 'busfee':
-            initialFee = previousPayments + (student.allFee.lastYearBusFee || 0) + (student.allFee.lastYearBusFeeDiscount || 0);
+            initialFee = previousPayments + (student.allFee.lastYearBusFee || 0);
             applicableDiscount = (student.allFee.lastYearBusFeeDiscount || 0);
-            currentBalance = initialFee - applicableDiscount;
             break;
           default:
             Swal.fire("error", "For Last year , you can make payment of Bus & Tuition fee only.", "error");
@@ -429,7 +441,7 @@ export function StudentDetail() {
         return;
       }
       // 3. Calculate remaining balances
-      const remainingBefore = Math.max(currentBalance - previousPayments, 0);
+      const remainingBefore = Math.max(initialFee - previousPayments, 0);
       const remainingAfter = Math.max(remainingBefore - paymentAmount, 0);
 
       // Validate payment amount
@@ -451,7 +463,7 @@ export function StudentDetail() {
       // 5. Create transaction object
       // if mode !== cheque , than receiptId will be total reciept in this year + 1 
       // check if transaction if of bus or tuition
-
+      console.log(historicalSnapshot)
       let receiptId;
       if (feeType?.toLowerCase() == "busfee") {
         receiptId = (Number(schoolData.busReceiptCount) || 0) + 1;
@@ -683,22 +695,32 @@ export function StudentDetail() {
 
         // 3) Compute unpaid for current year from transactions
         const unpaidOf = (key) => {
-          const due = key === 'tuitionFee' ? currentFees.tuitionFees?.total || 0 : currentFees[key] || 0;
-          const paid = transactions.filter(t => {
-            return t.academicYear === student.academicYear && t?.feeType?.toLowerCase() === key.toLowerCase() && t.status === "completed"
-          })
-            .reduce((a, t) => a + t.amount, 0);
+          // console.log(currentFees)
+          const due = key?.toLowerCase() === "tuitionfee" ? currentFees.tuitionFees?.total || 0 : currentFees[key] || 0;
+          let paid = 0;
+          // for tuition fee we also have to take sum of admissionfee
+          if (key?.toLowerCase() === "tuitionfee") {
+            paid = transactions.filter(t => {
+              return (t.academicYear === student.academicYear) && (t?.feeType?.toLowerCase() === key.toLowerCase() || t?.feeType?.toLowerCase() === "admissionfee") && t.status === "completed"
+            })
+              .reduce((a, t) => a + t.amount, 0);
+          } else {
+            paid = transactions.filter(t => {
+              return (t.academicYear === student.academicYear) && t?.feeType?.toLowerCase() === key.toLowerCase() && t.status === "completed"
+            })
+              .reduce((a, t) => a + t.amount, 0);
+          }
           return Math.max(due - paid, 0);
         };
 
-        // 4) Roll those into last‐year balances 
+        // 4) Roll those into last‐year balances  
         const newLastYearBalance = (currentFees.lastYearBalanceFee || 0) + unpaidOf('hostelFee') + unpaidOf('messFee') + unpaidOf('tuitionFee');
         const newLastYearTransport = (currentFees.lastYearBusFee || 0) + unpaidOf('busFee');
         // 5) If status was "new", flip to "current"
         const newStatus = student.status === "new" ? "current" : student.status;
 
         // 6) Fetch next‐year fees from your structure util
-        const rawFees = await getNewClassFees(userData.schoolCode, nextClass, nextAcademicYear, student);
+        const rawFees = await getNewClassFees(userData.schoolCode, nextClass, nextAcademicYear, student, student.div?.toLowerCase() !== "semi");
         // If the student is now "current", admission fee is zero:
         const admissionFee = newStatus === "current" ? 0 : rawFees.studentFees.AdmissionFee;
         const tuitionFee = rawFees.studentFees.tuitionFee;
@@ -775,7 +797,102 @@ export function StudentDetail() {
       }
     }
   };
+  const rollBackStudent = async () => {
+    const result = await Swal.fire({
+      title: 'Update student academic year?',
+      text: "This action will update the student's academic year with in same class, those who failed in class & add pending balance to previous year & updating current balance to 0",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, update',
+      cancelButtonText: 'Cancel'
+    });
 
+    if (result.isConfirmed) {
+      try {
+        // 1) Build the next academic‐year string
+        const [curStart, curEnd] = student.academicYear
+          .split("-")
+          .map((s) => parseInt(s, 10));
+        const nextAcademicYear = `${curStart + 1}-${curEnd + 1}`;
+
+        // 2) Figure out the next class in the sequence
+        const transactions = student.transactions || [];
+        const currentFees = student.allFee || {};
+
+        // 3) Compute unpaid for current year from transactions
+        const unpaidOf = (key) => {
+          // console.log(currentFees)
+          const due = key?.toLowerCase() === "tuitionfee" ? currentFees.tuitionFees?.total || 0 : currentFees[key] || 0;
+          let paid = 0;
+          // for tuition fee we also have to take sum of admissionfee
+          if (key?.toLowerCase() === "tuitionfee") {
+            paid = transactions.filter(t => {
+              return (t.academicYear === student.academicYear) && (t?.feeType?.toLowerCase() === key.toLowerCase() || t?.feeType?.toLowerCase() === "admissionfee") && t.status === "completed"
+            })
+              .reduce((a, t) => a + t.amount, 0);
+          } else {
+            paid = transactions.filter(t => {
+              return (t.academicYear === student.academicYear) && t?.feeType?.toLowerCase() === key.toLowerCase() && t.status === "completed"
+            })
+              .reduce((a, t) => a + t.amount, 0);
+          }
+          return Math.max(due - paid, 0);
+        };
+
+        // 4) Roll those into last‐year balances  
+        const newLastYearBalance = (currentFees.lastYearBalanceFee || 0) + unpaidOf('hostelFee') + unpaidOf('messFee') + unpaidOf('tuitionFee');
+        const newLastYearTransport = (currentFees.lastYearBusFee || 0) + unpaidOf('busFee');
+        // 5) If status was "new", flip to "current"
+        const newStatus = student.status === "new" ? "current" : student.status;
+        // If the student is now "current", admission fee is zero:
+        const admissionFee = newStatus === "current" ? 0 : currentFees.AdmissionFee;
+        const tuitionFee = currentFees.tuitionFees.tuitionFee;
+        // leave bus and its discount untouched:
+        const busFee = currentFees.busFee || 0;
+        const busDiscount = currentFees.busFeeDiscount || 0;
+
+        // 7) Build the updated fee object
+        const updatedAllFee = {
+          ...currentFees,
+          lastYearBalanceFee: newLastYearBalance,
+          lastYearBusFee: newLastYearTransport,
+          lastYearBusFeeDiscount: busDiscount,
+          lastYearDiscount: currentFees.tuitionFeesDiscount || 0,
+          // reset current‐year paid amounts
+          hostelFee: 0,
+          messFee: 0,
+          busFee,
+          busFeeDiscount: busDiscount,
+          // set the new tuitionFees and discounts
+          tuitionFees: {
+            AdmissionFee: admissionFee,
+            tuitionFee: tuitionFee,
+            total: admissionFee + tuitionFee,
+          },
+        };
+
+        // 8) Persist to Firestore
+        const updatedStudent = {
+          ...student,
+          academicYear: nextAcademicYear,
+          status: newStatus,
+          allFee: updatedAllFee,
+        };
+        await updateDoc(doc(db, "students", studentId), updatedStudent);
+
+        // 9) Update local state & notify
+        setStudent(updatedStudent);
+        setFormData((f) => ({ ...f, ...updatedStudent }));
+        fetchData()
+        Swal.fire("Success!", "Moved to next academic year, with in class", "success");
+      } catch (error) {
+        console.log(error)
+        Swal.fire("Error", error.message, "error");
+      }
+    }
+  }
   return (
     <>{
       loading ?
@@ -839,6 +956,7 @@ export function StudentDetail() {
                       studentId={student}
                       schoolData={schoolData}
                       fetchStudent={fetchData}
+                      rollBackStudent={rollBackStudent}
                     />
                   </motion.div>
                 )}

@@ -2,6 +2,7 @@ import { motion } from "framer-motion"
 import { Link } from "react-router-dom";
 import { Trash2Icon } from "lucide-react";
 import { useEffect } from "react"
+import { useAuth } from "../../../../contexts/AuthContext";
 
 export default function StudentsStockPaymentHistory({
   student,
@@ -21,7 +22,7 @@ export default function StudentsStockPaymentHistory({
   }, [student])
 
   if (!student) return null;
-
+  const { userData } = useAuth();
   return (
     <div className="rounded-2xl shadow-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-violet-50 overflow-hidden">
       {transactions.length > 0 ? (
@@ -33,7 +34,7 @@ export default function StudentsStockPaymentHistory({
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
               >
-                {["Date", "Items", "Amount", "Qty", "Account", "Receipt", "Actions"].map((header, idx) => (
+                {["Date", "Items", "Amount", "Qty", "Account", "Receipt", userData.role !== "superadmin" ? "Actions" : ""].filter(Boolean).map((header, idx) => (
                   <th
                     key={idx}
                     className="px-4 py-3 text-left text-sm font-semibold border-r border-purple-500/30 last:border-r-0 whitespace-nowrap"
@@ -72,14 +73,17 @@ export default function StudentsStockPaymentHistory({
                       {tx.receiptId}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => deleteStockTransaction(tx.receiptId)}
-                      className="p-1.5 rounded-lg hover:bg-red-50/80 transition-colors duration-300"
-                    >
-                      <Trash2Icon className="w-5 h-5 text-red-600 hover:text-red-700" />
-                    </button>
-                  </td>
+                  {
+                    userData.role !== "superadmin" &&
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <button
+                        onClick={() => deleteStockTransaction(tx.receiptId)}
+                        className="p-1.5 rounded-lg hover:bg-red-50/80 transition-colors duration-300"
+                      >
+                        <Trash2Icon className="w-5 h-5 text-red-600 hover:text-red-700" />
+                      </button>
+                    </td>
+                  }
                 </motion.tr>
               ))}
             </tbody>

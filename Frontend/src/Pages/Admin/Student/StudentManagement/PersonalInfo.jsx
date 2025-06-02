@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2"
 import {
   User, VenusAndMars, Mail, Phone, GraduationCapIcon, Hash, CalendarDays, Ticket, HomeIcon, CreditCardIcon, Utensils, Bus, HeartPulseIcon, MapPin, IndianRupee, BadgePercent, CheckCircle, FileTextIcon,
-  XCircle
+  XCircle,
+  TriangleAlert
 } from "lucide-react";
 import { InputField } from "../InputField";
 import { SelectField } from "../SelectField";
@@ -10,7 +11,7 @@ import { db } from "../../../../config/firebase";
 import { doc, query, where, collection, getDocs, updateDoc, } from "firebase/firestore";
 import { useAuth } from "../../../../contexts/AuthContext";
 
-export default function PersonalInfo({ formData, setFormData, studentId, schoolData, fetchStudent }) {
+export default function PersonalInfo({ formData, setFormData, studentId, schoolData, fetchStudent, rollBackStudent }) {
   const [destinationOptions, setDestinationOptions] = useState([]);
   const [busOptions, setBusOptions] = useState([]);
   const [selectedBus, setSelectedBus] = useState((formData.busStop && formData.busStop !== "" && formData.busNoPlate && formData.busNoPlate !== "") ? formData.busStop.toUpperCase() : "");
@@ -129,16 +130,20 @@ export default function PersonalInfo({ formData, setFormData, studentId, schoolD
       );
       const busSnapshot = await getDocs(busQuery);
       // it will show all that bus that go to student bus stop
-      const buses = busSnapshot.docs.map(doc => ({
+      let buses = busSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })).filter(b => b.destinations && b.destinations.length && b.destinations.find(d => d.name?.toLowerCase() === formData.busStop?.toLowerCase()));
-
+      }))
+      buses = buses.filter(b => {
+        if (b.destinations && b.destinations.length) {
+          // b.destinations.forEach((d) => console.log(d.name?.toLowerCase(), selectedName?.toLowerCase()))
+          return b.destinations.find(d => d.name?.toLowerCase() === selectedName?.toLowerCase())
+        }
+      });
       setBusOptions(buses);
       setBusFee(0);
       setBusDiscount(0);
       // if atleast 1 bus go on that place than assign 1st bus as default
-      console.log(buses)
       if (buses.length) {
         setFormData(prev => ({
           ...prev,
@@ -164,7 +169,6 @@ export default function PersonalInfo({ formData, setFormData, studentId, schoolD
   const handleBusSelection = async (busId) => {
     const bus = busOptions.find(b => b.id === busId);
     if (!bus) return;
-
     const destination = bus.destinations.find(d => d.name === formData.busStop);
     const fee = destination?.fee || 0;
 
@@ -189,7 +193,7 @@ export default function PersonalInfo({ formData, setFormData, studentId, schoolD
   const removeBusPreference = async () => {
     const result = await Swal.fire({
       title: 'Remove Bus Preference?',
-      text: 'This will reset all transport-related information',
+      text: 'This will Update transport-related information',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#dc2626',
@@ -469,6 +473,23 @@ export default function PersonalInfo({ formData, setFormData, studentId, schoolD
               value={formData.academicYear}
               disabled={true}
             />
+            <div className="relative inline-block group">
+              <button
+                className="w-full flex items-center justify-center gap-2 bg-blue-400 hover:bg-blue-500 text-white font-medium py-2.5 rounded-xl transition-all cursor-pointer"
+                onClick={rollBackStudent}
+              >
+                <span className="text-purple-900">
+                  <TriangleAlert className="w-5 h-5" />
+                </span>
+                Roll Back student
+              </button>
+              {/* Tooltip */}
+              <div
+                className=" absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 pointer-events-none transition-opacity group-hover:opacity-100"
+              >
+                Update the student’s academic year within same class
+              </div>
+            </div>
 
           </div>
         </Section>
@@ -656,8 +677,8 @@ export default function PersonalInfo({ formData, setFormData, studentId, schoolD
             />
           </div>
         </Section>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
 

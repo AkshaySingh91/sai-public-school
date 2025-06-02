@@ -14,7 +14,7 @@ import { ChevronLeft, ChevronRight, Search, Users } from "lucide-react";
 
 function StockAllocate() {
   const { school } = useSchool();
-  const { userData: users } = useAuth();
+  const { userData } = useAuth();
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [filters, setFilters] = useState({
@@ -56,7 +56,7 @@ function StockAllocate() {
       try {
         const q = query(
           studentsCollection,
-          where("schoolCode", "==", users?.schoolCode)
+          where("schoolCode", "==", school.Code)
         );
         const snapshot = await getDocs(q);
         const studentsList = snapshot.docs.map((doc) => ({
@@ -72,7 +72,7 @@ function StockAllocate() {
       }
     };
     fetchStudents();
-  }, [users?.schoolCode]);
+  }, [school.Code, userData]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;

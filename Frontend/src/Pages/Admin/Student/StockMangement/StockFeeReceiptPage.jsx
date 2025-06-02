@@ -21,8 +21,7 @@ function StockFeeReceiptPage() {
             if (!studentDoc.exists()) return;
 
             const studentData = { id: studentDoc.id, ...studentDoc.data() };
-            console.log(studentData.StockPaymentDetail, receiptId)
-            // dont type check this line
+             // dont type check this line
             const tx = (studentData.StockPaymentDetail || [])
                 .find(t => t.receiptId == receiptId);
 
@@ -40,10 +39,10 @@ function StockFeeReceiptPage() {
     }, [studentId, receiptId]);
 
     useEffect(() => {
-        if (userData?.schoolCode) {
+        if (school.Code) {
             fetchStudentAndTransaction();
         }
-    }, [userData?.schoolCode, fetchStudentAndTransaction]);
+    }, [userData, school.Code, fetchStudentAndTransaction]);
 
     useEffect(() => {
         if (student && school && transaction && !printTriggered) {

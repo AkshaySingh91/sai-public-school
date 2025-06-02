@@ -11,8 +11,10 @@ import TableLoader from "../../../../components/TableLoader"
 import busAnimation from "../../../../assets/busAnimation.gif"
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus } from "react-icons/fa";
+import { useSchool } from "../../../../contexts/SchoolContext";
 
 function BusList() {
+  const { school } = useSchool();
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showBusModal, setShowBusModal] = useState(false);
@@ -26,7 +28,7 @@ function BusList() {
     status: "Active",
     insuranceDate: "",
   });
-  const users = useAuth().userData;
+  const { userData } = useAuth();
   const [buses, setBuses] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,7 +80,7 @@ function BusList() {
       ...newBus,
       assistant: newBus.assistant || "-",
       insuranceDate: newBus.insuranceDate || "Not set",
-      schoolCode: users?.schoolCode,
+      schoolCode: school.Code,
     };
 
     try {
@@ -113,12 +115,12 @@ function BusList() {
 
   // Fetch buses
   const fetchBuses = async () => {
-    if (!users?.schoolCode) return;
+    if (!school.Code) return;
     setIsLoading(true);
     try {
       const q = query(
         collection(db, "allBuses"),
-        where("schoolCode", "==", users.schoolCode)
+        where("schoolCode", "==", school.Code)
       );
       const querySnapshot = await getDocs(q);
       const busList = querySnapshot.docs.map(doc => ({
@@ -234,7 +236,7 @@ function BusList() {
             ? bus["Status"].toString().trim()
             : "Inactive",
           insuranceDate: bus["InsuranceDate"]?.toString().trim() || "Not set",
-          schoolCode: users?.schoolCode,
+          schoolCode: school.Code,
         });
       });
       if (errors.length > 0) {
@@ -374,7 +376,7 @@ function BusList() {
   };
 
 
-  useEffect(() => { fetchBuses(); }, [users?.schoolCode]);
+  useEffect(() => { fetchBuses(); }, [school.Code, userData]);
 
   return (
     <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 min-h-screen">
@@ -390,37 +392,40 @@ function BusList() {
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header Section */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full justify-between">
-            <div className="flex gap-3 flex-wrap w-full ">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowBusModal(true)}
-                className="bg-gradient-to-r from-purple-600 to-violet-700 w-full sm:w-auto text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-              >
-                <FaPlus className="w-5 h-5" />
-                Add Bus
-              </motion.button>
+            {
+              userData.role !== "superadmin" &&
+              <div className="flex gap-3 flex-wrap w-full ">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowBusModal(true)}
+                  className="bg-gradient-to-r from-purple-600 to-violet-700 w-full sm:w-auto text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <FaPlus className="w-5 h-5" />
+                  Add Bus
+                </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowExcelModal(true)}
-                className="bg-gradient-to-r from-violet-600 to-purple-700 sm:w-auto w-full text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-              >
-                <Upload className="w-5 h-5" />
-                Bulk Upload
-              </motion.button>
-              {/* New Template Buttons */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={downloadExcelTemplate}
-                className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 whitespace-nowrap rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
-              >
-                <FileText className="w-4 h-4" />
-                Excel Template
-              </motion.button>
-            </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowExcelModal(true)}
+                  className="bg-gradient-to-r from-violet-600 to-purple-700 sm:w-auto w-full text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Upload className="w-5 h-5" />
+                  Bulk Upload
+                </motion.button>
+                {/* New Template Buttons */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={downloadExcelTemplate}
+                  className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 whitespace-nowrap rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
+                >
+                  <FileText className="w-4 h-4" />
+                  Excel Template
+                </motion.button>
+              </div>
+            }
 
             <div className="flex gap-3 w-full sm:w-auto">
               <motion.button
@@ -464,7 +469,7 @@ function BusList() {
             <table className="min-w-full divide-y divide-purple-100">
               <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-sm">
                 <tr>
-                  {['Bus No', 'Number Plate', 'Driver', 'Mobile', 'Assistant', 'Status', 'Insurance Date', 'Action'].map((header, i) => (
+                  {['Bus No', 'Number Plate', 'Driver', 'Mobile', 'Assistant', 'Status', 'Insurance Date', userData.role !== "superadmin" ? 'Action' : ""].filter(Boolean).map((header, i) => (
                     <th
                       key={i}
                       className="w-auto px-4 py-3 text-left font-semibold tracking-wide whitespace-nowrap border-r border-purple-500/30 last:border-r-0"
@@ -498,22 +503,25 @@ function BusList() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{bus.insuranceDate}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-3 items-center">
-                          <button
-                            onClick={() => openEditModal(bus)}
-                            className="text-violet-600 hover:text-purple-800 transition-colors p-2 rounded-full hover:bg-purple-100/50"
-                          >
-                            <Settings className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => deleteBus(bus.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors p-2 rounded-full hover:bg-red-100/50"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
+                      {
+                        userData.role !== "superadmin" &&
+                        <td className="px-4 py-3">
+                          <div className="flex gap-3 items-center">
+                            <button
+                              onClick={() => openEditModal(bus)}
+                              className="text-violet-600 hover:text-purple-800 transition-colors p-2 rounded-full hover:bg-purple-100/50"
+                            >
+                              <Settings className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => deleteBus(bus.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors p-2 rounded-full hover:bg-red-100/50"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      }
                     </motion.tr>
                   ))
                 ) : (

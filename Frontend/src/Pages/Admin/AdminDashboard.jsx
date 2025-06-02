@@ -27,6 +27,7 @@ const colors = {
 
 const AdminDashboard = () => {
     const { userData } = useAuth();
+    const { school } = useSchool();
     const [stats, setStats] = useState({
         totalStudents: 0,
         totalTeachers: 0,
@@ -34,13 +35,11 @@ const AdminDashboard = () => {
         totalEarnings: 0,
     });
     const [loading, setLoading] = useState(true);
-    const { school } = useSchool();
     useEffect(() => {
         async function fetchData() {
-            if (!userData?.schoolCode) return;
-            const code = userData.schoolCode;
-            const currentYear = school.academicYear;
-
+            if (!school?.Code) return;
+            // if (!userData?.schoolCode) return;
+            const code = school.Code;
             const newStudentsSnap = await getDocs(
                 query(collection(db, "students"), where("schoolCode", "==", code))
             );
@@ -90,9 +89,9 @@ const AdminDashboard = () => {
         }
 
         fetchData();
-    }, [userData]);
+    }, [school, userData]);
 
-
+    console.log({ school })
     return (
         <div className="bg-gradient-to-br from-gray-50 to-purple-50 min-h-screen space-y-6 p-2">
             <div className="bg-gradient-to-r from-slate-50 to-indigo-50 px-6 py-4 rounded-xl shadow-sm border border-gray-100">
@@ -119,14 +118,24 @@ const AdminDashboard = () => {
                     <div className="flex items-center gap-4 z-2 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm">
                         {/* Profile Image with Fallback */}
                         <div className="relative">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold">
-                                {userData.avatar || (
-                                    <span>{userData.name.charAt(0).toUpperCase()}</span>
+                            {/* Photo Container */}
+                            <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-black/20 shadow-xl">
+                                {userData.profileImage ? (
+                                    <img
+                                        src={userData.profileImage}
+                                        className="w-full h-full object-cover"
+                                        alt="Profile"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold">
+                                        <span>{userData?.name?.charAt(0).toUpperCase()}</span>
+                                    </div>
                                 )}
                             </div>
-                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
-                        </div>
 
+                            {/* Shine Effect */}
+                            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                        </div> 
                         {/* User Info */}
                         <div className="flex flex-col">
                             <span className="font-semibold text-gray-800">{userData?.name || ""}</span>

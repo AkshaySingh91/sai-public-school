@@ -46,6 +46,7 @@ const StudentList = () => {
   // init class & division
   useEffect(() => {
     if (school.class) setClasses(school.class);
+    console.log(school.class)
   }, [school.class]);
   useEffect(() => {
     if (school.divisions) setDivisions(school.divisions);
@@ -53,15 +54,15 @@ const StudentList = () => {
 
   // fetch all students
   useEffect(() => {
-    if (userData) fetchStudents();
-  }, [userData]);
+    if (school.Code) fetchStudents();
+  }, [userData, school]);
 
   const fetchStudents = async () => {
     setLoading(true);
     try {
       const q = query(
         collection(db, "students"),
-        where("schoolCode", "==", userData.schoolCode)
+        where("schoolCode", "==", school.Code)
       );
       const querySnapshot = await getDocs(q);
       const list = querySnapshot.docs.map((doc) => ({
@@ -305,7 +306,7 @@ const StudentList = () => {
           const newStatus =
             student.status === "new" ? "current" : student.status;
           const rawFees = await getNewClassFees(
-            userData.schoolCode,
+            school.Code,
             nextClass,
             nextYear,
             student
@@ -389,7 +390,7 @@ const StudentList = () => {
     try {
       const selected = students.filter((s) =>
         selectedStudents.includes(s.id) &&
-        s.schoolCode === userData.schoolCode // Initial filter
+        s.schoolCode === school.Code // Initial filter
       );
 
       // Confirm deletion
@@ -434,7 +435,7 @@ const StudentList = () => {
       for (const [index, student] of selected.entries()) {
         try {
           // Double-check school code and ID
-          if (student.schoolCode !== userData.schoolCode || !selectedStudents.includes(student.id)) {
+          if (student.schoolCode !== school.Code || !selectedStudents.includes(student.id)) {
             throw new Error("Unauthorized deletion attempt blocked");
           }
 
@@ -448,8 +449,8 @@ const StudentList = () => {
           // Perform deletion
           await deleteDoc(doc(db, "students", student.id));
           processed++;
-
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // remove it for fast deletion
+          // await new Promise((resolve) => setTimeout(resolve, 100));
         } catch (error) {
           console.error(`Error deleting ${student.name}:`, error);
           errors.push({
@@ -669,22 +670,28 @@ const StudentList = () => {
                 Excel
               </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={handleBatchMove}
-                disabled={selectedStudents.length === 0}
-                className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
-              >
-                Move to Next Year
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={handleBatchDelete}
-                disabled={selectedStudents.length === 0}
-                className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
-              >
-                Delete Student
-              </motion.button>
+              {
+                userData.role !== "superadmin" && (
+                  <>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      onClick={handleBatchMove}
+                      disabled={selectedStudents.length === 0}
+                      className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
+                    >
+                      Move to Next Year
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      onClick={handleBatchDelete}
+                      disabled={selectedStudents.length === 0}
+                      className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
+                    >
+                      Delete Student
+                    </motion.button>
+                  </>
+                )
+              }
             </div>
           </div>
 
@@ -693,25 +700,29 @@ const StudentList = () => {
             <table className="w-full">
               <thead className="sticky top-0 bg-gradient-to-r from-purple-600 to-violet-700 text-white shadow-sm">
                 <tr>
-                  <th className="p-3 w-12 text-center">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
-                      checked={selectedStudents.length === currentItems.length && currentItems.length > 0}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                  {["Academic", "Name", "Type", "Fee ID", "Class", "Div", "Gender", "Father Contact", "Status", "Actions"].map((header) => (
-                    <th
-                      key={header}
-                      className="p-3 text-left text-sm font-medium uppercase tracking-wider"
-                    >
-                      {header}
+                  {
+                    userData.role !== "superadmin" &&
+                    <th className="p-3 w-12 text-center">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                        checked={selectedStudents.length === currentItems.length && currentItems.length > 0}
+                        onChange={toggleSelectAll}
+                      />
                     </th>
-                  ))}
+                  }
+                  {["Academic", "Name", "Type", "Fee ID", "Class", "Div", "Gender", "Father Contact", "Status",
+                    userData.role !== "superadmin" ? "Actions" : ""].filter(Boolean).map((header) => (
+                      <th
+                        key={header}
+                        className="p-3 text-left text-sm font-medium uppercase tracking-wider"
+                      >
+                        {header}
+                      </th>
+                    ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-purple-100 capitalize">
+              <tbody className="divide-y divide-purple-100 capitalize text-left">
                 {currentItems.map((student) => (
                   <motion.tr
                     key={student.id}
@@ -719,18 +730,28 @@ const StudentList = () => {
                     animate={{ opacity: 1 }}
                     className="hover:bg-purple-50/50 transition-colors"
                   >
-                    <td className="p-3 text-center">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
-                        checked={selectedStudents.includes(student.id)}
-                        onChange={() => toggleSelectStudent(student.id)}
-                      />
-                    </td>
+                    {
+                      userData.role !== "superadmin" &&
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                          checked={selectedStudents.includes(student.id)}
+                          onChange={() => toggleSelectStudent(student.id)}
+                        />
+                      </td>
+                    }
                     <td className="p-3 text-sm text-violet-800">{student.academicYear || "-"}</td>
-                    <td className="p-3 text-sm font-medium text-violet-900">
-                      {student.fname || "-"} {student.fatherName || "-"} {student.lname || "-"}
-                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900 capitalize">
+                          {student.fname || '-'} {student.lname || ''}
+                        </p>
+                        <p className="text-xs text-gray-500 capitalize">
+                          {student.fatherName || 'Guardian not specified'}
+                        </p>
+                      </div>
+                    </td> 
                     <td className="p-3 text-sm text-violet-700 uppercase">{student.type || "-"}</td>
                     <td className="p-3 text-sm text-violet-600 font-medium">{student.feeId || "-"}</td>
                     <td className="p-3 text-sm text-violet-700">{student.class || "-"}</td>
@@ -754,16 +775,19 @@ const StudentList = () => {
                         {student.status}
                       </span>
                     </td>
-                    <td className="p-3 text-center">
-                      <motion.button
-                        whileHover={{ rotate: 90 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => navigate(`/student/${student.id}`)}
-                        className="text-violet-600 hover:text-violet-800 p-1 rounded-lg hover:bg-purple-100 cursor-pointer"
-                      >
-                        <SettingsIcon size={20} />
-                      </motion.button>
-                    </td>
+                    {
+                      userData.role !== "superadmin" &&
+                      <td td className="p-3 text-center">
+                        <motion.button
+                          whileHover={{ rotate: 90 }}
+                          transition={{ duration: 0.2 }}
+                          onClick={() => navigate(`/student/${student.id}`)}
+                          className="text-violet-600 hover:text-violet-800 p-1 rounded-lg hover:bg-purple-100 cursor-pointer"
+                        >
+                          <SettingsIcon size={20} />
+                        </motion.button>
+                      </td>
+                    }
                   </motion.tr>
                 ))}
               </tbody>
@@ -905,7 +929,7 @@ const StudentList = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div >
       )}
     </>
   );

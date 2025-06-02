@@ -5,12 +5,13 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '../../../../config/firebase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import FeeReceipt from './FeeReceipt';
+import { useSchool } from '../../../../contexts/SchoolContext';
 
 export default function FeeReceiptPage() {
     const { studentId, receiptId } = useParams();
     const { userData } = useAuth();
+    const { school } = useSchool();
     const [student, setStudent] = useState(null);
-    const [school, setSchool] = useState(null);
     const [transaction, setTransaction] = useState(null);
 
     // Fetch student and transaction
@@ -41,28 +42,6 @@ export default function FeeReceiptPage() {
 
         fetchStudentAndTransaction();
     }, [studentId, receiptId]);
-
-    // Fetch school data
-    useEffect(() => {
-        if (!userData?.schoolCode) return;
-
-        const fetchSchool = async () => {
-            try {
-                const schoolsRef = collection(db, 'schools');
-                const q = query(schoolsRef, where('Code', '==', userData.schoolCode));
-                const snap = await getDocs(q);
-
-                if (snap.docs.length > 0) {
-                    const schoolData = snap.docs[0].data();
-                    setSchool({ id: snap.docs[0].id, ...schoolData });
-                }
-            } catch (error) {
-                console.error('Error fetching school:', error);
-            }
-        };
-
-        fetchSchool();
-    }, [userData?.schoolCode]);
 
     // Auto-print when data is ready
     useEffect(() => {

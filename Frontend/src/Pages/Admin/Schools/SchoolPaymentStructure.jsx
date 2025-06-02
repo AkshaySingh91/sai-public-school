@@ -3,9 +3,11 @@ import { useState, useEffect } from 'react';
 import { db } from '../../../config/firebase';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useSchool } from '../../../contexts/SchoolContext';
 
 const PaymentStructure = () => {
   const { userData } = useAuth();
+  const { school } = useSchool();
   const [paymentModes, setPaymentModes] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [newMode, setNewMode] = useState('');
@@ -23,7 +25,7 @@ const PaymentStructure = () => {
     const fetchSchoolData = async () => {
       try {
         const schoolsRef = collection(db, 'schools');
-        const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+        const q = query(schoolsRef, where("Code", "==", school.Code));
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
@@ -38,7 +40,7 @@ const PaymentStructure = () => {
       }
     };
     fetchSchoolData();
-  }, [userData]);
+  }, [userData, school.Code]);
 
   const handleAddPaymentMode = async () => {
     const mode = newMode.trim().toUpperCase();
@@ -46,7 +48,7 @@ const PaymentStructure = () => {
 
     try {
       const schoolsRef = collection(db, 'schools');
-      const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+      const q = query(schoolsRef, where("Code", "==", school.Code));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) throw new Error("School not found");
@@ -69,7 +71,7 @@ const PaymentStructure = () => {
 
     try {
       const schoolsRef = collection(db, 'schools');
-      const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+      const q = query(schoolsRef, where("Code", "==", school.Code));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) throw new Error("School not found");
@@ -95,7 +97,7 @@ const PaymentStructure = () => {
       }
 
       const schoolsRef = collection(db, 'schools');
-      const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+      const q = query(schoolsRef, where("Code", "==", school.Code));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) throw new Error("School not found");
@@ -132,7 +134,7 @@ const PaymentStructure = () => {
   const handleDeleteAccount = async (idx) => {
     if (idx < accounts.length) {
       const schoolsRef = collection(db, 'schools');
-      const q = query(schoolsRef, where("Code", "==", userData.schoolCode));
+      const q = query(schoolsRef, where("Code", "==", school.Code));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) throw new Error("School not found");
@@ -158,21 +160,24 @@ const PaymentStructure = () => {
             <SkeletonLoader />
           ) : (
             <>
-              <div className="flex flex-col sm:flex-row gap-2 mb-6">
-                <input
-                  type="text"
-                  value={newMode}
-                  onChange={(e) => setNewMode(e.target.value)}
-                  placeholder="Add payment method (e.g. UPI)"
-                  className="border-2 border-purple-200 focus:border-purple-500 rounded-xl p-3 w-full transition-colors"
-                />
-                <button
-                  onClick={handleAddPaymentMode}
-                  className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
-                >
-                  Add
-                </button>
-              </div>
+              {
+                userData.role !== "superadmin" &&
+                <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                  <input
+                    type="text"
+                    value={newMode}
+                    onChange={(e) => setNewMode(e.target.value)}
+                    placeholder="Add payment method (e.g. UPI)"
+                    className="border-2 border-purple-200 focus:border-purple-500 rounded-xl p-3 w-full transition-colors"
+                  />
+                  <button
+                    onClick={handleAddPaymentMode}
+                    className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+              }
 
               <div className="space-y-3">
                 {paymentModes.map((mode) => (
@@ -181,12 +186,15 @@ const PaymentStructure = () => {
                     className="flex justify-between items-center bg-purple-50 p-4 rounded-lg"
                   >
                     <span className="font-medium text-purple-800">{mode}</span>
-                    <button
-                      onClick={() => handleDeleteMode(mode)}
-                      className="text-red-500 hover:text-red-700 transition-colors"
-                    >
-                      Delete
-                    </button>
+                    {
+                      userData.role !== "superadmin" &&
+                      <button
+                        onClick={() => handleDeleteMode(mode)}
+                        className="text-red-500 hover:text-red-700 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    }
                   </div>
                 ))}
                 {paymentModes.length === 0 && (
@@ -205,21 +213,24 @@ const PaymentStructure = () => {
             <h2 className="text-2xl sm:text-3xl font-bold text-purple-800">
               Bank Accounts
             </h2>
-            <button
-              onClick={() => {
-                setShowAddAccount(true);
-                setEditingIndex(-1);
-                setAccountDetails({
-                  AccountNo: "",
-                  IFSC: "",
-                  BankName: "",
-                  Branch: "",
-                });
-              }}
-              className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
-            >
-              Add Account
-            </button>
+            {
+              userData.role !== "superadmin" &&
+              <button
+                onClick={() => {
+                  setShowAddAccount(true);
+                  setEditingIndex(-1);
+                  setAccountDetails({
+                    AccountNo: "",
+                    IFSC: "",
+                    BankName: "",
+                    Branch: "",
+                  });
+                }}
+                className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-violet-700 transition-colors"
+              >
+                Add Account
+              </button>
+            }
           </div>
 
           {/* Add/Edit Form */}
@@ -230,30 +241,34 @@ const PaymentStructure = () => {
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-purple-700 mb-2">
-                    Account Number/Cash
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter 'Cash' for cash payments"
-                    value={accountDetails.AccountNo}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setAccountDetails((prev) => ({
-                        ...prev,
-                        AccountNo: value,
-                        ...(value === "Cash" && {
-                          BankName: "",
-                          IFSC: "",
-                          Branch: "",
-                        }),
-                      }));
-                    }}
-                    className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
-                  />
-                </div>
-
+                {
+                  userData.role !== "superadmin" &&
+                  <div>
+                    <label for='account'
+                      className="block text-sm font-medium text-purple-700 mb-2">
+                      Account Number/Cash
+                    </label>
+                    <input
+                      id="account"
+                      type="text"
+                      placeholder="Enter 'Cash' for cash payments"
+                      value={accountDetails.AccountNo}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setAccountDetails((prev) => ({
+                          ...prev,
+                          AccountNo: value,
+                          ...(value === "Cash" && {
+                            BankName: "",
+                            IFSC: "",
+                            Branch: "",
+                          }),
+                        }));
+                      }}
+                      className="w-full border-2 border-purple-200 focus:border-purple-500 rounded-lg p-3 transition-colors"
+                    />
+                  </div>
+                }
                 {accountDetails.AccountNo !== "Cash" && (
                   <>
                     <div>
@@ -395,24 +410,27 @@ const PaymentStructure = () => {
                     <span className="text-purple-600">
                       {acc.Branch || <span className="text-gray-400">-</span>}
                     </span>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => {
-                          setAccountDetails(acc);
-                          setEditingIndex(index);
-                          setShowAddAccount(true);
-                        }}
-                        className="text-purple-600 hover:text-purple-800 transition-colors"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAccount(index)}
-                        className="text-red-500 hover:text-red-700 transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                    {
+                      userData.role !== "superadmin" &&
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            setAccountDetails(acc);
+                            setEditingIndex(index);
+                            setShowAddAccount(true);
+                          }}
+                          className="text-purple-600 hover:text-purple-800 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAccount(index)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    }
                   </div>
                 </div>
               ))}

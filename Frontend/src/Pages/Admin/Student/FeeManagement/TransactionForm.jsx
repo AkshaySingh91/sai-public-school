@@ -1,10 +1,30 @@
 import {
-    CreditCard, Wallet, PiggyBankIcon, CalendarDays, DollarSign, FileTextIcon
+    CreditCard, Wallet, PiggyBankIcon, CalendarDays, DollarSign, FileTextIcon,
+    Clock
 } from "lucide-react"
 import { InputField } from '../InputField'
 import { SelectField } from '../SelectField'
-
+import { useEffect, useState } from "react"
 function TransactionForm({ newTransaction, setNewTransaction, schoolData, handleTransactionSubmit, student }) {
+    console.log(schoolData)
+    const [isThisYear, setIsThisYear] = useState(true);
+    useEffect(() => {
+        const [curStart, curEnd] = student.academicYear
+            .split("-")
+            .map((s) => parseInt(s, 10));
+        const prevYear = `${curStart - 1}-${curEnd - 1}`;
+
+        if (!isThisYear) {
+            setNewTransaction((prev) => ({
+                ...prev, academicYear: prevYear
+            }))
+        } else {
+            setNewTransaction((prev) => ({
+                ...prev, academicYear: student.academicYear
+            }))
+        }
+        console.log(isThisYear)
+    }, [isThisYear])
     return (
         <>
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -14,6 +34,39 @@ function TransactionForm({ newTransaction, setNewTransaction, schoolData, handle
                 </h3>
 
                 <form onSubmit={handleTransactionSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label
+                        htmlFor="radio-this-year"
+                        className={`flex items-center gap-4 p-4 rounded-xl border${isThisYear ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"} cursor-pointer transition-all hover:shadow-sm`}
+                    >
+                        <input
+                            id="radio-this-year"
+                            type="radio"
+                            name="yearPayment"
+                            className="w-5 h-5 text-blue-600 accent-blue-600 scale-150 cursor-pointer"
+                            checked={isThisYear}
+                            onChange={() => setIsThisYear(true)}
+                        />
+                        <span className="text-base font-medium text-gray-800">
+                            This Year payment
+                        </span>
+                    </label>
+
+                    <label
+                        htmlFor="radio-last-year"
+                        className={` flex items-center gap-4 p-4 rounded-xl border ${!isThisYear ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"} cursor-pointer transition-all hover:shadow-sm `}
+                    >
+                        <input
+                            id="radio-last-year"
+                            type="radio"
+                            name="yearPayment"
+                            className="w-5 h-5 text-blue-600 accent-blue-600 scale-150 cursor-pointer"
+                            checked={!isThisYear}
+                            onChange={() => setIsThisYear(false)}
+                        />
+                        <span className="text-base font-medium text-gray-800">
+                            Last Year payment
+                        </span>
+                    </label>
                     <InputField
                         icon={<CalendarDays />}
                         label="Academic Year"
@@ -68,7 +121,6 @@ function TransactionForm({ newTransaction, setNewTransaction, schoolData, handle
                         value={newTransaction.amount}
                         onChange={(e) => setNewTransaction({ ...newTransaction, amount: e.target.value })}
                     />
-
                     <div className="md:col-span-2">
                         <InputField
                             icon={<FileTextIcon />}

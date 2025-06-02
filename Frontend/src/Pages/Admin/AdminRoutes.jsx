@@ -67,10 +67,7 @@ const AdminIndex = () => {
         <Route path="/students/daily-book" element={<DailyBook />} />
         <Route path="/students/outstanding-fee" element={<FeeReportContainer />} />
         <Route path="/students/import" element={<ImportExistingStudent />} />
-        <Route
-          path="/student/:studentId/receipt/:receiptId"
-          element={<FeeReceiptPage />}
-        />
+        <Route path="/student/:studentId/receipt/:receiptId" element={<FeeReceiptPage />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/buslist" element={<BusList />} />
         <Route path='/busdest' element={<BusDestination />} />

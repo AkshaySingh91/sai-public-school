@@ -12,10 +12,9 @@ async function verifyAccountant(req, res, next) {
         const decoded = await admin.auth().verifyIdToken(token);
         const userSnap = await admin.firestore().collection('Users').doc(decoded.uid).get();
 
-        if (!userSnap.exists || userSnap.data().role !== 'accountant') {
-            return res.status(403).json({ error: 'Forbidden: not an accountant' });
+        if (!userSnap.exists || !(userSnap.data().role !== 'accountant' || userSnap.data().role !== 'superadmin')) {
+            return res.status(403).json({ error: 'Forbidden: not an valid user' });
         }
-
         req.user = { uid: decoded.uid, ...userSnap.data() };
         next();
     } catch (err) {
@@ -27,17 +26,19 @@ async function verifyAccountant(req, res, next) {
 // School lookup middleware
 async function fetchSchool(req, res, next) {
     try {
-        const snap = await admin
-            .firestore()
-            .collection('schools')
-            .where('Code', '==', req.user.schoolCode)
-            .limit(1)
-            .get();
+        if (req.user && req.user.role !== "superadmin") {
+            const snap = await admin
+                .firestore()
+                .collection('schools')
+                .where('Code', '==', req.user.schoolCode)
+                .limit(1)
+                .get();
 
-        if (snap.empty) {
-            return res.status(404).json({ error: 'School not found' });
-        }
-        req.school = snap.docs[0].data();
+            if (snap.empty) {
+                return res.status(404).json({ error: 'School not found' });
+            }
+            req.school = snap.docs[0].data();
+        }  
         next();
     } catch (err) {
         next(err);

@@ -9,6 +9,7 @@ import LoadingScreen from "./components/Loader";
 import SuperAdminRoutes from "./Pages/SuperAdmin/SuperAdminRoutes";
 import AdminRoutes from "./Pages/Admin/AdminRoutes";
 import NotFound from "./components/NotFound"
+import EmployeeFormWithToken from "./Pages/Admin/Employee/EmployeeFormWithToken"; // Add this
 
 const App = () => {
   return (
@@ -17,6 +18,8 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            {/* this is form send to unauthorized employee to fill there details */}
+            <Route path="/employee-form" element={<EmployeeFormWithToken />} />
             <Route path="/*" element={<ProtectedRoutes />} />
           </Routes>
         </BrowserRouter>

@@ -4,9 +4,11 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ChevronDown, RefreshCw, Info } from 'lucide-react';
+import { useSchool } from '../../../contexts/SchoolContext';
 
 export default function WeeklyCollectionChart() {
     const { userData } = useAuth();
+    const { school } = useSchool();
     const [classes, setClasses] = useState([]);
     const [selectedClass, setSelectedClass] = useState('All Classes');
     const [academicYear, setAcademicYear] = useState(null);
@@ -17,8 +19,8 @@ export default function WeeklyCollectionChart() {
     // Load school info
     useEffect(() => {
         async function loadSchool() {
-            if (!userData?.schoolCode) return;
-            const q = query(collection(db, 'schools'), where('Code', '==', userData.schoolCode));
+            if (!school?.Code) return;
+            const q = query(collection(db, 'schools'), where('Code', '==', school.Code));
             const snap = await getDocs(q);
             if (!snap.empty) {
                 const data = snap.docs[0].data();
@@ -27,7 +29,7 @@ export default function WeeklyCollectionChart() {
             }
         }
         loadSchool();
-    }, [userData]);
+    }, [userData, school]);
     // Fetch data with animations
     useEffect(() => {
         if (!academicYear) return;
@@ -57,8 +59,7 @@ export default function WeeklyCollectionChart() {
 
         let studQ = query(
             collection(db, 'students'),
-            where('schoolCode', '==', userData.schoolCode),
-            where('academicYear', '==', academicYear)
+            where('schoolCode', '==', school.Code),
         );
         if (selectedClass !== 'All Classes') studQ = query(studQ, where('class', 'in', selectedClass));
 
@@ -66,17 +67,14 @@ export default function WeeklyCollectionChart() {
         const sums = days.reduce((acc, { key }) => ({ ...acc, [key]: 0 }), {});
         studSnap.docs.forEach(d => {
             (d.data().transactions || []).forEach(tx => {
-                // it means we exclude transaction of studnet imported from other system
-                // (isNaN(Number(tx.receiptId)) && tx.status !== "completed" means include pending transaction
-                // !isNaN(Number(tx.receiptId)) means only include completed transaction
-
-                if (!isNaN(Number(tx.receiptId)) || (isNaN(Number(tx.receiptId)) && tx.status !== "completed")) {
+                // it means we exclude transaction of studnet imported from other system 
+                if (!isNaN(Number(tx.receiptId)) || (tx.status !== "completed")) {
                     const date = tx.timestamp?.slice(0, 10);
                     if (date in sums) sums[date] += Number(tx.amount) || 0;
                 }
             });
         });
-
+        // sums will have all transaction that are done in one week
         const maxAmount = Math.max(...Object.values(sums), 1);
         const barData = days.map(({ key, label }) => ({
             key,

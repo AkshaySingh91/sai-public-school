@@ -85,7 +85,7 @@ function StockList() {
 
   useEffect(() => {
     fetchStocks();
-  }, []);
+  }, [userData, school.Code]);
 
   useEffect(() => {
     let filtered = stocks.filter(
@@ -103,7 +103,7 @@ function StockList() {
       const snapshot = await getDocs(collection(db, "allStocks"));
       const stockData = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((item) => item.schoolCode === userData.schoolCode);
+        .filter((item) => item.schoolCode === school.Code);
       setStocks(stockData);
       setFilteredStocks(stockData);
     } catch (error) {
@@ -128,7 +128,7 @@ function StockList() {
       newItem.fromClass?.toLowerCase().trim(),
       newItem.toClass?.toLowerCase().trim(),
       newItem.category?.toLowerCase().trim(),
-      userData.schoolCode
+      school.Code
     ].join("|");
 
     // 2. Field validations
@@ -190,7 +190,7 @@ function StockList() {
         quantity: Number(newItem.quantity),
         purchasePrice: Number(newItem.purchasePrice),
         sellingPrice: Number(newItem.sellingPrice),
-        schoolCode: userData.schoolCode,
+        schoolCode: school.Code,
         [isEditing ? "updatedAt" : "createdAt"]: new Date().toISOString()
       };
 
@@ -362,7 +362,7 @@ function StockList() {
             category: cat,
             fromClass: fromC,
             toClass: toC,
-            schoolCode: userData.schoolCode,
+            schoolCode: school.Code,
             createdAt: new Date().toISOString()
           });
         }
@@ -536,7 +536,7 @@ function StockList() {
     try {
       const selected = stocks.filter((s) =>
         selectedStocks.includes(s.id) &&
-        s.schoolCode === userData.schoolCode // Initial filter
+        s.schoolCode === school.Code // Initial filter
       );
 
       // Confirm deletion
@@ -581,7 +581,7 @@ function StockList() {
       for (const [index, stock] of selected.entries()) {
         try {
           // Double-check school code and ID
-          if (stock.schoolCode !== userData.schoolCode || !selectedStocks.includes(stock.id)) {
+          if (stock.schoolCode !== school.Code || !selectedStocks.includes(stock.id)) {
             throw new Error("Unauthorized deletion attempt blocked");
           }
           // Update progress
@@ -647,40 +647,42 @@ function StockList() {
         <>
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full sm:w-auto">
-              <div className="flex gap-3 flex-wrap w-full sm:w-auto">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowModal(true)}
-                  className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-3 rounded-xl flex sm:w-fit w-full items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                >
-                  <FaPlus className="w-4 h-4 " />
-                  Add Stock
-                </motion.button>
+            <div className="flex flex-col sm:flex-row gap-4 items-start justify-between  sm:items-center w-full sm:w-auto">
+              {
+                userData.role !== "superadmin" &&
+                <div className="flex gap-3 flex-wrap w-full sm:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowModal(true)}
+                    className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-3 rounded-xl flex sm:w-fit w-full items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                  >
+                    <FaPlus className="w-4 h-4 " />
+                    Add Stock
+                  </motion.button>
 
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowExcelModal(true)}
-                  className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 sm:w-fit w-full text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                >
-                  <MdOutlineFileUpload className="w-5 h-5" />
-                  Bulk Upload
-                </motion.button>
-                {/* New Template Buttons */}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={downloadExcelTemplate}
-                  className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 whitespace-nowrap rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
-                >
-                  <FileText className="w-4 h-4" />
-                  Excel Template
-                </motion.button>
-              </div>
-
-              <div className="ml-auto flex items-center sm:gap-3 gap-3 w-full sm:w-auto justify-between ">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowExcelModal(true)}
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 sm:w-fit w-full text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                  >
+                    <MdOutlineFileUpload className="w-5 h-5" />
+                    Bulk Upload
+                  </motion.button>
+                  {/* New Template Buttons */}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={downloadExcelTemplate}
+                    className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 whitespace-nowrap rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Excel Template
+                  </motion.button>
+                </div>
+              }
+              <div className=" flex items-center sm:gap-3 gap-3 w-full sm:w-auto justify-between ">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -701,14 +703,17 @@ function StockList() {
                   PDF
                 </motion.button>
                 {/* deleted one or multiple stocks */}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={handleBatchDelete}
-                  disabled={selectedStocks.length === 0}
-                  className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all whitespace-nowrap"
-                >
-                  Delete Stocks
-                </motion.button>
+                {
+                  userData.role !== "superadmin" &&
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={handleBatchDelete}
+                    disabled={selectedStocks.length === 0}
+                    className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                  >
+                    Delete Stocks
+                  </motion.button>
+                }
               </div>
             </div>
 
@@ -731,14 +736,17 @@ function StockList() {
               <table className="min-w-full divide-y divide-purple-100 table-fixed">
                 <thead className="bg-gradient-to-r from-purple-600 to-violet-700 text-white text-sm">
                   <tr>
-                    <th className="p-3 w-12 text-center">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
-                        checked={selectedStocks.length === currentItems.length && currentItems.length > 0}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
+                    {
+                      userData.role !== "superadmin" &&
+                      <th className="p-3 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                          checked={selectedStocks.length === currentItems.length && currentItems.length > 0}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                    }
                     {[
                       "Item Name",
                       "From-Class",
@@ -747,8 +755,8 @@ function StockList() {
                       "Category",
                       "Purchase Price",
                       "Selling Price",
-                      "Action",
-                    ].map((header, index) => (
+                      userData.role !== "superadmin" ? "Action" : "",
+                    ].filter(Boolean).map((header, index) => (
                       <th
                         key={index}
                         className="px-6 py-3 text-center font-semibold tracking-wide whitespace-nowrap border-r border-purple-500/30 last:border-r-0 align-middle"
@@ -767,14 +775,17 @@ function StockList() {
                       transition={{ delay: index * 0.05 }}
                       className="bg-purple-50/50 even:bg-purple-100/50 hover:bg-purple-200/50 transition-colors duration-150"
                     >
-                      <td className="p-3 text-center">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
-                          checked={selectedStocks.includes(stock.id)}
-                          onChange={() => toggleSelectStock(stock.id)}
-                        />
-                      </td>
+                      {
+                        userData.role !== "superadmin" &&
+                        <td className="p-3 text-center">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500"
+                            checked={selectedStocks.includes(stock.id)}
+                            onChange={() => toggleSelectStock(stock.id)}
+                          />
+                        </td>
+                      }
                       <td className="px-6 py-3 text-center align-middle font-medium text-violet-900 capitalize">
                         {stock.itemName}
                       </td>
@@ -800,22 +811,25 @@ function StockList() {
                       <td className="px-6 py-3 text-center align-middle font-medium text-emerald-700">
                         ₹{stock.sellingPrice || "N/A"}
                       </td>
-                      <td className="px-6 py-3 text-center align-middle">
-                        <div className="flex justify-center items-center gap-3">
-                          <button
-                            onClick={() => openEditModal(stock)}
-                            className="text-violet-600 hover:text-purple-800 transition-colors p-2 rounded-full hover:bg-purple-100/50"
-                          >
-                            <Settings className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => deletestock(stock.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors p-2 rounded-full hover:bg-red-100/50"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
+                      {
+                        userData.role !== "superadmin" &&
+                        <td className="px-6 py-3 text-center align-middle">
+                          <div className="flex justify-center items-center gap-3">
+                            <button
+                              onClick={() => openEditModal(stock)}
+                              className="text-violet-600 hover:text-purple-800 transition-colors p-2 rounded-full hover:bg-purple-100/50"
+                            >
+                              <Settings className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => deletestock(stock.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors p-2 rounded-full hover:bg-red-100/50"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      }
                     </motion.tr>
                   ))}
                 </tbody>

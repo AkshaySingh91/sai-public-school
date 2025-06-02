@@ -3,6 +3,7 @@ import { db } from "../../../../config/firebase";
 import { Switch } from "@headlessui/react";
 import { Save, Trash2, User, CalendarDays, Banknote } from "lucide-react";
 import { motion } from 'framer-motion'
+import StudentProfilePhoto from "./StudentProfilePhoto";
 
 export default function StudentProfile({
   student,
@@ -80,9 +81,11 @@ export default function StudentProfile({
       className="md:min-w-[28%] md:max-w-[30%] space-y-6 sticky top-6 h-fit overflow-y-auto overflow-x-hidden">
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <User className="w-10 h-10 text-purple-600" />
-          </div>
+          <StudentProfilePhoto
+            student={student}
+            formData={formData}
+            setFormData={setFormData}
+          />
           <h2 className="text-2xl font-bold text-gray-900 capitalize">
             {student.fname} {student.fatherName || ""} {student.lname}
           </h2>

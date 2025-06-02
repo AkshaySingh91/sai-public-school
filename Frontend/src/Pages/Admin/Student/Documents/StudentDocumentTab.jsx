@@ -52,7 +52,7 @@ const StudentDocumentTab = ({ student, setStudent }) => {
             const fileExtension = newDoc.file.name.split('.').pop();
             const uniqueId = uuidv4();
             const fileName = `${newDoc.name.replace(/[^a-z0-9]/gi, '_')}-${uniqueId}.${fileExtension}`;
-            const storagePath = `admin/${currentUser.uid}/${studentId}/${fileName}`;
+            const storagePath = `admin/${currentUser.uid}/students/${studentId}/${fileName}`;
             const storageRef = ref(storage, storagePath);
 
             // Setup upload task

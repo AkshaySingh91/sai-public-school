@@ -7,18 +7,21 @@ import ProfileSettings from "./ProfileSettings/ProfileSettings";
 import SchoolSettings from "./SchoolSettings/SchoolSettings";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { auth } from "../../../config/firebase";
+import { useSchool } from "../../../contexts/SchoolContext";
+import SuperadminProfile from "./ProfileSettings/SuperAdminProfile"
 
 const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
 const VITE_PORT = import.meta.env.VITE_PORT;
 const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const Settings = () => {
-  const { currentUser } = useAuth();
+  const { userData, currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [profile, setProfile] = useState(null);
   const [school, setSchool] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { school: s } = useSchool();
 
   const fetchData = async () => {
     try {
@@ -28,15 +31,22 @@ const Settings = () => {
         throw new Error("User not authenticated");
       }
       const userToken = await user.getIdToken();
+      let profileUrl = "", schoolUrl = "";
+      if (userData.role === "superadmin") {
+        profileUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/profile` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/profile`;
+        schoolUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/school?schoolCode=${s.Code}` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/school`
+      } else {
+        profileUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/profile` : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`;
+        schoolUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/school?schoolCode=${s.Code}` : `${VITE_DOMAIN_PROD}/api/admin/settings/school`
+      }
 
       const [profileRes, schoolRes] = await Promise.all([
-        fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/profile` : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${userToken}`,
-            },
-          }),
-        fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/school` : `${VITE_DOMAIN_PROD}/api/admin/settings/school`, {
+        fetch(profileUrl, {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }),
+        fetch(schoolUrl, {
           headers: {
             Authorization: `Bearer ${userToken}`,
           },
@@ -80,20 +90,22 @@ const Settings = () => {
   const handleProfileUpdate = async () => {
     try {
       setLoading(true);
-      const updateResponse = await fetch(
-        VITE_NODE_ENV === "Development"
-          ? `http://localhost:${VITE_PORT}/api/admin/settings/profile`
-          : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${await auth.currentUser.getIdToken()}`,
-          },
-          body: JSON.stringify({
-            ...profile,
-          }),
-        }
+      let url = "";
+      if (userData.role === "superadmin") {
+        url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/profile` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/profile`
+      } else {
+        url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/profile` : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`
+      }
+      const updateResponse = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await auth.currentUser.getIdToken()}`,
+        },
+        body: JSON.stringify({
+          ...profile,
+        }),
+      }
       );
 
       if (!updateResponse.ok) throw new Error('Profile update failed');
@@ -129,11 +141,17 @@ const Settings = () => {
       </div>
 
       {activeTab === "profile" ? (
-        <ProfileSettings
-          profile={profile}
-          setProfile={setProfile}
-          handleProfileUpdate={handleProfileUpdate}
-        />
+        userData.role === "superadmin" ?
+          <SuperadminProfile
+            profile={profile}
+            setProfile={setProfile}
+            handleProfileUpdate={handleProfileUpdate}
+          />
+          : <ProfileSettings
+            profile={profile}
+            setProfile={setProfile}
+            handleProfileUpdate={handleProfileUpdate}
+          />
       ) : (
         <SchoolSettings
           school={school}

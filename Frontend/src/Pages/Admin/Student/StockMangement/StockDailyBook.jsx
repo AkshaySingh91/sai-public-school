@@ -15,6 +15,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSchool } from "../../../../contexts/SchoolContext";
 
 const SkeletonLoader = () => (
   <div className="animate-pulse space-y-4">
@@ -30,6 +31,7 @@ const SkeletonLoader = () => (
 
 export default function StockDailyBook() {
   const { userData } = useAuth();
+  const { school } = useSchool();
   const [stockTransactions, setStockTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -52,7 +54,7 @@ export default function StockDailyBook() {
       setLoading(true);
       const studentsQ = query(
         collection(db, "students"),
-        where("schoolCode", "==", userData.schoolCode)
+        where("schoolCode", "==", school.Code)
       );
       const snap = await getDocs(studentsQ);
       const allTx = [];
@@ -107,7 +109,7 @@ export default function StockDailyBook() {
     };
 
     fetchTransactions();
-  }, [userData.schoolCode, fromDate, toDate]);
+  }, [userData, school.Code, fromDate, toDate]);
 
   const pageCount = Math.ceil(stockTransactions.length / perPage);
   const pageData = useMemo(() => {
@@ -116,7 +118,6 @@ export default function StockDailyBook() {
   }, [stockTransactions, page]);
 
   const exportExcel = () => {
-    console.log(stockTransactions)
     const wsData = stockTransactions.map((t) => ({
       Date: new Date(t.date).toLocaleString(),
       Student: `${t.fname} ${t.fatherName} ${t.lname}`.toUpperCase(),

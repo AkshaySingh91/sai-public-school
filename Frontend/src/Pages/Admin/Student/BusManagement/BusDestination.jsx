@@ -45,14 +45,14 @@ function BusDestination() {
     try {
       const q = query(
         collection(db, "allDestinations"),
-        where("schoolCode", "==", userData.schoolCode)
+        where("schoolCode", "==", school.Code)
       );
       const querySnapshot = await getDocs(q);
       const dests = querySnapshot.docs
         .map((doc) => {
           return { id: doc.id, ...doc.data() }
         })
-        .filter((d) => d.schoolCode === userData.schoolCode);
+        .filter((d) => d.schoolCode === school.Code);
       setDestinations(dests);
       setFilteredDestinations(dests);
     } catch (error) {
@@ -73,9 +73,8 @@ function BusDestination() {
       const snap = await getDocs(ref);
       const busesData = snap.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((bus) => bus.schoolCode === userData.schoolCode);
+        .filter((bus) => bus.schoolCode === school.Code);
       setBuses(busesData);
-
       const map = {};
       busesData.forEach((bus) => {
         (bus.destinations || []).forEach((dest) => {
@@ -106,7 +105,7 @@ function BusDestination() {
       name: newDestination?.name?.toLowerCase(),
       fee: parseFloat(newDestination.fee),
       academicYear: school.academicYear,
-      schoolCode: userData.schoolCode,
+      schoolCode: school.Code,
     });
   }
   const assignBus = async (destination, busDocId) => {
@@ -179,7 +178,7 @@ function BusDestination() {
     try {
       const existingDestSnap = await getDocs(collection(db, "allDestinations"));
       const existingDestNames = existingDestSnap.docs
-        .filter(doc => doc.data().schoolCode === userData.schoolCode)
+        .filter(doc => doc.data().schoolCode === school.Code)
         .map(doc => doc.data().name.toLowerCase().trim());
 
       const reader = new FileReader();
@@ -237,7 +236,7 @@ function BusDestination() {
                 name,
                 fee,
                 academicYear: school.academicYear,
-                schoolCode: userData.schoolCode
+                schoolCode: school.Code
               });
               addedDestinations.push(normalizedName);
             } catch (err) {
@@ -370,7 +369,7 @@ function BusDestination() {
   useEffect(() => {
     fetchDestinations();
     fetchBuses();
-  }, []);
+  }, [userData, school.Code]);
 
   useEffect(() => {
     let filtered = destinations;
@@ -394,39 +393,42 @@ function BusDestination() {
         {
           (loading) ? <TableLoader /> :
             <div className="max-w-7xl mx-auto space-y-6">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="flex gap-3 flex-wrap">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowDestinationModal(true)}
-                    className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 w-full sm:w-auto text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                  >
-                    <FaPlus className="w-4 h-4" />
-                    Add Destination
-                  </motion.button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                {
+                  userData.role !== "superadmin" &&
+                  <div className="flex gap-3 flex-wrap">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setShowDestinationModal(true)}
+                      className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 w-full sm:w-auto text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                    >
+                      <FaPlus className="w-4 h-4" />
+                      Add Destination
+                    </motion.button>
 
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white w-full sm:w-auto px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    onClick={() => setShowExcelModal(true)}
-                  >
-                    <MdOutlineFileUpload className="w-5 h-5" />                    Bulk Upload
-                  </motion.button>
-                </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white w-full sm:w-auto px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                      onClick={() => setShowExcelModal(true)}
+                    >
+                      <MdOutlineFileUpload className="w-5 h-5" />Bulk Upload
+                    </motion.button>
+                    {/* New Template Buttons */}
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={downloadExcelTemplate}
+                      className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Excel Template
+                    </motion.button>
+                  </div>
+                }
 
-                <div className="ml-auto flex gap-3 w-full sm:w-auto">
-                  {/* New Template Buttons */}
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={downloadExcelTemplate}
-                    className="flex items-center w-full sm:w-auto gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Excel Template
-                  </motion.button>
+                <div className="flex gap-3 w-full sm:w-auto">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -501,6 +503,7 @@ function BusDestination() {
                                   className="border-2 border-purple-200 w-full rounded-xl p-2 text-sm text-purple-900 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
                                   value={assignment.busDocId || ""}
                                   onChange={(e) => assignBus(dest, e.target.value)}
+                                  disabled={userData.role === "superadmin" ? true : false}
                                 >
                                   <option
                                     className="text-purple-900"
@@ -522,7 +525,7 @@ function BusDestination() {
                                     </div>
                                   ) : (
                                     <label
-                                      className={` relative inline-flex items-center gap-2 ${!assignment.busDocId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'} `}
+                                      className={` relative inline-flex items-center gap-2 ${!assignment.busDocId || userData.role === "superadmin" ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'} `}
                                     >
                                       <input
                                         type="checkbox"
@@ -533,7 +536,7 @@ function BusDestination() {
                                             toggleStatus(dest).finally(() => setUpdatingDestinationId(null));
                                           }
                                         }}
-                                        disabled={!assignment.busDocId}
+                                        disabled={!assignment.busDocId || userData.role === "superadmin" ? true : false}
                                         className="sr-only peer"
                                         aria-label={`Toggle status for ${dest.name}`}
                                       />

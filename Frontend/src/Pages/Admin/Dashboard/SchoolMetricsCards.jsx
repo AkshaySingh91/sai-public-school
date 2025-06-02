@@ -12,6 +12,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
+import { useSchool } from "../../../contexts/SchoolContext";
 
 const MetricCard = ({
   icon: Icon,
@@ -56,6 +57,7 @@ const MetricCard = ({
 
 export default function SchoolMetricsCards() {
   const { userData } = useAuth();
+  const { school } = useSchool();
   const [metrics, setMetrics] = useState({
     todaysCollection: 0,
     discountedAmount: 0,
@@ -68,13 +70,13 @@ export default function SchoolMetricsCards() {
 
   useEffect(() => {
     async function fetchMetrics() {
-      if (!userData?.schoolCode) return;
+      if (!school?.Code) return;
       setLoading(true);
 
       const schoolSnap = await getDocs(
         query(
           collection(db, "schools"),
-          where("Code", "==", userData.schoolCode)
+          where("Code", "==", school.Code)
         )
       );
 
@@ -85,7 +87,7 @@ export default function SchoolMetricsCards() {
       const studSnap = await getDocs(
         query(
           collection(db, "students"),
-          where("schoolCode", "==", userData.schoolCode)
+          where("schoolCode", "==", school.Code)
         )
       );
 
@@ -102,24 +104,26 @@ export default function SchoolMetricsCards() {
         const s = docSnap.data();
         const all = s.allFee || {};
 
-        const isActive = s.status?.toLowerCase() === "new" || s.status.toLowerCase() === "current";
+        const isActive = s.status?.toLowerCase() !== "inactive";
         if (isActive) {
           // cal discounted amnt for each student except left
           metricsData.discountedAmount +=
             (all.busFeeDiscount || 0) + (all.tuitionFeesDiscount || 0);
-          // for all student also for left one
+          // it is all fees that are expected to collect in this academic year inc last year pending fees & this year total fees need to pay by student
+          // this expected collection is for this year because we sum fee of student 
           metricsData.expectedCollection +=
             (all.tuitionFees?.total || 0) +
             (all.busFee || 0) +
             (all.messFee || 0) +
-            (all.hostelFee || 0);
+            (all.hostelFee || 0)
 
           metricsData.lastYearBalance +=
             (all.lastYearBalanceFee || 0) + (all.lastYearBusFee || 0);
 
           // we sum of all those that are collected from external system only "completed" one
+          // collected fees are  all those fees that student paid for this year except last year pending fees
           (s.transactions || []).forEach((t) => {
-            if (t?.status?.toLowerCase() === "completed")
+            if (t?.status?.toLowerCase() === "completed" && t?.academicYear?.toLowerCase() === s?.academicYear?.toLowerCase())
               metricsData.collectedFees += Number(t.amount) || 0;
           });
         }
@@ -153,7 +157,7 @@ export default function SchoolMetricsCards() {
     }
 
     fetchMetrics();
-  }, [userData]);
+  }, [userData, school]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 content-start px-2 sm:px-4 ">
