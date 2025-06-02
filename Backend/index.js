@@ -49,7 +49,7 @@ const initializeApp = async () => {
 
         // Apply routes
         app.use('/api/admin/settings', verifyAccountant, fetchSchool, settingsRouter);
-        app.use('/api/superadmin/settings', verifyAccountant, fetchSchool, superadminSettings);
+        app.use('/api/superadmin/settings', verifyAccountant, superadminSettings);
 
         // Superadmin route
         app.post('/api/superadmin/schools/create-accountant', async (req, res) => {

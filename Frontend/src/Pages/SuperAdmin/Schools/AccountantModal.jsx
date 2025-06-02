@@ -1,10 +1,11 @@
 // src/Pages/SuperAdmin/Schools/AccountantModal.jsx
 import React, { useState } from "react";
-import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
-import { db , auth } from "../../../config/firebase";
+import { auth } from "../../../config/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
-import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const AccountantModal = ({ isOpen, school, onClose, onAccountantAdded }) => {
     const [formData, setFormData] = useState({
@@ -15,78 +16,66 @@ const AccountantModal = ({ isOpen, school, onClose, onAccountantAdded }) => {
         schoolCode: school?.Code || ""
     });
     const [loading, setLoading] = useState(false);
-
-
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error("User not authenticated");
+    }
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        const userToken = await user.getIdToken();
+
         try {
-            // Check if email exists in Firestore
-            const emailQuery = query(collection(db, "Users"), where("email", "==", formData.email));
-            const emailSnapshot = await getDocs(emailQuery);
+            // 1) Call backend route to create an accountant
+            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/accountants/` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/accountants/`;
 
-            if (!emailSnapshot.empty) {
-                const existingUser = emailSnapshot.docs[0].data();
-                const schoolQuery = query(collection(db, "schools"), where("Code", "==", existingUser.schoolCode));
-                const schoolSnapshot = await getDocs(schoolQuery);
-                const schoolName = schoolSnapshot.docs[0]?.data().schoolName || "another school";
-
-                Swal.fire({
-                    icon: "error",
-                    title: "Accountant Exists",
-                    html: `This email is already registered at <strong>${schoolName}</strong>!`,
-                });
-                return;
-            }
-            // Create Firebase Authentication user
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                formData.email,
-                formData.password
-            );
-            const firebaseUser = userCredential.user;
-
-            try {
-                // Create Firestore document with UID as document ID
-                await setDoc(doc(db, "Users", firebaseUser.uid), {
-                    name: formData.name,
-                    email: formData.email,
-                    phone: formData.phone,
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${userToken}`,
+                },
+                body: JSON.stringify({
+                    name: formData.name.trim(),
+                    email: formData.email.trim().toLowerCase(),
+                    phone: formData.phone.trim(),
+                    password: formData.password,
                     schoolCode: school.Code,
-                    role: "accountant",
-                    createdAt: new Date(),
-                    uid: firebaseUser.uid
-                });
+                }),
+            });
 
-                Swal.fire("Success!", "Accountant created successfully", "success");
-                onAccountantAdded();
-                onClose();
-            } catch (firestoreError) {
-                // Rollback Firebase auth creation if Firestore fails
-                await deleteUser(firebaseUser);
-                throw firestoreError;
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to create accountant");
             }
+
+            Swal.fire("Success!", "Accountant created successfully", "success");
+            onAccountantAdded();
+            onClose();
         } catch (error) {
             console.error("Error creating accountant:", error);
-            let errorMessage = "Failed to create accountant";
+            let msg = error.message || "Failed to create accountant";
 
-            if (error.code === "auth/email-already-in-use") {
-                errorMessage = "This email is already registered in our system";
-            } else if (error.code === "auth/weak-password") {
-                errorMessage = "Password should be at least 6 characters";
+            // If backend says email already exists (400 with error text)
+            if (msg.includes("already registered")) {
+                // We show that message directly
+            } else if (msg.includes("password")) {
+                msg = "Password should be at least 6 characters.";
             }
 
             Swal.fire({
                 icon: "error",
                 title: "Error",
-                text: errorMessage,
+                text: msg,
                 showConfirmButton: false,
-                timer: 3000
+                timer: 3000,
             });
         } finally {
             setLoading(false);
         }
-    }
+    };
+
 
     return (
         <AnimatePresence>

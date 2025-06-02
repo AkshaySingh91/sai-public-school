@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "../../../config/firebase";
+import { db, auth } from "../../../config/firebase";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const SchoolModal = ({ onClose, onSchoolAdded }) => {
     const [formData, setFormData] = useState({
@@ -11,17 +14,19 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
         location: {
             state: "Maharashtra",
             district: "",
-            taluka: ""
+            taluka: "",
+            landmark: "",
+            pincode: ""
         },
         paymentModes: ["Cash", "Online", "Cheque"],
         feeTypes: ["AdmissionFee", "TuitionFee"],
-        academicYear: "2024-2025",
+        academicYear: "25-26",
         class: "Nursery,JRKG,SRKG,1st,2nd,3rd,4th,5th,6th,7th,8th,9th",
         divisions: "A,B,C,D,E,SEMI",
         studentsType: "DS,DSR,DSS",
-        schoolReceiptHeader: "",
-        busReceiptHeader: "",
-        stockReceiptHeader: "",
+        schoolReceiptHeader: "Sai Public School",
+        busReceiptHeader: "Sai Public School",
+        stockReceiptHeader: "Sai Public School",
         feeIdCount: 0,
         tuitionReceiptCount: 0,
         busReceiptCount: 0,
@@ -30,16 +35,16 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
     const [loading, setLoading] = useState(false);
     const [activeSection, setActiveSection] = useState("basic");
 
-    const generateRandomCode = () => {
-        return Math.random().toString(36).substring(2, 8).toUpperCase();
-    };
-
     const parseArrayInput = (str) => {
         return str.split(',').map(item => item.trim()).filter(Boolean);
     };
-
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error("User not authenticated");
+    }
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const userToken = await user.getIdToken();
 
         const { value: accept } = await Swal.fire({
             title: 'Confirm School Creation',
@@ -59,47 +64,67 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
         if (!accept) return;
 
         setLoading(true);
-
         try {
-            const schoolCode = formData.Code.trim() || generateRandomCode();
+            // 2) Call backend endpoint instead of addDoc(...)
+            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/school/` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/school/`;
 
-            await addDoc(collection(db, "schools"), {
-                ...formData,
-                Code: schoolCode,
-                students: [],
-                accounts: [],
-                paymentModes: parseArrayInput(formData.paymentModes.join(',')),
-                feeTypes: parseArrayInput(formData.feeTypes.join(',')),
-                class: parseArrayInput(formData.class),
-                divisions: parseArrayInput(formData.divisions),
-                studentsType: parseArrayInput(formData.studentsType),
-                createdAt: new Date().toISOString(),
-                feeIdCount: 0,
-                tuitionReceiptCount: 0,
-                busReceiptCount: 0,
-                stockReceiptCount: 0,
-                mobile: "",
-                email: "",
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${userToken}`,
+                },
+                body: JSON.stringify({
+                    Code: formData.Code,
+                    schoolName: formData.schoolName,
+                    location: formData.location,
+                    academicYear: formData.academicYear,
+                    // receipt header
+                    schoolReceiptHeader: formData.schoolReceiptHeader,
+                    busReceiptHeader: formData.busReceiptHeader,
+                    stockReceiptHeader: formData.stockReceiptHeader,
+                    paymentModes: parseArrayInput(formData.paymentModes.join(',')),
+                    // feettype is for school fees 
+                    feeTypes: parseArrayInput(formData.feeTypes.join(',')),
+                    // total class & div
+                    class: parseArrayInput(formData.class),
+                    divisions: parseArrayInput(formData.divisions),
+                    // student type
+                    studentsType: parseArrayInput(formData.studentsType),
+                    // receipt counts
+                    feeIdCount: 0,
+                    tuitionReceiptCount: 0,
+                    busReceiptCount: 0,
+                    stockReceiptCount: 0,
+                    // contact
+                    mobile: "",
+                    email: "",
+                }),
             });
 
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to create school");
+            }
             await Swal.fire({
-                icon: 'success',
-                title: 'School Created!',
-                text: `${formData.schoolName} has been successfully registered`,
+                icon: "success",
+                title: "School Created!",
+                text: `“${formData.schoolName}” has been successfully registered.`,
                 timer: 2000,
-                showConfirmButton: false
+                showConfirmButton: false,
             });
-
             onSchoolAdded();
             onClose();
         } catch (error) {
+            console.error("Error creating school:", error);
             Swal.fire({
-                icon: 'error',
-                title: 'Creation Failed',
-                text: error.message || 'Failed to create school',
+                icon: "error",
+                title: "Creation Failed",
+                text: error.message || "Failed to create school",
             });
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (
@@ -293,21 +318,6 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
                                     className="w-ful border rounded-lg px-2 py-1  focus:ring-2 focus:ring-indigo-500"
                                 />
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Fee Types *
-                                    <span className="text-gray-500 ml-2">(comma separated)</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.feeTypes}
-                                    onChange={(e) => setFormData({ ...formData, feeTypes: e.target.value.split(',') })}
-                                    className="w-full px-2 py-1 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                                />
-                            </div>
-
                             <div className="md:col-span-2">
                                 <h3 className="text-sm font-medium text-gray-700 mb-3">Receipt Headers</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -341,7 +351,7 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
                                 </div>
                             </div>
                             <div className="md:col-span-2">
-                                <h3 className="text-sm font-medium text-gray-700 mb-3">Receipt Headers</h3>
+                                <h3 className="text-sm font-medium text-gray-700 mb-3">Receipt Count</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-sm text-gray-600 mb-2">School Receipt</label>

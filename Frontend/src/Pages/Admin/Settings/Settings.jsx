@@ -34,12 +34,11 @@ const Settings = () => {
       let profileUrl = "", schoolUrl = "";
       if (userData.role === "superadmin") {
         profileUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/profile` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/profile`;
-        schoolUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/school?schoolCode=${s.Code}` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/school`
+        schoolUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/school?schoolCode=${s.Code}` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/school?schoolCode=${s.Code}`
       } else {
         profileUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/profile` : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`;
         schoolUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/school?schoolCode=${s.Code}` : `${VITE_DOMAIN_PROD}/api/admin/settings/school`
       }
-
       const [profileRes, schoolRes] = await Promise.all([
         fetch(profileUrl, {
           headers: {

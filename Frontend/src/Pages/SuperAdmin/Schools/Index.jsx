@@ -12,6 +12,10 @@ import { useNavigate } from "react-router-dom";
 import { useSchool } from "../../../contexts/SchoolContext";
 import { FiPlus, FiTrash2, FiUserPlus, FiRefreshCw, FiLogOut, FiHome, FiChevronRight } from "react-icons/fi";
 import { FaSchool, FaUserTie } from "react-icons/fa";
+import { X } from "lucide-react";
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const ManageSchools = () => {
   const navigate = useNavigate();
@@ -21,6 +25,7 @@ const ManageSchools = () => {
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedSchoolId, setSelectedSchoolId] = useState(null);
+  const user = auth.currentUser;
 
   const fetchSchools = async () => {
     setLoading(true);
@@ -52,44 +57,36 @@ const ManageSchools = () => {
       cancelButtonColor: "#3085d6",
       confirmButtonText: "Delete",
       cancelButtonText: "Cancel",
-      reverseButtons: true
+      reverseButtons: true,
     });
     if (!result.isConfirmed) return;
-
+    const userToken = await user.getIdToken();
     try {
-      // Delete school document
-      await deleteDoc(doc(db, "schools", schoolId));
+      const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/schools/${schoolId}` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/schools/${schoolId}`;
 
-      // Delete associated accountants
-      const accountantsQuery = query(
-        collection(db, "Users"),
-        where("schoolCode", "==", schoolCode),
-        where("role", "==", "accountant")
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+      }
       );
-
-      const batch = writeBatch(db);
-      const accountantSnapshot = await getDocs(accountantsQuery);
-
-      accountantSnapshot.forEach(async (doc) => {
-        batch.delete(doc.ref);
-        try {
-          await deleteUser(auth, doc.data().uid);
-        } catch (error) {
-          console.error("Error deleting auth user:", error);
-        }
-      });
-      await batch.commit();
-      fetchSchools();
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete school");
+      }
+      await fetchSchools();
       Swal.fire({
         title: "Deleted!",
         text: "School and associated accountants have been deleted.",
         icon: "success",
         timer: 2000,
-        showConfirmButton: false
+        showConfirmButton: false,
       });
     } catch (error) {
       console.error("Error deleting school:", error);
-      Swal.fire("Error", "Failed to delete school and associated accountants", "error");
+      Swal.fire("Error", error.message || "Failed to delete school", "error");
     }
   };
   const handleSwitchSchool = (school) => {
@@ -298,7 +295,12 @@ const ManageSchools = () => {
 const AccountantList = ({ schoolCode }) => {
   const [accountants, setAccountants] = useState([]);
   const [loading, setLoading] = useState(true);
+  const user = auth.currentUser;
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
   const fetchAccountants = async () => {
     setLoading(true);
     try {
@@ -326,35 +328,60 @@ const AccountantList = ({ schoolCode }) => {
       cancelButtonColor: "#3085d6",
       confirmButtonText: "Delete",
       cancelButtonText: "Cancel",
-      reverseButtons: true
+      reverseButtons: true,
     });
 
     if (!result.isConfirmed) return;
-
+    const userToken = await user.getIdToken();
     try {
-      // Delete Firestore document
-      await deleteDoc(doc(db, "Users", accountant.id));
-      // Delete Authentication user
-      await deleteUser(auth, accountant.uid);
+      // 1) Call our backend endpoint:
+      const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/accountants/${accountant.id}` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/accountants/${accountant.id}`;
 
-      fetchAccountants();
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({ uid: accountant.id }),
+      }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete accountant");
+      }
+
+      // 2) Refresh the list in the UI
+      await fetchAccountants();
+
       Swal.fire({
         title: "Deleted!",
         text: "Accountant has been removed.",
         icon: "success",
         timer: 1500,
-        showConfirmButton: false
+        showConfirmButton: false,
       });
     } catch (error) {
       console.error("Error deleting accountant:", error);
-      Swal.fire("Error", "Failed to delete accountant", "error");
+      Swal.fire("Error", error.message || "Failed to delete accountant", "error");
     }
   };
+
 
   useEffect(() => {
     fetchAccountants();
   }, [schoolCode]);
 
+  const openProfilePhotoModal = () => {
+    setIsProfileModalOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeProfilePhotoModal = () => {
+    setIsProfileModalOpen(false);
+    document.body.style.overflow = 'unset';
+  };
   return (
     <div className="space-y-3">
       {loading ? (
@@ -376,46 +403,95 @@ const AccountantList = ({ schoolCode }) => {
       ) : (
         <AnimatePresence>
           {accountants.map((acc) => (
-            <motion.div
-              key={acc.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex justify-between items-center bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center">
-                {/* <div className="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+            <>
+              <motion.div
+                key={acc.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex justify-between items-center bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center">
+                  {/* <div className="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
                   <FaUserTie className="text-indigo-600" />
                 </div> */}
-                <div className="w-12 h-12 rounded-full overflow-hidden">
-                  {acc && acc.avatar && acc.avatar.avatarUrl ? (
-                    <img
-                      src={acc.avatar.avatarUrl}
-                      className="w-full h-full object-cover"
-                      alt="Profile"
-                    />
-                  ) : (
-                    <div className="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto my-auto">
-                      <FaUserTie className="text-indigo-600" />
+                  <div className="w-12 h-12 rounded-full overflow-hidden cursor-pointer">
+                    {acc && acc.profileImage ? (
+                      <img
+                        onClick={openProfilePhotoModal}
+                        src={acc.profileImage}
+                        className="w-full h-full object-cover"
+                        alt="Profile"
+                      />
+                    ) : (
+                      <div className="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto my-auto">
+                        <FaUserTie className="text-indigo-600" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-800">{acc.name}</p>
+                    <p className="text-sm text-gray-600 truncate max-w-[120px]">{acc.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDeleteAccountant(acc)}
+                  className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors cursor-pointer bg-red-100 "
+                  title="Remove Accountant"
+                >
+                  <FiTrash2 />
+                </button>
+              </motion.div>
+
+              {isProfileModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                  {/* Backdrop */}
+                  <div
+                    className="absolute rounded-md bg-clip-padding backdrop-filter  border border-gray-100  inset-0 z-10 flex items-center justify-center px-4 sm:px-6 md:px-8 backdrop-blur-sm "
+                    onClick={closeProfilePhotoModal}
+                  ></div>
+
+                  {/* Modal Content */}
+                  <div className="relative z-50 max-w-md w-full mx-4 animate-in fade-in zoom-in duration-300 ">
+                    {/* Close Button */}
+                    <button
+                      onClick={closeProfilePhotoModal}
+                      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all duration-200 hover:scale-110"
+                    >
+                      <X size={20} />
+                    </button>
+
+                    {/* Profile Photo */}
+                    <div className="flex flex-col items-center">
+                      <div className="relative mb-6">
+                        {/* Photo Container */}
+                        <div className="relative w-96 h-96 rounded-full overflow-hidden border-2 border-white/30 shadow-xl">
+                          {acc && acc.profileImage ? (
+                            <img
+                              src={acc.profileImage}
+                              className="w-full h-full object-cover"
+                              alt="Profile"
+                            />
+                          ) : (
+                            <div className="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto my-auto">
+                              <FaUserTie className="text-indigo-600" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Shine Effect */}
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                      </div>
+
                     </div>
-                  )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-800">{acc.name}</p>
-                  <p className="text-sm text-gray-600 truncate max-w-[120px]">{acc.email}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleDeleteAccountant(acc)}
-                className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
-                title="Remove Accountant"
-              >
-                <FiTrash2 />
-              </button>
-            </motion.div>
+              )}
+            </>
           ))}
         </AnimatePresence>
       )}
+
     </div>
   );
 };

@@ -81,7 +81,6 @@ export default function DailyBook() {
   });
   // Memoized filtered transactions
   const filteredTransactions = useMemo(() => {
-
     return transactions.filter(transaction => {
       const matchesSearch = searchTerm === '' ||
         `${transaction.fname} ${transaction.fatherName} ${transaction.lname}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -92,8 +91,7 @@ export default function DailyBook() {
 
       const transactionDate = new Date(transaction.date);
       const matchesDateRange = transactionDate >= fromDate && transactionDate <= toDate;
-
-      return matchesSearch && matchesStatus && matchesFeeType && matchesPaymentMode && matchesDateRange;
+      return matchesDateRange && matchesStatus && matchesFeeType && matchesPaymentMode && matchesSearch;
     });
   }, [transactions, statusFilter, feeTypeFilter, paymentModeFilter, searchTerm]);
   // Memoized sorted and filtered transactions
@@ -167,8 +165,10 @@ export default function DailyBook() {
       const data = doc.data();
       (data.transactions || []).forEach((t) => {
         const txDate = new Date(t.timestamp);
+        // i wrote this bec some of transaction date is not equal to timestamp (deleted by fault)
+        const receiptDate = new Date(t.date);
         // dont add imported transaction , but show cancle transaction
-        if (!(isNaN(Number(t.receiptId)) && t.status === "completed") && txDate >= fromDate && txDate <= toDate) {
+        if (!(isNaN(Number(t.receiptId)) && t.status === "completed") && ((txDate >= fromDate && txDate <= toDate) || (!isNaN(receiptDate) && (receiptDate >= fromDate && receiptDate <= toDate)))) {
           allTx.push({
             studentId: doc.id,
             fname: data.fname || "",
