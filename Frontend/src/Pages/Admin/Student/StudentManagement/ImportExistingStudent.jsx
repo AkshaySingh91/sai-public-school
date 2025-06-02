@@ -304,14 +304,12 @@ export default function ImportExistingStudent() {
                 const jsonData = utils.sheet_to_json(worksheet);
                 // Validate Data
                 const results = jsonData.map(row => {
-                    console.log(row)
                     const errors = validate(row);
                     return { ...row, errors };
                 });
 
                 const validStudents = results.filter(r => Object.keys(r.errors).length === 0);
                 const invalidStudents = results.filter(r => Object.keys(r.errors).length > 0);
-                console.log(validStudents, invalidStudents)
                 setTotalStudents(validStudents.length);
 
                 if (validStudents.length === 0) {

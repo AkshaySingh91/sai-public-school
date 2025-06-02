@@ -46,7 +46,6 @@ const StudentList = () => {
   // init class & division
   useEffect(() => {
     if (school.class) setClasses(school.class);
-    console.log(school.class)
   }, [school.class]);
   useEffect(() => {
     if (school.divisions) setDivisions(school.divisions);

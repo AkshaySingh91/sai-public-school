@@ -14,7 +14,6 @@ const AccountantModal = ({ isOpen, school, onClose, onAccountantAdded }) => {
         phone: "",
         schoolCode: school?.Code || ""
     });
-    console.log(school)
     const [loading, setLoading] = useState(false);
 
 

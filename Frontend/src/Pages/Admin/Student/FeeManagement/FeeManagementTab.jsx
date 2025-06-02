@@ -7,7 +7,6 @@ import { motion } from "framer-motion"
 
 export default function FeeManagement({ student, transactions, handleFeeUpdate, formData, setFormData }) {
     // local copy of fees
-    console.log(transactions, student)
     const [fees, setFees] = useState({
         // ensure the shape exists immediately
         tuitionFees: { AdmissionFee: 0, tuitionFee: 0, total: 0 },
@@ -29,7 +28,6 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
         .filter((t) => t.academicYear === student.academicYear && t.status == "completed")
         .reduce((sum, t) => sum + Number(t.amount), 0);
 
-    console.log({ paidFees })
     // on mount / student changes, seed from student.allFee
     useEffect(() => {
         if (student.allFee) {
@@ -54,12 +52,6 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
             }));
 
             setSummaryTotal(schoolTotal + mess + hostel + bus);
-            console.log({
-                schoolTotal
-                , mess
-                , hostel
-                , bus
-            })
         }
     }, [
         fees.tuitionFees?.tuitionFee,
@@ -92,11 +84,9 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
 
 
         return transactions.reduce((acc, t) => {
-            console.log(t)
             if (t.status === "completed") {
                 if (t.academicYear === currentYear) {
                     // if addmission fee paid than we have to sum it in tuition fee
-                    console.log(t?.feeType)
                     if (t?.feeType?.toLowerCase() === 'admissionfee') {
                         acc.currentYearPaid["TuitionFee"] = acc.currentYearPaid["TuitionFee"] + t.amount
                     }
@@ -116,7 +106,6 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
             lastYearPaid: { balance: 0, bus: 0 }
         });
     }, [transactions, student.academicYear]);
-    console.log({ currentYearPaid, lastYearPaid })
     // Calculate current year totals
     const currentYearTotals = useMemo(() => ({
         TuitionFee: (fees.tuitionFees?.AdmissionFee || 0) + (fees.tuitionFees?.tuitionFee || 0),

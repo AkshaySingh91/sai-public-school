@@ -236,7 +236,6 @@ const StudentFeeDetails = ({
   }, [currentItems, studentActiveTab]);
 
   const handleAction = async (action, student) => {
-    console.log(action, student)
     switch (action) {
       case 'StudentProfile':
         navigate(`/student/${student.id}`)

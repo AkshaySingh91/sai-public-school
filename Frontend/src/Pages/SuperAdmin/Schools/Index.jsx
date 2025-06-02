@@ -32,7 +32,6 @@ const ManageSchools = () => {
       if (list.length > 0 && !selectedSchoolId) {
         setSelectedSchoolId(list[0].id);
       }
-      // console.log({ school })
     } catch (error) {
       console.error("Error fetching schools:", error);
       Swal.fire("Error", "Failed to load schools", "error");
@@ -309,7 +308,6 @@ const AccountantList = ({ schoolCode }) => {
         where("role", "==", "accountant")
       );
       const snapshot = await getDocs(q);
-      console.log(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
       setAccountants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
       console.error("Error fetching accountants:", error);

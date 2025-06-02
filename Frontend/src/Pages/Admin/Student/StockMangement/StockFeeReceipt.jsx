@@ -82,7 +82,6 @@ function convertToWords(n) {
 function StockFeeReceipt({ student, school, transaction }) {
   const { fname, lname, class: cls, div, academicYear, feeId } = student;
   const items = transaction.items || [];
-  console.log(transaction)
   const totalAmount = items.reduce((sum, item) => sum + (item.total || 0), 0);
   return (
     <div className="px-8 py-2 bg-white text-sm leading-relaxed text-black print:p-0">

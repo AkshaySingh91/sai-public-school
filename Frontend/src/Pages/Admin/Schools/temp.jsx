@@ -141,7 +141,6 @@ export default function FeeStructure() {
                 Number(value) || 0,
             ])
         );
-        console.log({ year, className, stName, feeStructure })
         setStructures((prev) =>
             prev.map((s) => {
                 if (s.year !== year) return s;
@@ -298,7 +297,6 @@ const YearSection = ({
 }) => {
     const containerRef = useRef(null);
     const prevClassesLength = useRef(yearStruct.classes.length);
-    console.log({ yearStruct })
     useEffect(() => {
         if (yearStruct.classes.length > prevClassesLength.current) {
             const lastClassElement = containerRef.current?.lastElementChild;

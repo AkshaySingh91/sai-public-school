@@ -56,7 +56,6 @@ export default function FeeStructure() {
               const getStartYear = (year) => parseInt(year?.split("-")[0] || "00");
               return getStartYear(b.year) - getStartYear(a.year);
             });
-            console.log(sorted[0].year)
             setSelectedYear(sorted[0].year);
           }
         } else {
@@ -137,7 +136,6 @@ export default function FeeStructure() {
   };
 
   const addClass = (year, className) => {
-    console.log(year, className)
     setStructures((prev) =>
       prev.map((s) =>
         s.year === year
@@ -176,7 +174,6 @@ export default function FeeStructure() {
     );
     const currYear = selectedYear;
     const currClass = selectedClass;
-    console.log(selectedClass, selectedYear)
 
     setStructures((prev) =>
       prev.map((s) => {
@@ -338,7 +335,6 @@ export default function FeeStructure() {
                         }
                       }).then((result) => {
                         if (result.isConfirmed) {
-                          console.log(result.value)
                           setNewYear(result.value);
                           addYear(result.value);
                         }
@@ -409,7 +405,6 @@ export default function FeeStructure() {
                           }
                         }
                       }).then((result) => {
-                        console.log(result)
                         if (result.isConfirmed && selectedYear) {
                           addClass(selectedYear, result.value);
                           setSelectedClass(result.value);

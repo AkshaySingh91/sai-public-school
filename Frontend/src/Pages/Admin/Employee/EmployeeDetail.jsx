@@ -160,7 +160,6 @@ const EmployeeDetail = () => {
   };
   const handleAvatarUpload = async (file) => {
     if (!file) return;
-    console.log(file)
     try {
       setLocalLoading(true);
       validateFile(file);

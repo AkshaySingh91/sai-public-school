@@ -39,7 +39,6 @@ const SuperAdminProfile = ({ profile, setProfile, handleProfileUpdate }) => {
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
     const openProfilePhotoModal = () => {
-        console.log("object")
         setIsProfileModalOpen(true);
         document.body.style.overflow = 'hidden';
     };

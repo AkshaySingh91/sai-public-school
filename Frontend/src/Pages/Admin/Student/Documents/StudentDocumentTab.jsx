@@ -20,7 +20,6 @@ const StudentDocumentTab = ({ student, setStudent }) => {
     const { studentId } = useParams();
     const { school } = useSchool();
     const { currentUser } = useAuth();
-    console.log(currentUser)
     const validateDocument = (file) => {
         if (!ALLOWED_TYPES.includes(file.type)) {
             throw new Error('Allowed formats: PDF, JPG, PNG');

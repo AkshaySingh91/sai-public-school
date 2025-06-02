@@ -29,7 +29,6 @@ export default function StudentDemographics() {
                     return { type, count: snap.size };
                 }));
                 setStudentTypes(typeCounts);
-                console.log(typeCounts)
                 // Fetch class division counts
                 const classes = school.class || [];
                 const strengthData = await Promise.all(classes.map(async (cls) => {
@@ -49,7 +48,6 @@ export default function StudentDemographics() {
 
                     return { class: cls, divisions: divisionCounts, total };
                 }));
-                console.log(strengthData)
                 setClassStrength(strengthData);
             } catch (error) {
                 console.error("Error fetching data:", error);

@@ -108,7 +108,6 @@ const PaymentStructure = () => {
         : accounts.map((acc, index) =>
           index === editingIndex ? accountDetails : acc
         );
-      console.log(updatedAccounts)
       await updateDoc(doc(db, 'schools', schoolDoc.id), {
         accounts: updatedAccounts
       });

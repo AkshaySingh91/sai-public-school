@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { User, Phone, } from 'lucide-react';
 
 const StudentStockProfilCard = ({ student }) => {
-    console.log(student)
     const getStatusBadge = (status) => {
         const statusConfig = {
             current: { bg: 'bg-green-100', text: 'text-green-700', label: 'Current' },

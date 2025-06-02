@@ -136,7 +136,6 @@ export default function PersonalInfo({ formData, setFormData, studentId, schoolD
       }))
       buses = buses.filter(b => {
         if (b.destinations && b.destinations.length) {
-          // b.destinations.forEach((d) => console.log(d.name?.toLowerCase(), selectedName?.toLowerCase()))
           return b.destinations.find(d => d.name?.toLowerCase() === selectedName?.toLowerCase())
         }
       });

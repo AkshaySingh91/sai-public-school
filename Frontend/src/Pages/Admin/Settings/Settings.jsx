@@ -73,7 +73,6 @@ const Settings = () => {
         department: profileData.department || "",
         dateOfJoining: profileData.dateOfJoining || "",
       });
-      console.log(schoolData)
       setSchool(schoolData);
       setError(null);
     } catch (err) {

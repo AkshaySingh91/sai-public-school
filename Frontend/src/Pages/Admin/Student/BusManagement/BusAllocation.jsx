@@ -75,11 +75,9 @@ const BusAllocation = () => {
 
   // Filtered students memoization
   const filteredStudents = useMemo(() => {
-    console.log(filters)
     return students.filter(student => {
       const matchesFilters = Object.entries(filters).every(([key, value]) => {
         if (value === 'All' || !value) return true;
-        console.log(key, student?.type?.toLowerCase(), value.toLowerCase())
         switch (key) {
           case 'searchQuery':
             const searchTerms = value.toLowerCase().split(' ');

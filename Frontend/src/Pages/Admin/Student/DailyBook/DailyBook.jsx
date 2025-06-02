@@ -154,37 +154,37 @@ export default function DailyBook() {
     setSortConfig({ key, direction });
   };
 
-  useEffect(() => {
-    const fetchDaily = async () => {
-      setLoading(true);
-      const studentsQ = query(
-        collection(db, "students"),
-        where("schoolCode", "==", school.Code)
-      );
-      const snap = await getDocs(studentsQ);
-      const allTx = [];
+  const fetchDaily = async () => {
+    setLoading(true);
+    const studentsQ = query(
+      collection(db, "students"),
+      where("schoolCode", "==", school.Code)
+    );
+    const snap = await getDocs(studentsQ);
+    const allTx = [];
 
-      snap.forEach((doc) => {
-        const data = doc.data();
-        (data.transactions || []).forEach((t) => {
-          const txDate = new Date(t.timestamp);
-          // dont add imported transaction , but show cancle transaction
-          if (!(isNaN(Number(t.receiptId)) && t.status === "completed") && txDate >= fromDate && txDate <= toDate) {
-            allTx.push({
-              studentId: doc.id,
-              fname: data.fname || "",
-              fatherName: data.fatherName || "",
-              lname: data.lname || "",
-              ...t,
-            });
-          }
-        });
+    snap.forEach((doc) => {
+      const data = doc.data();
+      (data.transactions || []).forEach((t) => {
+        const txDate = new Date(t.timestamp);
+        // dont add imported transaction , but show cancle transaction
+        if (!(isNaN(Number(t.receiptId)) && t.status === "completed") && txDate >= fromDate && txDate <= toDate) {
+          allTx.push({
+            studentId: doc.id,
+            fname: data.fname || "",
+            fatherName: data.fatherName || "",
+            lname: data.lname || "",
+            ...t,
+          });
+        }
       });
+    });
 
-      allTx.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      setTransactions(allTx);
-      setLoading(false)
-    };
+    allTx.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    setTransactions(allTx);
+    setLoading(false)
+  };
+  useEffect(() => {
     fetchDaily();
   }, [school.Code, fromDate, toDate, userData, school.Code]);
 
@@ -321,9 +321,10 @@ export default function DailyBook() {
         (t) => (isCompleted ? t.receiptId : t.tempReceiptId) !== (isCompleted ? tx.receiptId : tx.tempReceiptId)
       );
       // return
+      const ref = doc(db, 'students', tx.studentId);
       await updateDoc(ref, { transactions: newTrans });
       setTransactions(newTrans)
-      fetchData()
+      fetchDaily()
       Swal.fire('Deleted!', 'Transaction removed and fees rolled back.', 'success');
     } catch (e) {
       Swal.fire('Error', e.message, 'error');

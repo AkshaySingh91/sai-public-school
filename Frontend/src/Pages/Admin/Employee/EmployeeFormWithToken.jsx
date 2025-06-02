@@ -61,7 +61,6 @@ const EmployeeForm = () => {
   const validateToken = async (token) => {
     try {
       const tokenDoc = await getDoc(doc(db, 'shareTokens', token));
-      console.log(tokenDoc.exists())
       if (!tokenDoc.exists()) {
         throw new Error('Invalid token');
       }
@@ -80,11 +79,9 @@ const EmployeeForm = () => {
       }
 
       // check if school with give code exist 
-      console.log(tokenData.schoolCode)
       const schoolsRef = collection(db, "schools");
       const q = query(schoolsRef, where("Code", "==", tokenData.schoolCode));
       const querySnapshot = await getDocs(q);
-      console.log(querySnapshot.empty)
 
       if (querySnapshot.empty) {
         throw new Error('School not found');

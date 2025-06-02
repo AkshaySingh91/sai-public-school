@@ -89,7 +89,6 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
     let classStructure = yearStructure.classes?.find(
       (c) => c.name?.trim().toLowerCase() === newClass?.trim()?.toLowerCase()
     );
-    console.log(classStructure)
     if (!classStructure || !classStructure.studentType || !classStructure.studentType.length) {
       console.warn(`No fee structure found for class ${newClass}`);
       return {
@@ -108,9 +107,8 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
     // it is for semi student
     // if this condition is false it means student next class does not have semi fee structure thus normal fees will assign
     if (!englishMedium && classStructure.studentType.find(c => c.englishMedium === englishMedium) && classStructure.studentType.find(c => c.name?.toLowerCase() === student.type?.toLowerCase())) {
-      classStructure = classStructure.studentType.filter(c => c.englishMedium === englishMedium)
+      classStructure.studentType = classStructure.studentType.filter(c => c.englishMedium === englishMedium)
     }
-
     const studentType = classStructure.studentType?.find(
       (st) => st.name?.trim().toLowerCase() === student.type?.trim().toLowerCase()
     );
@@ -141,18 +139,6 @@ export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, 
     const originalFeeStructure = originalFees.feeStructure || {};
     const originalAdmissionFee = Number(originalFeeStructure.AdmissionFee) || 0;
     const originalTutuionFee = Number(originalFeeStructure.TuitionFee) || 0;
-    console.log({
-      originalFees: {
-        AdmissionFee: originalAdmissionFee,
-        tuitionFee: originalTutuionFee,
-        total: originalAdmissionFee + originalTutuionFee,
-      },
-      studentFees: {
-        AdmissionFee: AdmissionFee,
-        tuitionFee: tuitionFee,
-        total: AdmissionFee + tuitionFee,
-      }
-    });
 
     return {
       originalFees: {
@@ -241,7 +227,6 @@ export function StudentDetail() {
       await goToNextAcademicYear();
       return;
     }
-    console.log("object2", formData)
     try {
       await updateDoc(doc(db, "students", studentId), formData);
       Swal.fire("Success!", "Student details updated", "success");
@@ -463,7 +448,6 @@ export function StudentDetail() {
       // 5. Create transaction object
       // if mode !== cheque , than receiptId will be total reciept in this year + 1 
       // check if transaction if of bus or tuition
-      console.log(historicalSnapshot)
       let receiptId;
       if (feeType?.toLowerCase() == "busfee") {
         receiptId = (Number(schoolData.busReceiptCount) || 0) + 1;
@@ -695,7 +679,6 @@ export function StudentDetail() {
 
         // 3) Compute unpaid for current year from transactions
         const unpaidOf = (key) => {
-          // console.log(currentFees)
           const due = key?.toLowerCase() === "tuitionfee" ? currentFees.tuitionFees?.total || 0 : currentFees[key] || 0;
           let paid = 0;
           // for tuition fee we also have to take sum of admissionfee
@@ -823,7 +806,6 @@ export function StudentDetail() {
 
         // 3) Compute unpaid for current year from transactions
         const unpaidOf = (key) => {
-          // console.log(currentFees)
           const due = key?.toLowerCase() === "tuitionfee" ? currentFees.tuitionFees?.total || 0 : currentFees[key] || 0;
           let paid = 0;
           // for tuition fee we also have to take sum of admissionfee

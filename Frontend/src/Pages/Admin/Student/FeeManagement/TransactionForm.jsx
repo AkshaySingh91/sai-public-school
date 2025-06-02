@@ -6,7 +6,6 @@ import { InputField } from '../InputField'
 import { SelectField } from '../SelectField'
 import { useEffect, useState } from "react"
 function TransactionForm({ newTransaction, setNewTransaction, schoolData, handleTransactionSubmit, student }) {
-    console.log(schoolData)
     const [isThisYear, setIsThisYear] = useState(true);
     useEffect(() => {
         const [curStart, curEnd] = student.academicYear
@@ -23,7 +22,6 @@ function TransactionForm({ newTransaction, setNewTransaction, schoolData, handle
                 ...prev, academicYear: student.academicYear
             }))
         }
-        console.log(isThisYear)
     }, [isThisYear])
     return (
         <>

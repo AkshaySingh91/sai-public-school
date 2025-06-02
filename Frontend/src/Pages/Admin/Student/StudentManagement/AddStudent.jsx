@@ -140,9 +140,7 @@ export default function AddStudent() {
       let tuitionFeesDiscount = 0;
       // to calculate dis if student is new than we will subtract it from total of DS ie (tuition+addminssion) else ig current than only subtract from tuition because we dont take admissionFee.
       if (formData.type?.toLowerCase() === 'dsr' || formData.type?.toLowerCase() === 'dss') {
-        console.log(studentType, classStructure)
         const dsStructure = classStructure.find(st => st.name?.toLowerCase() === 'ds');
-        console.log(dsStructure)
         if (!dsStructure) {
           throw new Error('DS fee structure not found for discount calculation');
         }
@@ -157,7 +155,6 @@ export default function AddStudent() {
         const dssTotal = tuitionFees.total;
         tuitionFeesDiscount = Math.max(dsTotal - dssTotal, 0);
       }
-      console.log({ tuitionFeesDiscount })
       // feeId will total feeId + 1
       const feeId = (Number(school.feeIdCount) || 0) + 1;
       // Prepare student data with fees

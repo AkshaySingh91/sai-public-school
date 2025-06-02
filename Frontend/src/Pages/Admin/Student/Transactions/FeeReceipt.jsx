@@ -115,7 +115,6 @@ export default function FeeReceipt({ student, school, transaction }) {
     remainingBefore = 0,  //fee remain before this payment
     remainingAfter = 0,   //fee remain after this payment
   } = historicalSnapshot || {};
-  console.log(historicalSnapshot, transaction)
   // Build receipt rows based on fee type
   const rows = [];
   const showDiscount = ["bus", "tuition"].includes(feeCategory.toLowerCase());

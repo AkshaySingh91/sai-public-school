@@ -129,7 +129,6 @@ function BusList() {
       }));
       busList.sort((a, b) => a.busNo.localeCompare(b.busNo, undefined, { numeric: true }));
       setBuses(busList);
-      console.log(busList)
     } catch (error) {
       console.error("Error fetching buses:", error);
     } finally {
@@ -283,7 +282,6 @@ function BusList() {
   const totalPages = Math.ceil(filteredBuses.length / itemsPerPage);
   // Export to Excel
   const exportToExcel = () => {
-    console.log(buses)
     const headers = {
       BusNo: '',
       NumberPlate: '',

@@ -91,7 +91,6 @@ const AdminDashboard = () => {
         fetchData();
     }, [school, userData]);
 
-    console.log({ school })
     return (
         <div className="bg-gradient-to-br from-gray-50 to-purple-50 min-h-screen space-y-6 p-2">
             <div className="bg-gradient-to-r from-slate-50 to-indigo-50 px-6 py-4 rounded-xl shadow-sm border border-gray-100">
