@@ -5,7 +5,11 @@ import { useAuth } from "../../../../contexts/AuthContext";
 import { useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { doc, writeBatch } from "firebase/firestore";
-import { db } from "../../../../config/firebase";
+import { db, auth } from "../../../../config/firebase";
+
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 function StudentProfilePhoto({ formData, setFormData }) {
     const [localLoading, setLocalLoading] = useState(false);
@@ -13,7 +17,9 @@ function StudentProfilePhoto({ formData, setFormData }) {
     const storage = getStorage();
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-    const [uploading, setUploading] = useState(false);
+    const { studentId } = useParams();
+    const { currentUser } = useAuth();
+
     const validateFile = (file) => {
         if (!ALLOWED_TYPES.includes(file.type)) {
             throw new Error('Only JPG, PNG, and WEBP images are allowed');
@@ -22,98 +28,96 @@ function StudentProfilePhoto({ formData, setFormData }) {
             throw new Error('File size exceeds 5MB limit');
         }
     };
-    const { studentId } = useParams();
-    const { currentUser } = useAuth();
+
     const handleAvatarUpload = async (file) => {
         if (!file) return;
         try {
+            const userToken = await currentUser.getIdToken();
             setLocalLoading(true);
             validateFile(file);
+            const formData = new FormData();
+            formData.append('avatar', file);
+            // Show initial progress dialog
+            Swal.fire({
+                title: 'Uploading...',
+                html: `
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="upload-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2" id="upload-percent">0% Complete</div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+            });
+            // Use XMLHttpRequest to track upload progress and get back the JSON
+            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/school/students/avatar/${studentId}` : `${VITE_DOMAIN_PROD}/api/admin/school/students/avatar/${studentId}`
+            const uploadResult = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url);
+                xhr.setRequestHeader('Authorization', 'Bearer ' + userToken);
 
-            const timestamp = Date.now();
-            const fileExt = file.name.split('.').pop();
-            const newFileName = `admin/${currentUser.uid}/students/${studentId}/${timestamp}.${fileExt}`;
-            const storageRef = ref(storage, newFileName);
-            // Show progress dialog
-            let progressDialog;
-            const showProgress = (progress) => {
-                progressDialog = Swal.fire({
-                    title: 'Uploading...',
-                    html: `<div class="w-full bg-gray-200 rounded-full h-2.5">
-                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progress}%"></div>
-              </div>
-              <div class="mt-2">${Math.round(progress)}% Complete</div>`,
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                });
-            };
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const percent = Math.round((event.loaded / event.total) * 100);
+                        const bar = document.getElementById('upload-bar');
+                        const pctText = document.getElementById('upload-percent');
+                        if (bar) bar.style.width = `${percent}%`;
+                        if (pctText) pctText.innerText = `${percent}% Complete`;
+                    }
+                };
 
-            // Handle existing image deletion
-            let oldImageDeleted = false;
-            if (formData.avatar && formData.avatar.avatarUrl) {
-                try {
-                    await deleteObject(ref(storage, formData?.avatar?.avatarUrl));
-                    oldImageDeleted = true;
-                } catch (deleteErr) {
-                    console.warn('Old image deletion warning:', deleteErr);
-                    if (deleteErr.code !== 'storage/object-not-found') throw deleteErr;
-                }
-            }
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const json = JSON.parse(xhr.responseText);
+                            resolve(json);
+                        } catch (parseErr) {
+                            reject(new Error('Invalid JSON from server'));
+                        }
+                    } else {
+                        reject(new Error(`Upload failed with status ${xhr.status}`));
+                    }
+                };
 
-            // Upload with progress tracking
-            const uploadTask = uploadBytesResumable(storageRef, file);
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    showProgress(progress);
-                },
-                (error) => {
-                    Swal.close();
-                    throw error;
-                }
-            );
+                xhr.onerror = () => reject(new Error('Network error during upload'));
+                xhr.send(formData);
+            });
 
-            await uploadTask;
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            // Atomic Firestore update
+            Swal.close();
+
+            const { avatar } = uploadResult;
             const batch = writeBatch(db);
             const studentRef = doc(db, "students", studentId);
             batch.update(studentRef, {
                 avatar: {
-                    avatarUrl: downloadURL,
-                    avatarImagePath: newFileName,
-                    updatedAt: new Date().toISOString()
+                    avatarUrl: avatar.avatarUrl,
+                    avatarImagePath: avatar.avatarImagePath,
+                    updatedAt: avatar.updatedAt
                 }
-            }); 
+            });
             await batch.commit();
             // Update local state
             setFormData(prev => ({
                 ...prev,
                 avatar: {
-                    avatarUrl: downloadURL,
-                    avatarImagePath: newFileName,
-                    updatedAt: new Date().toISOString()
+                    avatarUrl: avatar.avatarUrl,
+                    avatarImagePath: avatar.avatarImagePath,
+                    updatedAt: avatar.updatedAt
                 }
             }));
             Swal.fire({
                 icon: 'success',
                 title: 'Avatar Image Updated!',
                 showConfirmButton: false,
-                timer: 1500
+                timer: 1500,
             });
         } catch (err) {
             console.error('Upload Error:', err);
-            // Handle specific storage errors
-            let errorMessage = err.message;
-            if (err.code === 'storage/canceled') {
-                errorMessage = 'Upload was canceled';
-            } else if (err.code === 'storage/retry-limit-exceeded') {
-                errorMessage = 'Upload failed after multiple attempts';
-            }
+            Swal.close();
             Swal.fire({
                 icon: 'error',
                 title: 'Upload Failed',
-                html: `<div class="text-red-600">${errorMessage}</div>`,
+                html: `<div class="text-red-600">${err.message}</div>`,
             });
         } finally {
             setLocalLoading(false);

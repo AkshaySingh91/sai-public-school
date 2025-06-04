@@ -5,11 +5,11 @@ export const SelectField = ({ icon, label, value, onChange, options, required = 
       {label}
       {required && <span className="text-red-500 ml-1">*</span>}
     </label>
-    <div className="relative">
+    <div className="">
       <select
         value={value}
         onChange={onChange}
-        className={`${!className ? "w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none appearance-none transition-all" : className}`}
+        className={`${!className ? "w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none appearance-none transition-all z-0" : className}`}
         required={required}
         {...props}
       >

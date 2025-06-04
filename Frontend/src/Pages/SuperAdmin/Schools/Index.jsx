@@ -5,9 +5,7 @@ import { db, auth } from "../../../config/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import SchoolModal from "./SchoolModal";
 import AccountantModal from "./AccountantModal";
-import { deleteUser } from "firebase/auth";
 import Swal from "sweetalert2";
-import TableLoader from "../../../components/TableLoader";
 import { useNavigate } from "react-router-dom";
 import { useSchool } from "../../../contexts/SchoolContext";
 import { FiPlus, FiTrash2, FiUserPlus, FiRefreshCw, FiLogOut, FiHome, FiChevronRight } from "react-icons/fi";
@@ -441,52 +439,7 @@ const AccountantList = ({ schoolCode }) => {
                 >
                   <FiTrash2 />
                 </button>
-              </motion.div>
-
-              {isProfileModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                  {/* Backdrop */}
-                  <div
-                    className="absolute rounded-md bg-clip-padding backdrop-filter  border border-gray-100  inset-0 z-10 flex items-center justify-center px-4 sm:px-6 md:px-8 backdrop-blur-sm "
-                    onClick={closeProfilePhotoModal}
-                  ></div>
-
-                  {/* Modal Content */}
-                  <div className="relative z-50 max-w-md w-full mx-4 animate-in fade-in zoom-in duration-300 ">
-                    {/* Close Button */}
-                    <button
-                      onClick={closeProfilePhotoModal}
-                      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all duration-200 hover:scale-110"
-                    >
-                      <X size={20} />
-                    </button>
-
-                    {/* Profile Photo */}
-                    <div className="flex flex-col items-center">
-                      <div className="relative mb-6">
-                        {/* Photo Container */}
-                        <div className="relative w-96 h-96 rounded-full overflow-hidden border-2 border-white/30 shadow-xl">
-                          {acc && acc.profileImage ? (
-                            <img
-                              src={acc.profileImage}
-                              className="w-full h-full object-cover"
-                              alt="Profile"
-                            />
-                          ) : (
-                            <div className="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto my-auto">
-                              <FaUserTie className="text-indigo-600" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Shine Effect */}
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                      </div>
-
-                    </div>
-                  </div>
-                </div>
-              )}
+              </motion.div> 
             </>
           ))}
         </AnimatePresence>

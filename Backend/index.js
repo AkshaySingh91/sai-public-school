@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
-import fileUpload from 'express-fileupload';
-import { auth, firestore, storage } from './utils/firebase.js'
+import { auth, firestore, storage } from './utils/firebase.js' // initilize firebase before proceding to any route
 import { verifyAccountant, fetchSchool } from './Middleware/getAuth.js';
 
 config();
@@ -29,25 +28,21 @@ const configureCORS = () => {
         credentials: true
     });
 };
-// Configure file upload
-const configureFileUpload = () => fileUpload({
-    limits: { fileSize: 5 * 1024 * 1024 },
-    abortOnLimit: true,
-    responseOnLimit: 'File size exceeds 5MB limit'
-});
+// Configure file upload 
 
 const initializeApp = async () => {
     try {
         // Apply middleware
         app.use(configureCORS());
         app.use(express.json());
-        app.use(configureFileUpload());
 
         // Import routes after Firebase initialization
         const { default: settingsRouter } = await import('./Routes/settings.js');
         const { default: superadminSettings } = await import('./Routes/superadminSettings.js');
+        const { default: fileUpload } = await import('./Routes/fileUpload.js');
 
         // Apply routes
+        app.use('/api/admin/school', verifyAccountant, fileUpload);
         app.use('/api/admin/settings', verifyAccountant, fetchSchool, settingsRouter);
         app.use('/api/superadmin/settings', verifyAccountant, superadminSettings);
 

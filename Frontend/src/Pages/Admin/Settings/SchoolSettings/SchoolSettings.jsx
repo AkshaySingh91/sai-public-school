@@ -4,8 +4,7 @@ import Swal from "sweetalert2";
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useSchool } from "../../../../contexts/SchoolContext"
 import { auth, db } from '../../../../config/firebase'; // Ensure auth is imported correctly
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { doc, writeBatch, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
 const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
 const VITE_PORT = import.meta.env.VITE_PORT;
@@ -14,7 +13,6 @@ const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 const SchoolSettings = ({ school, setSchool }) => {
     // this school is use to get the school id
     const { school: s } = useSchool();
-
     const { userData, currentUser } = useAuth();
     const { refresh } = useSchool();
     const [schoolName, setSchoolName] = useState(school.schoolName || "");
@@ -33,10 +31,10 @@ const SchoolSettings = ({ school, setSchool }) => {
     const [schoolEmail, setSchoolEmail] = useState(school.email || "")
     const [schoolMobile, setSchoolMobile] = useState(school.mobile || "")
     // file upload
-    const storage = getStorage();
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     const [uploading, setUploading] = useState(false);
+
     const validateFile = (file) => {
         if (!ALLOWED_TYPES.includes(file.type)) {
             throw new Error('Only JPG, PNG, and WEBP images are allowed');
@@ -242,73 +240,64 @@ const SchoolSettings = ({ school, setSchool }) => {
             setUploading(true);
             validateFile(file);
 
-            const timestamp = Date.now();
-            const fileExt = file.name.split('.').pop();
-            const newFileName = `admin/${currentUser.uid}/${timestamp}.${fileExt}`;
-            const storageRef = ref(storage, newFileName);
+            const userToken = await currentUser.getIdToken();
+            const formData = new FormData();
+            formData.append('schoolLogo', file);
             // Show progress dialog
-            let progressDialog;
-            const showProgress = (progress) => {
-                progressDialog = Swal.fire({
-                    title: 'Uploading...',
-                    html: `<div class="w-full bg-gray-200 rounded-full h-2.5">
-                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progress}%"></div>
-              </div>
-              <div class="mt-2">${Math.round(progress)}% Complete</div>`,
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                });
-            };
-
-            // Handle existing image deletion
-            let oldImageDeleted = false;
-            if (school.logoUrl) {
-                try {
-                    await deleteObject(ref(storage, school.logoImagePath));
-                    oldImageDeleted = true;
-                } catch (deleteErr) {
-                    console.warn('Old image deletion warning:', deleteErr);
-                    if (deleteErr.code !== 'storage/object-not-found') throw deleteErr;
-                }
-            }
-
-            // Upload with progress tracking
-            const uploadTask = uploadBytesResumable(storageRef, file);
-
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    showProgress(progress);
+            Swal.fire({
+                title: 'Uploading Document...',
+                html: 'Please wait while we process your file.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
                 },
-                (error) => {
-                    Swal.close();
-                    throw error;
-                }
-            );
-
-            await uploadTask;
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            // Atomic Firestore update
-            const batch = writeBatch(db);
-            const userRef = doc(db, 'schools', s.id);
-            batch.update(userRef, {
-                logoUrl: downloadURL,
-                logoImagePath: newFileName,
-                updatedAt: new Date().toISOString()
             });
+            // Use XMLHttpRequest to track upload progress and get back the JSON
+            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/school/logo/${s.id}` : `${VITE_DOMAIN_PROD}/api/admin/school/logo/${s.id}`
 
-            await batch.commit();
+            const uploadResult = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url);
+                xhr.setRequestHeader('Authorization', 'Bearer ' + userToken);
 
-            // Update local state
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const percent = Math.round((event.loaded / event.total) * 100);
+                        const bar = document.getElementById('upload-bar');
+                        const pctText = document.getElementById('upload-percent');
+                        if (bar) bar.style.width = `${percent}%`;
+                        if (pctText) pctText.innerText = `${percent}% Complete`;
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const json = JSON.parse(xhr.responseText);
+                            resolve(json);
+                        } catch (parseErr) {
+                            reject(new Error('Invalid JSON from server'));
+                        }
+                    } else {
+                        reject(new Error(`Upload failed with status ${xhr.status}`));
+                    }
+                };
+
+                xhr.onerror = () => reject(new Error('Network error during upload'));
+                xhr.send(formData);
+            });
+            Swal.close();
+            const { metaData } = uploadResult;
+
             setSchool(prev => ({
                 ...prev,
-                logoUrl: downloadURL,
-                logoImagePath: newFileName
+                logoUrl: metaData.logoUrl,
+                logoImagePath: metaData.logoImagePath
             }));
 
             Swal.fire({
                 icon: 'success',
-                title: 'Logo Image Updated!',
+                title: 'Profile Image Updated!',
                 showConfirmButton: false,
                 timer: 1500
             });

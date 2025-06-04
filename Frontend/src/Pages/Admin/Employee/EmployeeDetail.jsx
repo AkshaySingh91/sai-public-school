@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
-import { db } from "../../../config/firebase";
+import { auth, db } from "../../../config/firebase";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-import { deleteObject, getDownloadURL, getStorage, ref, uploadBytesResumable } from "firebase/storage";
 import { useAuth } from "../../../contexts/AuthContext";
 import { User, Camera, Download, Share, X } from 'lucide-react';
 
 const MySwal = withReactContent(Swal);
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const EmployeeDetail = () => {
-  const { uid } = useParams();
+  const { uid } = useParams(); //employee uid
   const { userData } = useAuth();
   const navigate = useNavigate();
   const [employee, setEmployee] = useState({
@@ -40,6 +42,7 @@ const EmployeeDetail = () => {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const user = auth.currentUser;
 
   const designationOptions = [
     "Teacher",
@@ -146,11 +149,9 @@ const EmployeeDetail = () => {
   };
   // avatar upload section
   // file upload
-  const storage = getStorage();
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-  const [uploading, setUploading] = useState(false);
   const validateFile = (file) => {
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     if (!ALLOWED_TYPES.includes(file.type)) {
       throw new Error('Only JPG, PNG, and WEBP images are allowed');
     }
@@ -160,102 +161,94 @@ const EmployeeDetail = () => {
   };
   const handleAvatarUpload = async (file) => {
     if (!file) return;
+    const userToken = await user.getIdToken();
+
     try {
       setLocalLoading(true);
       validateFile(file);
 
-      const timestamp = Date.now();
-      const fileExt = file.name.split('.').pop();
-      const newFileName = `admin/employee/${currentUser.uid}/${timestamp}.${fileExt}`;
-      const storageRef = ref(storage, newFileName);
-      // Show progress dialog
-      let progressDialog;
-      const showProgress = (progress) => {
-        progressDialog = Swal.fire({
-          title: 'Uploading...',
-          html: `<div class="w-full bg-gray-200 rounded-full h-2.5">
-                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progress}%"></div>
-              </div>
-              <div class="mt-2">${Math.round(progress)}% Complete</div>`,
-          showConfirmButton: false,
-          allowOutsideClick: false,
-        });
-      };
+      const formData = new FormData();
+      formData.append('avatar', file);
 
-      // Handle existing image deletion
-      let oldImageDeleted = false;
-      if (employee.avatar && employee.avatar.avatarUrl) {
-        try {
-          await deleteObject(ref(storage, employee?.avatar?.avatarUrl));
-          oldImageDeleted = true;
-        } catch (deleteErr) {
-          console.warn('Old image deletion warning:', deleteErr);
-          if (deleteErr.code !== 'storage/object-not-found') throw deleteErr;
-        }
-      }
-
-      // Upload with progress tracking
-      const uploadTask = uploadBytesResumable(storageRef, file);
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          showProgress(progress);
-        },
-        (error) => {
-          Swal.close();
-          throw error;
-        }
-      );
-
-      await uploadTask;
-      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-      // Atomic Firestore update
-      const batch = writeBatch(db);
-      const employeeRef = doc(db, "Employees", uid);
-      batch.update(employeeRef, {
-        avatar: {
-          avatarUrl: downloadURL,
-          avatarImagePath: newFileName,
-          updatedAt: new Date().toISOString()
-        }
+      // Show initial progress dialog
+      Swal.fire({
+        title: 'Uploading...',
+        html: `
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+          <div id="upload-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
+        <div class="mt-2" id="upload-percent">0% Complete</div>
+      `,
+        showConfirmButton: false,
+        allowOutsideClick: false,
       });
 
-      await batch.commit();
+      // Use XMLHttpRequest to track upload progress and get back the JSON       
+      const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/school/employee/avatar/${uid}` : `${VITE_DOMAIN_PROD}/api/admin/school/employee/avatar/${uid}`
+      const uploadResult = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader('Authorization', 'Bearer ' + userToken);
 
-      // Update local state
-      setEmployee(prev => ({
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            const bar = document.getElementById('upload-bar');
+            const pctText = document.getElementById('upload-percent');
+            if (bar) bar.style.width = `${percent}%`;
+            if (pctText) pctText.innerText = `${percent}% Complete`;
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const json = JSON.parse(xhr.responseText);
+              resolve(json);
+            } catch (parseErr) {
+              reject(new Error('Invalid JSON from server'));
+            }
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+        xhr.send(formData);
+      });
+
+      Swal.close();
+
+      // uploadResult should be { message: '...', avatar: { avatarUrl, avatarImagePath, updatedAt } }
+      const { avatar } = uploadResult;
+      setEmployee((prev) => ({
         ...prev,
         avatar: {
-          avatarUrl: downloadURL,
-          avatarImagePath: newFileName,
-          updatedAt: new Date().toISOString()
-        }
+          avatarUrl: avatar.avatarUrl,
+          avatarImagePath: avatar.avatarImagePath,
+          updatedAt: avatar.updatedAt,
+        },
       }));
 
       Swal.fire({
         icon: 'success',
         title: 'Avatar Image Updated!',
         showConfirmButton: false,
-        timer: 1500
+        timer: 1500,
       });
     } catch (err) {
       console.error('Upload Error:', err);
-      // Handle specific storage errors
-      let errorMessage = err.message;
-      if (err.code === 'storage/canceled') {
-        errorMessage = 'Upload was canceled';
-      } else if (err.code === 'storage/retry-limit-exceeded') {
-        errorMessage = 'Upload failed after multiple attempts';
-      }
+      Swal.close();
       Swal.fire({
         icon: 'error',
         title: 'Upload Failed',
-        html: `<div class="text-red-600">${errorMessage}</div>`,
+        html: `<div class="text-red-600">${err.message}</div>`,
       });
     } finally {
       setLocalLoading(false);
     }
   };
+
   if (loading) return <SkeletonLoader type="settings" />;
   if (error) return <p className="text-red-500 text-center py-12">{error}</p>;
 

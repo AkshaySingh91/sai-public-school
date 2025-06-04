@@ -3,11 +3,16 @@ import { Upload, Trash2, Loader, User } from 'lucide-react';
 import Swal from "sweetalert2";
 import { reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
 import { auth, db } from '../../../../config/firebase'; // Ensure auth is imported correctly
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { doc, writeBatch, getDoc } from "firebase/firestore";
+import { getStorage, ref, deleteObject } from "firebase/storage";
+import { doc, writeBatch, } from "firebase/firestore";
 import { useAuth } from "../../../../contexts/AuthContext"
 import { Camera, Mail, Phone, MapPin, Calendar, Building2, GraduationCap, Shield, X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import PasswordModal from './PasswordModal';
+
+
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
     const [localLoading, setLocalLoading] = useState(false);
@@ -33,7 +38,6 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
             throw new Error('File size exceeds 5MB limit');
         }
     };
-    // for updating profile image 
     const handleDeleteImage = async () => {
         try {
             setLocalLoading(true);
@@ -59,20 +63,24 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
 
             if (!result.isConfirmed) return;
 
-            // Delete from Storage
-            await deleteObject(ref(storage, profile.profileImagePath));
+            const userToken = await currentUser.getIdToken();
+            const url =
+                VITE_NODE_ENV === 'Development'
+                    ? `http://localhost:${VITE_PORT}/api/admin/school/avatar/${currentUser.uid}`
+                    : `${VITE_DOMAIN_PROD}/api/admin/school/avatar/${currentUser.uid}`;
 
-            // Atomic Firestore update
-            const batch = writeBatch(db);
-            const userRef = doc(db, 'Users', currentUser.uid);
-            batch.update(userRef, {
-                profileImage: null,
-                profileImagePath: null,
-                updatedAt: new Date().toISOString()
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + userToken,
+                },
             });
 
-            await batch.commit();
-
+            if (!response.ok) {
+                const errorJson = await response.json().catch(() => ({}));
+                throw new Error(errorJson.error || 'Failed to delete document');
+            }
             // Update local state
             setProfile(prev => ({
                 ...prev,
@@ -87,90 +95,72 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                 timer: 1500
             });
         } catch (err) {
-            console.error('Delete Error:', err);
-            const errorMessage = err.code === 'storage/object-not-found'
-                ? 'Image was already removed'
-                : err.message;
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Deletion Failed',
-                html: `<div class="text-red-600">${errorMessage}</div>`,
-            });
+            console.error('Delete error:', err);
+            Swal.fire('Error', err.message || 'Could not delete document', 'error');
         } finally {
             setLocalLoading(false);
         }
     };
+
     const handleImageUpload = async (file) => {
         if (!file) return;
-
         try {
             setLocalLoading(true);
             validateFile(file);
-
-            const timestamp = Date.now();
-            const fileExt = file.name.split('.').pop();
-            const newFileName = `admin/${currentUser.uid}/${timestamp}.${fileExt}`;
-            const storageRef = ref(storage, newFileName);
-
+            const userToken = await currentUser.getIdToken();
+            const formData = new FormData();
+            formData.append('avatar', file);
             // Show progress dialog
-            let progressDialog;
-            const showProgress = (progress) => {
-                progressDialog = Swal.fire({
-                    title: 'Uploading...',
-                    html: `<div class="w-full bg-gray-200 rounded-full h-2.5">
-                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progress}%"></div>
-              </div>
-              <div class="mt-2">${Math.round(progress)}% Complete</div>`,
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                });
-            };
-
-            // Handle existing image deletion
-            let oldImageDeleted = false;
-            if (profile.profileImagePath) {
-                try {
-                    await deleteObject(ref(storage, profile.profileImagePath));
-                    oldImageDeleted = true;
-                } catch (deleteErr) {
-                    console.warn('Old image deletion warning:', deleteErr);
-                    if (deleteErr.code !== 'storage/object-not-found') throw deleteErr;
-                }
-            }
-
-            // Upload with progress tracking
-            const uploadTask = uploadBytesResumable(storageRef, file);
-
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    showProgress(progress);
+            Swal.fire({
+                title: 'Uploading Document...',
+                html: 'Please wait while we process your file.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
                 },
-                (error) => {
-                    Swal.close();
-                    throw error;
-                }
-            );
-
-            await uploadTask;
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            // Atomic Firestore update
-            const batch = writeBatch(db);
-            const userRef = doc(db, 'Users', currentUser.uid);
-            batch.update(userRef, {
-                profileImage: downloadURL,
-                profileImagePath: newFileName,
-                updatedAt: new Date().toISOString()
             });
+            // Use XMLHttpRequest to track upload progress and get back the JSON
+            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/school/avatar/${currentUser.uid}` : `${VITE_DOMAIN_PROD}/api/admin/school/avatar/${currentUser.uid}`
 
-            await batch.commit();
+            const uploadResult = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url);
+                xhr.setRequestHeader('Authorization', 'Bearer ' + userToken);
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const percent = Math.round((event.loaded / event.total) * 100);
+                        const bar = document.getElementById('upload-bar');
+                        const pctText = document.getElementById('upload-percent');
+                        if (bar) bar.style.width = `${percent}%`;
+                        if (pctText) pctText.innerText = `${percent}% Complete`;
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const json = JSON.parse(xhr.responseText);
+                            resolve(json);
+                        } catch (parseErr) {
+                            reject(new Error('Invalid JSON from server'));
+                        }
+                    } else {
+                        reject(new Error(`Upload failed with status ${xhr.status}`));
+                    }
+                };
+
+                xhr.onerror = () => reject(new Error('Network error during upload'));
+                xhr.send(formData);
+            });
+            Swal.close();
+            const { avatar } = uploadResult;
 
             // Update local state
             setProfile(prev => ({
                 ...prev,
-                profileImage: downloadURL,
-                profileImagePath: newFileName
+                profileImage: avatar.profileImage,
+                profileImagePath: avatar.profileImagePath
             }));
 
             Swal.fire({
@@ -199,7 +189,6 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
             setLocalLoading(false);
         }
     };
-    // for updating profile data
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {

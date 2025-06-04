@@ -11,6 +11,7 @@ import { SelectField } from '../SelectField';
 import { InputField } from "../InputField"
 import { useSchool } from '../../../../contexts/SchoolContext';
 import showStudentSummary from "./ShowStudentSummary"
+
 export default function AddStudent() {
   const { userData } = useAuth();
   const navigate = useNavigate();
@@ -34,9 +35,6 @@ export default function AddStudent() {
   });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // Fetch school data
-
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -182,19 +180,23 @@ export default function AddStudent() {
         transactions: [],
         createdAt: new Date()
       };
-      await addDoc(collection(db, 'students'), studentData);
-      // update school feeIdCount
-      await updateDoc(doc(db, 'schools', school.id), {
-        feeIdCount: feeId
-      });
-      await refresh()
-      Swal.fire({
-        icon: 'success',
-        title: 'Student Added!',
-        text: 'Student record created successfully',
-        confirmButtonColor: '#6366f1'
-      });
-      navigate('/students');
+      const isConfirmed = await showStudentSummary(studentData);
+      console.log(isConfirmed)
+      if (!isConfirmed) return;
+
+      // await addDoc(collection(db, 'students'), studentData);
+      // // update school feeIdCount
+      // await updateDoc(doc(db, 'schools', school.id), {
+      //   feeIdCount: feeId
+      // });
+      // await refresh()
+      // Swal.fire({
+      //   icon: 'success',
+      //   title: 'Student Added!',
+      //   text: 'Student record created successfully',
+      //   confirmButtonColor: '#6366f1'
+      // });
+      // navigate('/students');
     } catch (error) {
       Swal.fire({
         icon: 'error',
