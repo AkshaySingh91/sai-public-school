@@ -122,23 +122,24 @@ const AdminDashboard = () => {
                                 {userData.profileImage ? (
                                     <img
                                         src={userData.profileImage}
-                                        className="w-full h-full object-cover"
+                                        className="w-12 h-12 object-cover rounded-full"
                                         alt="Profile"
                                     />
-                                ) : (
+                                ) : (<>
                                     <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold">
                                         <span>{userData?.name?.charAt(0).toUpperCase()}</span>
                                     </div>
-                                )}
+                                </>)}
                             </div>
 
                             {/* Shine Effect */}
                             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                        </div> 
+                        </div>
                         {/* User Info */}
                         <div className="flex flex-col">
-                            <span className="font-semibold text-gray-800">{userData?.name || ""}</span>
-                            <span className="text-sm text-purple-600 font-medium">{userData.role}</span>
+                            <span className="font-semibold text-gray-800 capitalize">{userData?.name || ""}</span>
+                            <span className="text-sm text-purple-600 font-medium capitalize">{userData.role}</span>
+                            <span className='px-2 py-0.5 mt-1 rounded-full text-xs font-medium w-fit whitespace-nowrap bg-blue-100 text-blue-800'>{userData?.privilege?.toLowerCase() === "read" ? "Read Only" : "Read & Write"}</span>
                         </div>
                     </div>
                 </div>

@@ -69,7 +69,6 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
         try {
             // 2) Call backend endpoint instead of addDoc(...)
             const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/school/` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/school/`;
-
             const response = await fetch(url, {
                 method: "POST",
                 headers: {

@@ -34,7 +34,7 @@ export default function StudentsStockPaymentHistory({
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
               >
-                {["Date", "Items", "Amount", "Qty", "Account", "Receipt", userData.role !== "superadmin" ? "Actions" : ""].filter(Boolean).map((header, idx) => (
+                {["Date", "Items", "Amount", "Qty", "Account", "Receipt", userData.privilege?.toLowerCase() === "both" ? "Actions" : ""].filter(Boolean).map((header, idx) => (
                   <th
                     key={idx}
                     className="px-4 py-3 text-left text-sm font-semibold border-r border-purple-500/30 last:border-r-0 whitespace-nowrap"
@@ -74,7 +74,7 @@ export default function StudentsStockPaymentHistory({
                     </Link>
                   </td>
                   {
-                    userData.role !== "superadmin" &&
+                    userData.privilege?.toLowerCase() === "both" &&
                     <td className="px-4 py-3 whitespace-nowrap">
                       <button
                         onClick={() => deleteStockTransaction(tx.receiptId)}

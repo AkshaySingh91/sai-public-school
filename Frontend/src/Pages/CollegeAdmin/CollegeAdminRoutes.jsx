@@ -2,6 +2,8 @@ import { Outlet, Route, Routes } from "react-router-dom";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
 import CollegeAdminDashboard from "./Dashboard/CollegeAdminDashboard"
 import { useAuth } from "../../contexts/AuthContext";
+import NotFound from "../../components/NotFound";
+import CollegeSettings from "./Settings";
 
 const AdminLayout = () => {
     return (
@@ -42,10 +44,13 @@ const CollegeAdminIndex = () => {
                     userData.privilege?.toLowerCase() === "both" ?
                         <>
                             <Route path="/" element={<CollegeAdminDashboard />} />
+                            <Route path="/settings" element={<CollegeSettings />} />
+                            <Route path="*" element={<NotFound />} />
                         </> :
                         <>
                             {/* dashboard  */}
                             <Route path="/" element={<ReadOnlyDashboard />} />
+                            <Route path="*" element={<NotFound />} />
                         </>
                 }
             </Route>

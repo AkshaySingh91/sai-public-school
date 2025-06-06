@@ -47,103 +47,399 @@ router.get('/school', async (req, res) => {
         return res.status(500).json({ error: "Internal server error", details: err.message });
     }
 });
-// superadmin will delete accountant from specific school
-router.delete("/user/:", async (req, res) => {
-    const { accountantId } = req.params;
-    const { uid } = req.body;
-    if (!uid) {
-        return res.status(400).json({ error: "Missing 'uid' in request body." });
+router.get('/college', async (req, res) => {
+    if (!req.query.collegeCode) {
+        return res.status(400).json({ error: "Missing Query parameter" });
     }
+    const { collegeCode } = req.query;
+    console.log({ collegeCode })
     try {
-        // 1. Delete Firestore document
-        const userDoc = await admin.firestore().collection('Users').doc(accountantId).delete();
-        // 2. Delete the Auth user
-        await admin.auth().deleteUser(uid);
-
-        return res.json({ success: true, message: "Accountant deleted." });
-    } catch (error) {
-        console.error("Error deleting accountant:", error);
-        return res
-            .status(500)
-            .json({ success: false, error: error.message || "Internal error" });
+        const snap = await admin
+            .firestore()
+            .collection("colleges")
+            .where("Code", "==", collegeCode)
+            .limit(1)
+            .get();
+        if (snap.empty) {
+            return res.status(404).json({ error: "College not found" });
+        }
+        return res.json(snap.docs[0].data());
+    } catch (err) {
+        console.error("[GET /superadmin/school] Error:", err);
+        return res.status(500).json({ error: "Internal server error", details: err.message });
     }
 });
+router.post("/college", async (req, res) => {
+    try {
+        const {
+            collegeName,
+            Code: rawCode,
+            location,
+            academicYear,
+            courses,
+            departments,
+            // header
+            collegeReceiptHeader,
+            feeIdCount,
+            // receipt count
+            tuitionReceiptCount,
+            // contact
+            mobile,
+            email,
+            paymentModes,
+            feeTypes,
+            studentsType,
+        } = req.body;
+
+        // Validate `collegeName`
+        if (typeof collegeName !== "string" || collegeName.trim().length === 0) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'collegeName' (must be a non-empty string)." });
+        }
+
+        // Helper: check non-empty array of strings
+        function isNonEmptyStringArray(arr) {
+            return (
+                Array.isArray(arr) &&
+                arr.length > 0 &&
+                arr.every((el) => typeof el === "string" && el.trim().length > 0)
+            );
+        }
+
+        if (!isNonEmptyStringArray(courses)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'courses' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(departments)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'departments' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(paymentModes)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'paymentModes' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(feeTypes)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'feeTypes' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(studentsType)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'studentsType' (must be a non-empty array of strings)." });
+        }
+
+        // Generate random 6-character code
+        function generateRandomCode() {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            let code = "";
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // Determine final college code (uppercase). If none provided, auto-generate.
+        let collegeCode = "";
+        if (typeof rawCode === "string" && rawCode.trim().length > 0) {
+            collegeCode = rawCode.trim();
+        } else {
+            let tries = 0;
+            do {
+                if (tries >= 5) {
+                    return res
+                        .status(500)
+                        .json({ error: "Could not generate a unique college code. Try again later." });
+                }
+                collegeCode = generateRandomCode();
+                tries++;
+                const dupSnap = await admin
+                    .firestore()
+                    .collection("colleges")
+                    .where("Code", "==", collegeCode)
+                    .limit(1)
+                    .get();
+                if (dupSnap.empty) break;
+            } while (true);
+        }
+
+        // Check case-insensitive uniqueness in "colleges"
+        const existingQuery = admin
+            .firestore()
+            .collection("colleges")
+            .where("Code", "==", collegeCode)
+            .limit(1);
+        const existingSnap = await existingQuery.get();
+        if (!existingSnap.empty) {
+            const existingData = existingSnap.docs[0].data();
+            return res.status(400).json({
+                error: `College "${existingData.collegeName}" with code "${collegeCode}" already exists.`,
+            });
+        }
+
+        // Construct the new college document
+        const newCollegeData = {
+            collegeName: collegeName.trim(),
+            Code: collegeCode,
+            courses: courses.map((s) => s.trim()),
+            departments: departments.map((s) => s.trim()),
+            paymentModes: paymentModes.map((s) => s.trim()),
+            feeTypes: feeTypes.map((s) => s.trim()),
+            studentsType: studentsType.map((s) => s.trim()),
+            accounts: [],
+            location,
+            academicYear,
+            // headers
+            collegeReceiptHeader,
+            feeIdCount,
+            // receipt counts
+            tuitionReceiptCount,
+            // contact
+            mobile,
+            email,
+            type: "college",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        // Write to Firestore
+        const docRef = await admin.firestore().collection("colleges").add(newCollegeData);
+
+        return res.status(201).json({ success: true, id: docRef.id });
+    } catch (error) {
+        console.error("Error in POST api/superadmin/setting/college:", error);
+        return res
+            .status(500)
+            .json({ error: error.message || "Internal server error while creating college." });
+    }
+});
+
+// superadmin will delete accountant from specific school
+router.delete("/user/:institutionId/:userId", async (req, res) => {
+    const { institutionId, userId } = req.params;
+    if (!userId || !institutionId) {
+        return res.status(400).json({ error: "Missing userId or institutionId in request." });
+    }
+    try {
+        // 1) Delete Firestore document
+        const userDocRef = admin.firestore().collection("Users").doc(userId);
+        const userSnapshot = await userDocRef.get();
+        if (!userSnapshot.exists) {
+            return res.status(404).json({ error: "User not found in Firestore." });
+        }
+        // Optionally verify that this user truly belongs to that institutionId:
+        const data = userSnapshot.data();
+        if (data.institutionId !== institutionId) {
+            return res.status(403).json({ error: "User does not belong to this institution." });
+        }
+        await userDocRef.delete();
+
+        // 2) Delete the Firebase Auth user
+        await admin.auth().deleteUser(userId);
+
+        return res.json({ success: true, message: "User deleted." });
+    } catch (error) {
+        console.error("Error deleting user:", error);
+        return res.status(500).json({ success: false, error: error.message || "Internal error" });
+    }
+});
+
 // superadmin create new accountant for exsisting or new school
-router.post("/accountants", async (req, res) => {
-    if (!(req.body.name && req.body.email && req.body.phone && req.body.password && req.body.schoolCode)) {
+router.post("/user", async (req, res) => {
+    const { name, email, phone, password, institutionType, institutionId, role, privilege, schoolCode, collegeCode, } = req.body;
+    // 1) Basic presence 
+    if (!name || !email || !password || !institutionType || !institutionId || !role || !privilege) {
         return res.status(400).json({
             success: false,
-            error: `Incompleted field".`,
+            error: "Missing required fields. Required: name, email, password, institutionType, institutionId, role, privilege.",
         });
     }
-    const { name, email, phone, password, schoolCode } = req.body;
+    if (typeof name !== "string" || name.trim().length === 0) {
+        return res
+            .status(400)
+            .json({ success: false, error: "Invalid 'name' field." });
+    }
+    if (typeof email !== "string" || !email.includes("@")) {
+        return res
+            .status(400)
+            .json({ success: false, error: "Invalid 'email' field." });
+    }
+    if (typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({
+            success: false,
+            error: "Password must be at least 6 characters long.",
+        });
+    }
+    if (
+        institutionType !== "school" &&
+        institutionType !== "college"
+    ) {
+        return res
+            .status(400)
+            .json({ success: false, error: "institutionType must be 'school' or 'college'." });
+    }
+    if (typeof institutionId !== "string" || institutionId.trim().length === 0) {
+        return res
+            .status(400)
+            .json({ success: false, error: "Invalid 'institutionId' field." });
+    }
+    if (typeof role !== "string" || role.trim().length === 0) {
+        return res
+            .status(400)
+            .json({ success: false, error: "Invalid 'role' field." });
+    }
+    if (privilege !== "read" && privilege !== "both") {
+        return res
+            .status(400)
+            .json({ success: false, error: "Invalid 'privilege' field." });
+    }
+    if (institutionType === "school" && (!schoolCode || typeof schoolCode !== "string")) {
+        return res.status(400).json({
+            success: false,
+            error: "Missing or invalid 'schoolCode' for a school user.",
+        });
+    }
+    if (institutionType === "college" && (!collegeCode || typeof collegeCode !== "string")) {
+        return res.status(400).json({
+            success: false,
+            error: "Missing or invalid 'collegeCode' for a college user.",
+        });
+    }
+
     try {
-        // Check if email already exists in Firestore "Users"
+        // 2) Verify institution exists (in Firestore)
+        const instCollection = institutionType === "school" ? "schools" : "colleges";
+        const instDoc = await admin
+            .firestore()
+            .collection(instCollection)
+            .doc(institutionId)
+            .get();
+        if (!instDoc.exists) {
+            return res.status(404).json({
+                success: false,
+                error: `${institutionType} with ID '${institutionId}' not found.`,
+            });
+        }
+
+        // 3) Check if email already exists in Firestore Users
         const emailQuery = admin
             .firestore()
             .collection("Users")
-            .where("email", "==", email)
+            .where("email", "==", email.trim().toLowerCase())
             .limit(1);
         const emailSnapshot = await emailQuery.get();
         if (!emailSnapshot.empty) {
-            // Already registered somewhere
-            const userData = emailSnapshot.docs[0].data();
-            const existingSchoolCode = userData.schoolCode;
-            // Optionally look up the schoolName for a nicer message:
-            let schoolName = "another school";
-            if (existingSchoolCode) {
-                const schoolQuery = admin
+            const existingData = emailSnapshot.docs[0].data();
+            const existingCode =
+                existingData.institutionType === "school"
+                    ? existingData.schoolCode
+                    : existingData.collegeCode;
+            let existingName = "another institution";
+            // Look up that institution's name for a better message
+            if (existingCode) {
+                const instQuery2 = admin
                     .firestore()
-                    .collection("schools")
-                    .where("Code", "==", existingSchoolCode)
+                    .collection(instCollection)
+                    .where("Code", "==", existingCode)
                     .limit(1);
-                const schoolSnap = await schoolQuery.get();
-                if (!schoolSnap.empty) {
-                    schoolName = schoolSnap.docs[0].data().schoolName || schoolName;
+                const instSnap = await instQuery2.get();
+                if (!instSnap.empty) {
+                    existingName =
+                        instSnap.docs[0].data()[
+                        institutionType === "school" ? "schoolName" : "collegeName"
+                        ] || existingName;
                 }
             }
             return res.status(400).json({
                 success: false,
-                error: `This email is already registered at "${schoolName}".`,
+                error: `This email is already registered at "${existingName}".`,
             });
         }
 
-        // 2) Create the Auth user (so superadmin session is unaffected)
-        const userRecord = await admin.auth().createUser({
-            email: email,
-            password: password,
-            displayName: name,
-            phoneNumber: phone,
-        });
+        // 4) Check if email already exists in Firebase Auth
+        try {
+            await admin.auth().getUserByEmail(email.trim().toLowerCase());
+            // If no error, user exists in Auth already
+            return res.status(400).json({
+                success: false,
+                error: "This email is already in use in Authentication.",
+            });
+        } catch (authErr) {
+            // If authErr.code === "auth/user-not-found", it's okay to proceed
+            if (authErr.code !== "auth/user-not-found") {
+                console.error("Error checking Auth email:", authErr);
+                return res
+                    .status(500)
+                    .json({ success: false, error: "Error verifying email in Auth." });
+            }
+        }
 
+        // 5) Create Firebase Auth user (superadmin session is unaffected)
+        const userRecord = await admin.auth().createUser({
+            email: email.trim().toLowerCase(),
+            password: password,
+            displayName: name.trim(),
+            phoneNumber: phone ? phone.trim() : undefined,
+        });
         const newUid = userRecord.uid;
 
-        // 3) Write Firestore document under Users/{uid}
-        const userDocRef = admin
-            .firestore()
-            .collection("Users").doc(newUid);
-        await userDocRef.set({
-            name: name,
-            email: email,
-            phone: phone,
-            schoolCode: schoolCode,
-            role: "accountant",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        // 6) Write Firestore document under /Users/{newUid}
+        const userDocRef = admin.firestore().collection("Users").doc(newUid);
+        const userDocData = {
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            phone: phone ? phone.trim() : "",
+            role: role.toLowerCase(),
+            privilege: privilege.toLowerCase(),
+            institutionType,
+            institutionId,
             uid: newUid,
-        });
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        // Add either schoolCode or collegeCode to Firestore doc
+        if (institutionType === "school") {
+            userDocData.schoolCode = schoolCode;
+        } else {
+            userDocData.collegeCode = collegeCode;
+        }
 
-        // 4) Return success
+        await userDocRef.set(userDocData);
+
+        // 7) Return success
         return res.status(201).json({ success: true, uid: newUid });
     } catch (error) {
-        console.error("Error in POST /accountants:", error);
-        // Clean up if Auth user was created but Firestore write failed:
-        if (error.errorInfo && error.errorInfo.code === "auth/email-already-exists") {
-            return res.status(400).json({ success: false, error: "Email already in use" });
+        console.error("Error in POST /api/superadmin/settings/user:", error);
+        // If Auth user was created but Firestore write failed, clean up:
+        if (
+            error.code &&
+            typeof error.code === "string" &&
+            error.code.startsWith("auth/")
+        ) {
+            // If password or email error, send 400
+            return res.status(400).json({ success: false, error: error.message });
         }
-        return res.status(500).json({ success: false, error: error.message || "Internal error" });
+        // Otherwise, a server error—attempt to delete the created Auth user if present
+        if (error.message && error.message.includes("createUser")) {
+            // no-op: createUser failed
+        } else if (error.message && error.message.includes("Firestore")) {
+            // Firestore write failed after createUser
+            // Attempt cleanup:
+            try {
+                const newlyCreatedUid = error.uid; // if you included in error
+                if (newlyCreatedUid) await admin.auth().deleteUser(newlyCreatedUid);
+            } catch (cleanupErr) {
+                console.error("Error cleaning up after Firestore failure:", cleanupErr);
+            }
+        }
+        return res
+            .status(500)
+            .json({ success: false, error: "Internal server error." });
     }
-}
-);
+});
+
 router.post("/school", async (req, res) => {
     try {
         const {
@@ -295,154 +591,6 @@ router.post("/school", async (req, res) => {
         return res
             .status(500)
             .json({ error: error.message || "Internal server error while creating school." });
-    }
-});
-router.post("/college", async (req, res) => {
-    try {
-        const {
-            collegeName,
-            Code: rawCode,
-            location,
-            academicYear,
-            courses,
-            departments,
-            // header
-            collegeReceiptHeader,
-            feeIdCount,
-            // receipt count
-            tuitionReceiptCount,
-            // contact
-            mobile,
-            email,
-            paymentModes,
-            feeTypes,
-            studentsType,
-            type,
-        } = req.body;
-
-        // Validate `collegeName`
-        if (typeof collegeName !== "string" || collegeName.trim().length === 0) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'collegeName' (must be a non-empty string)." });
-        }
-
-        // Helper: check non-empty array of strings
-        function isNonEmptyStringArray(arr) {
-            return (
-                Array.isArray(arr) &&
-                arr.length > 0 &&
-                arr.every((el) => typeof el === "string" && el.trim().length > 0)
-            );
-        }
-
-        if (!isNonEmptyStringArray(courses)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'courses' (must be a non-empty array of strings)." });
-        }
-        if (!isNonEmptyStringArray(departments)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'departments' (must be a non-empty array of strings)." });
-        }
-        if (!isNonEmptyStringArray(paymentModes)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'paymentModes' (must be a non-empty array of strings)." });
-        }
-        if (!isNonEmptyStringArray(feeTypes)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'feeTypes' (must be a non-empty array of strings)." });
-        }
-        if (!isNonEmptyStringArray(studentsType)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'studentsType' (must be a non-empty array of strings)." });
-        }
-
-        // Generate random 6-character code
-        function generateRandomCode() {
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            let code = "";
-            for (let i = 0; i < 6; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return code;
-        }
-
-        // Determine final college code (uppercase). If none provided, auto-generate.
-        let collegeCode = "";
-        if (typeof rawCode === "string" && rawCode.trim().length > 0) {
-            collegeCode = rawCode.trim();
-        } else {
-            let tries = 0;
-            do {
-                if (tries >= 5) {
-                    return res
-                        .status(500)
-                        .json({ error: "Could not generate a unique college code. Try again later." });
-                }
-                collegeCode = generateRandomCode();
-                tries++;
-                const dupSnap = await admin
-                    .firestore()
-                    .collection("colleges")
-                    .where("Code", "==", collegeCode)
-                    .limit(1)
-                    .get();
-                if (dupSnap.empty) break;
-            } while (true);
-        }
-
-        // Check case-insensitive uniqueness in "colleges"
-        const existingQuery = admin
-            .firestore()
-            .collection("colleges")
-            .where("Code", "==", collegeCode)
-            .limit(1);
-        const existingSnap = await existingQuery.get();
-        if (!existingSnap.empty) {
-            const existingData = existingSnap.docs[0].data();
-            return res.status(400).json({
-                error: `College "${existingData.collegeName}" with code "${collegeCode}" already exists.`,
-            });
-        }
-
-        // Construct the new college document
-        const newCollegeData = {
-            collegeName: collegeName.trim(),
-            Code: collegeCode,
-            courses: courses.map((s) => s.trim()),
-            departments: departments.map((s) => s.trim()),
-            paymentModes: paymentModes.map((s) => s.trim()),
-            feeTypes: feeTypes.map((s) => s.trim()),
-            studentsType: studentsType.map((s) => s.trim()),
-            accounts: [],
-            location,
-            academicYear,
-            // headers
-            collegeReceiptHeader,
-            feeIdCount,
-            // receipt counts
-            tuitionReceiptCount,
-            // contact
-            mobile,
-            email,
-            type: "college",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        // Write to Firestore
-        const docRef = await admin.firestore().collection("colleges").add(newCollegeData);
-
-        return res.status(201).json({ success: true, id: docRef.id });
-    } catch (error) {
-        console.error("Error in POST api/superadmin/setting/college:", error);
-        return res
-            .status(500)
-            .json({ error: error.message || "Internal server error while creating college." });
     }
 });
 

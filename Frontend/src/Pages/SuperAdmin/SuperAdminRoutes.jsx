@@ -1,6 +1,5 @@
 // src/components/SuperAdmin/Index.jsx
-import { Routes, Route, Outlet, useNavigate } from 'react-router-dom';
-
+import { Routes, Route, Outlet } from 'react-router-dom';
 import AdminDashboard from '../SchoolAdmin/AdminDashboard';
 import MangeInsitute from './Schools/Index';
 import AdminSidebar from '../../components/Admin/AdminSidebar';
@@ -32,6 +31,7 @@ import CollegeAdminDashboard from '../CollegeAdmin/Dashboard/CollegeAdminDashboa
 import NotFound from '../../components/NotFound';
 import AddStudent from '../SchoolAdmin/Student/StudentManagement/AddStudent';
 import ImportExistingStudent from '../SchoolAdmin/Student/StudentManagement/ImportExistingStudent';
+import CollegeSettings from '../CollegeAdmin/Settings/index';
 
 const SuperAdminLayout = () => {
   return (
@@ -94,6 +94,7 @@ const SuperAdminIndex = () => {
             : (school.type?.toLowerCase() == "college" ?
               <>
                 <Route path="/college" element={<CollegeAdminDashboard />} />
+                <Route path="/college/settings" element={<CollegeSettings />} />
                 <Route path="*" element={<NotFound />} />
               </>
               :

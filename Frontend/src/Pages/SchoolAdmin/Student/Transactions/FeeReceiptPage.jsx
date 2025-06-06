@@ -11,7 +11,7 @@ export default function FeeReceiptPage() {
     const { school } = useInstitution();
     const [student, setStudent] = useState(null);
     const [transaction, setTransaction] = useState(null);
-
+    
     // Fetch student and transaction
     useEffect(() => {
         const fetchStudentAndTransaction = async () => {

@@ -124,7 +124,7 @@ export default function FeeReportsContainer() {
         .filter((s) => s.normalizedStatus === statusFilter)
         .forEach((student) => {
           const studentFees = processStudentData(student);  // Reuse your working function
-          const cls = student.class || "Unknown";
+          const cls = student.class?.toLowerCase() || "Unknown";
           const existing = classMap.get(cls) || {
             lastYear: 0, //it will inc last year balance + last year transport
             tuitionFeeWithDiscount: 0,

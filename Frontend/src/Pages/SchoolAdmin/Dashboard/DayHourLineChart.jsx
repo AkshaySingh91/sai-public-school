@@ -196,7 +196,7 @@ export default function DayHourLineChart() {
           {/* tell them that we dont show cheque pending amount */}
           <div className="flex items-center gap-2  text-sm text-gray-500">
             <Info size={16} className="text-purple-600" />
-            <span>Only completed anount will shown</span>
+            <span>Only completed amount will shown</span>
           </div>
         </div>
       )}

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
 import { auth, firestore, storage } from './utils/firebase.js' // initilize firebase before proceding to any route
-import { verifyAccountant, fetchSchool } from './Middleware/getAuth.js';
+import { verifyAccountant, fetchInstiute } from './Middleware/getAuth.js';
 
 config();
 const app = express();
@@ -34,7 +34,7 @@ const initializeApp = async () => {
     try {
         // Apply middleware
         app.use(configureCORS());
-app.use(express.json({ limit: '10mb' }));
+        app.use(express.json({ limit: '10mb' }));
 
         // Import routes after Firebase initialization
         const { default: settingsRouter } = await import('./Routes/settings.js');
@@ -43,7 +43,7 @@ app.use(express.json({ limit: '10mb' }));
 
         // Apply routes
         app.use('/api/admin/school', verifyAccountant, fileUpload);
-        app.use('/api/admin/settings', verifyAccountant, fetchSchool, settingsRouter);
+        app.use('/api/admin/settings', verifyAccountant, fetchInstiute, settingsRouter);
         app.use('/api/superadmin/settings', verifyAccountant, superadminSettings);
 
         // Superadmin route

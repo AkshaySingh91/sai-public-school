@@ -8,8 +8,10 @@ import UserModal from "./UserModal";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import { useInstitution } from "../../../contexts/InstitutionContext";
-import { FiPlus, FiTrash2, FiUserPlus, FiRefreshCw, FiHome, FiChevronRight } from "react-icons/fi";
-import { FaSchool, FaUserTie } from "react-icons/fa";
+import { FiPlus, FiTrash2, FiUserPlus, FiRefreshCw, FiHome, FiChevronRight, FiUser } from "react-icons/fi";
+import { FaSchool, FaUniversity, FaUserTie } from "react-icons/fa";
+import CollegeModal from "./CollegeModal";
+import { User, X } from "lucide-react";
 
 const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
 const VITE_PORT = import.meta.env.VITE_PORT;
@@ -18,13 +20,14 @@ const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 const MangeInsitute = () => {
   const navigate = useNavigate();
   const { school, switchSchool } = useInstitution();
-  const [showSchoolModal, setShowSchoolModal] = useState(false);
-  const [selectedSchool, setSelectedSchool] = useState(null);
-  const [loading, setLoading] = useState(false);
   const user = auth.currentUser;
+
   const [institutionsList, setInstitutionsList] = useState([]); // just schools+colleges 
-  // pre hard coded roles for school & college
-  const [roles, setRoles] = useState(["Accountants", "Head-Master", "Teacher"])
+  const [loading, setLoading] = useState(false);
+
+  const [showSchoolModal, setShowSchoolModal] = useState(false);
+  const [selectedInstitute, setSelectedInstitute] = useState(null);
+  const [showCollegeModal, setShowCollegeModal] = useState(false);
 
   const fetchAllInstitutions = async () => {
     setLoading(true);
@@ -51,7 +54,10 @@ const MangeInsitute = () => {
   }, []);
 
   const handleDeleteInstitution = async (inst) => {
-    console.log(inst)
+    if (!user) {
+      Swal.fire("Error", "You must be logged in", "error");
+      return;
+    }
     const result = await Swal.fire({
       title: `Delete ${inst.type}?`,
       text: "This will also delete all associated accountants!",
@@ -84,7 +90,7 @@ const MangeInsitute = () => {
         throw new Error(data.error || "Failed to delete institution");
       }
       await fetchAllInstitutions();
-
+      // If this was the current institution, clear it and pick a new default
       if (school?.id === inst.id) {
         localStorage.removeItem("selectedInstitution");
         const newDefault = institutionsList.find((i) => i.id !== inst.id) || null;
@@ -116,15 +122,15 @@ const MangeInsitute = () => {
     }
   };
 
-  const handleSwitchSchool = (inst) => {
+  const handleSwitchInstitution = (inst) => {
     Swal.fire({
       title: `Switch to ${inst.type === "school" ? inst.schoolName : inst.collegeName}, ${inst.location?.taluka}?`,
-      text: "You'll be redirected to this school's dashboard",
+      text: `You'll be redirected to this ${inst.type}'s dashboard`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#6366f1",
       cancelButtonColor: "#6b7280",
-      confirmButtonText: "Switch School",
+      confirmButtonText: `Switch ${inst.type}`,
       cancelButtonText: "Cancel",
       reverseButtons: true,
       background: "#f9fafb",
@@ -133,30 +139,30 @@ const MangeInsitute = () => {
       if (result.isConfirmed) {
         // Use the context function to switch schools
         switchSchool(inst);
-        navigate("/school");
+        navigate(inst.type === "school" ? "/school" : "/college", { replace: true });
         Swal.fire({
-          title: "School Changed!",
-          text: `You're now viewing ${inst.schoolName}`,
+          title: `${inst.type === "school" ? inst.schoolName : inst.collegeName} Selected!`,
+          text: `You're now viewing this ${inst.type}.`,
           icon: "success",
           timer: 1500,
-          showConfirmButton: false
+          showConfirmButton: false,
         });
       }
     });
   };
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-            <FaSchool className="mr-3 text-indigo-600" />
-            Institute Management
+            <FaUniversity className="mr-3 text-indigo-600" />
+            Institution Management
           </h1>
           <p className="text-gray-600 mt-2">
-            Manage Institutions and their accountants
+            Manage schools, colleges, and their users
           </p>
         </div>
-
         <div className="flex gap-3">
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -177,282 +183,293 @@ const MangeInsitute = () => {
             <FiPlus className="mr-2" />
             Add School
           </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCollegeModal(true)}
+            className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-6 py-2 rounded-lg shadow-md transition-all flex items-center"
+          >
+            <FiPlus className="mr-2" />
+            Add College
+          </motion.button>
         </div>
       </div>
 
-      {loading ? (
+      {/* LOADING */}
+      {loading && (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
-          <p className="text-gray-600">Loading schools...</p>
+          <p className="text-gray-600">Loading institutions...</p>
         </div>
-      ) : institutionsList.filter(i => (i.type?.toLowerCase() === "school")).length === 0 ? (
-        <div className="text-center py-16 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100">
-          <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-            <FaSchool className="text-3xl text-indigo-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">No Schools Found</h3>
-          <p className="text-gray-600 max-w-md mx-auto mb-6">
-            Get started by adding your first school to manage accountants and school details.
-          </p>
-          <button
-            onClick={() => setShowSchoolModal(true)}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg shadow-md transition-all flex items-center mx-auto"
-          >
-            <FiPlus className="mr-2" />
-            Add First School
-          </button>
-        </div>
-      ) : (<>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence>
-            {institutionsList.filter((i) => (i.type?.toLowerCase() === "school")).map((s) => (
-              <motion.div
-                key={s.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className={`bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl ${s.schoolName} ${school.schoolName} ${s.id} transition-all border-2 ${s.id === school.id
-                  ? "border-indigo-500 shadow-indigo-100"
-                  : "border-gray-100"
-                  }`}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
-                        <FaSchool className="text-indigo-600 text-lg" />
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-800">{s.schoolName}</h3>
-                    </div>
-                    <div className="ml-12 mt-2">
-                      <p className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full inline-block">
-                        Code: {s.Code}
-                      </p>
-                      <div className="mt-2 text-sm text-gray-500">
-                        <p className="flex items-center">
-                          <FiHome className="mr-2 opacity-70" />
-                          {s.location?.taluka}, {s.location?.district}
-                        </p>
-                        <p className="mt-1">
-                          Academic Year: <span className="font-medium">{s.academicYear}</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteInstitution(s)}
-                    className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
-                    title="Delete School"
-                  >
-                    <FiTrash2 />
-                  </button>
-                </div>
+      )}
 
-                <div className="border-t border-gray-100 pt-4 mt-4">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedSchool(s)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center"
-                  >
-                    <FiUserPlus className="mr-1" />
-                    Add
-                  </motion.button>
-                  <UserList collection={"schools"} id={s.id} />
-                </div>
-
-                <div className="mt-6 flex gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleSwitchSchool(s)}
-                    className={`flex-1 text-center  rounded-lg whitespace-nowrap font-medium px-2 p-1.5 transition-colors ${s.id === school.id
-                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                  >
-                    {s.id === school.id ? "Current School" : "Switch to this School"}
-                  </motion.button>
-
-                  {s.id === school.id && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate("/")}
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2.5 rounded-lg flex items-center"
+      {/* SCHOOLS SECTION */}
+      {!loading && (
+        <>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Schools</h2>
+          {institutionsList.filter((i) => i.type === "school").length === 0 ? (
+            <div className="text-center py-12 bg-indigo-50 rounded-lg border border-indigo-100 mb-8">
+              <p className="text-gray-600">No schools found.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              <AnimatePresence>
+                {institutionsList
+                  .filter((i) => i.type === "school")
+                  .map((s) => (
+                    <motion.div
+                      key={s.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className={`bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all border-2 ${school?.id === s.id
+                        ? "border-indigo-500 shadow-indigo-100"
+                        : "border-gray-100"
+                        }`}
                     >
-                      Go to Dashboard
-                      <FiChevronRight className="ml-1" />
-                    </motion.button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      </>)}
-      {/* {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
-          <p className="text-gray-600">Loading schools...</p>
-        </div>
-      ) : institutionsList.filter(i => (i.type?.toLowerCase() === "college")).length === 0 ? (
-        <div className="text-center py-16 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100">
-          <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-            <FaSchool className="text-3xl text-indigo-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">No college Found</h3>
-          <p className="text-gray-600 max-w-md mx-auto mb-6">
-            Get started by adding your first school to manage accountants and college details.
-          </p>
-          <button
-            onClick={() => setShowSchoolModal(true)}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg shadow-md transition-all flex items-center mx-auto"
-          >
-            <FiPlus className="mr-2" />
-            Add First college
-          </button>
-        </div>
-      ) : (<>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence>
-            {institutionsList.filter((i) => (i.type?.toLowerCase() === "college")).map((c) => (
-              <motion.div
-                key={c.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className={`bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl ${c.collegeName} ${school.schoolName} ${c.id} transition-all border-2 ${c.id === school.id
-                  ? "border-indigo-500 shadow-indigo-100"
-                  : "border-gray-100"
-                  }`}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
-                        <FaSchool className="text-indigo-600 text-lg" />
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                              <FaSchool className="text-indigo-600 text-lg" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 capitalize">
+                              {s.schoolName}
+                            </h3>
+                          </div>
+                          <div className="ml-12 mt-2">
+                            <p className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full inline-block">
+                              Code: {s.Code}
+                            </p>
+                            <div className="mt-2 text-sm text-gray-500">
+                              <p className="flex items-center">
+                                <FiHome className="mr-2 opacity-70" />
+                                {s.location?.taluka}, {s.location?.district}
+                              </p>
+                              <p className="mt-1">
+                                Academic Year:{" "}
+                                <span className="font-medium">
+                                  {s.academicYear}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteInstitution(s)}
+                          className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
+                          title="Delete School"
+                        >
+                          <FiTrash2 />
+                        </button>
                       </div>
-                      <h3 className="text-xl font-bold text-gray-800">{c.collegeName}</h3>
-                    </div>
-                    <div className="ml-12 mt-2">
-                      <p className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full inline-block">
-                        Code: {s.Code}
-                      </p>
-                      <div className="mt-2 text-sm text-gray-500">
-                        <p className="flex items-center">
-                          <FiHome className="mr-2 opacity-70" />
-                          {c.location?.taluka}, {c.location?.district}
-                        </p>
-                        <p className="mt-1">
-                          Academic Year: <span className="font-medium">{c.academicYear}</span>
-                        </p>
+
+                      <div className="border-t border-gray-100 pt-4 mt-4 space-y-3">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setSelectedInstitute(s)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center"
+                        >
+                          <FiUserPlus className="mr-1" />
+                          Add User
+                        </motion.button>
+                        <UserList collectionName="schools" instId={s.id} />
                       </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteInstitution(s)}
-                    className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
-                    title="Delete School"
-                  >
-                    <FiTrash2 />
-                  </button>
-                </div>
 
-                <div className="border-t border-gray-100 pt-4 mt-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center">
-                      <FaUserTie className="text-gray-600 mr-2" />
-                      <h4 className="font-medium text-gray-700">Accountants</h4>
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setSelectedSchool(s)}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center"
+                      <div className="mt-6 flex gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleSwitchInstitution(s)}
+                          className={`flex-1 text-center rounded-lg whitespace-nowrap font-medium px-2 py-1.5 transition-colors ${school?.id === s.id
+                            ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                          {school?.id === s.id
+                            ? "Current School"
+                            : "Switch to this School"}
+                        </motion.button>
+
+                        {school?.id === s.id && (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => navigate("/school")}
+                            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2.5 rounded-lg flex items-center"
+                          >
+                            Go to Dashboard
+                            <FiChevronRight className="ml-1" />
+                          </motion.button>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* COLLEGES SECTION */}
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Colleges</h2>
+          {institutionsList.filter((i) => i.type === "college").length === 0 ? (
+            <div className="text-xl font-bold text-center py-12 bg-blue-50 rounded-lg border border-green-100 mb-8">
+              <p className="text-gray-600">No colleges found.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              <AnimatePresence>
+                {institutionsList
+                  .filter((i) => i.type === "college")
+                  .map((c) => (
+                    <motion.div
+                      key={c.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className={`bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all border-2 ${school?.id === c.id
+                        ? "border-indigo-500 shadow-indigo-100"
+                        : "border-gray-100"
+                        }`}
                     >
-                      <FiUserPlus className="mr-1" />
-                      Add
-                    </motion.button>
-                  </div>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                              <FaUniversity className="text-green-600 text-lg" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 capitalize">
+                              {c.collegeName}
+                            </h3>
+                          </div>
+                          <div className="ml-12 mt-2">
+                            <p className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full inline-block">
+                              Code: {c.Code}
+                            </p>
+                            <div className="mt-2 text-sm text-gray-500">
+                              <p className="flex items-center">
+                                <FiHome className="mr-2 opacity-70" />
+                                {c.location?.taluka}, {c.location?.district}
+                              </p>
+                              <p className="mt-1">
+                                Academic Year:{" "}
+                                <span className="font-medium">
+                                  {c.academicYear}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteInstitution(c)}
+                          className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
+                          title="Delete College"
+                        >
+                          <FiTrash2 />
+                        </button>
+                      </div>
 
-                  <UserList schoolCode={c.Code} />
-                </div>
+                      <div className="border-t border-gray-100 pt-4 mt-4 space-y-3">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setSelectedInstitute(c)}
+                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center"
+                        >
+                          <FiUserPlus className="mr-1" />
+                          Add User
+                        </motion.button>
+                        <UserList collectionName="colleges" instId={c.id} />
+                      </div>
 
-                <div className="mt-6 flex gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleSwitchSchool(s)}
-                    className={`flex-1 text-center  rounded-lg whitespace-nowrap font-medium px-2 p-1.5 transition-colors ${s.id === school.id
-                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                  >
-                    {c.id === school.id ? "Current School" : "Switch to this School"}
-                  </motion.button>
+                      <div className="mt-6 flex gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleSwitchInstitution(c)}
+                          className={`flex-1 text-center rounded-lg whitespace-nowrap font-medium px-2 py-1.5 transition-colors ${school?.id === c.id
+                            ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                          {school?.id === c.id
+                            ? "Current College"
+                            : "Switch to this College"}
+                        </motion.button>
 
-                  {c.id === school.id && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate("/")}
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2.5 rounded-lg flex items-center"
-                    >
-                      Go to Dashboard
-                      <FiChevronRight className="ml-1" />
-                    </motion.button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      </>)} */}
+                        {school?.id === c.id && (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => navigate("/college")}
+                            className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-4 py-2.5 rounded-lg flex items-center"
+                          >
+                            Go to Dashboard
+                            <FiChevronRight className="ml-1" />
+                          </motion.button>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Modals */}
-      {showSchoolModal &&
+      {showSchoolModal && (
         <SchoolModal
           isOpen={showSchoolModal}
           onClose={() => setShowSchoolModal(false)}
           onSchoolAdded={fetchAllInstitutions}
         />
-      }
-
-      <UserModal
-        isOpen={!!selectedSchool}
-        school={selectedSchool}
-        onClose={() => setSelectedSchool(null)}
-        onUserAdded={fetchAllInstitutions}
-      />
+      )}
+      {showCollegeModal && (
+        <CollegeModal
+          isOpen={showCollegeModal}
+          onClose={() => setShowCollegeModal(false)}
+          onCollegeAdded={fetchAllInstitutions}
+        />
+      )}
+      {selectedInstitute && (
+        <UserModal
+          isOpen={!!selectedInstitute}
+          institute={selectedInstitute}
+          onClose={() => setSelectedInstitute(null)}
+          onUserAdded={fetchAllInstitutions}
+        />
+      )}
     </div>
   );
-};
+}
 
-const UserList = ({ collection, id }) => {
-  console.log(collection, id)
-  const [Users, setUsers] = useState([]);
+const UserList = ({ collectionName, instId }) => {
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
   const user = auth.currentUser;
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   if (!user) {
     throw new Error("User not authenticated");
   }
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      if (collection != "schools" || collection != "colleges") {
+      if (collectionName !== "schools" && collectionName !== "colleges") {
         throw new Error("Invalid collection");
       }
+      const instType = collectionName === "schools" ? "school" : "college";
       const q = query(
         collection(db, "Users"),
-        where("institutionId", "==", id),
-        where("institutionType", "==", collection === "schools" ? "school" : "college")
+        where("institutionId", "==", instId),
+        where("institutionType", "==", instType)
       );
+
       const snapshot = await getDocs(q);
-      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      console.log(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      setUsers(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
       console.error("Error fetching users:", error);
       Swal.fire("Error", "Failed to load users", "error");
@@ -460,24 +477,32 @@ const UserList = ({ collection, id }) => {
     setLoading(false);
   };
 
-  const handleDeleteUser = async (u, institutionId) => {
+  const handleDeleteUser = async (u) => {
     const result = await Swal.fire({
       title: "Remove User?",
-      text: "This will permanently delete their access!",
+      html: `<p class="py-2">This will permanently remove <b>${u.name}</b>'s access!</p>`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Delete",
+      confirmButtonText: "Delete User",
       cancelButtonText: "Cancel",
       reverseButtons: true,
+      customClass: {
+        popup: 'rounded-xl',
+        confirmButton: 'px-4 py-2 rounded-lg',
+        cancelButton: 'px-4 py-2 rounded-lg'
+      }
     });
 
     if (!result.isConfirmed) return;
+
     const userToken = await user.getIdToken();
     try {
-      // 1) Call our backend endpoint:
-      const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/user/${institutionId}/${u.id}` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/${institutionId}/${u.id}`;
+      const url =
+        import.meta.env.VITE_NODE_ENV === "Development"
+          ? `http://localhost:${import.meta.env.VITE_PORT}/api/superadmin/settings/user/${instId}/${u.id}`
+          : `${import.meta.env.VITE_DOMAIN_PROD}/api/superadmin/settings/user/${instId}/${u.id}`;
 
       const response = await fetch(url, {
         method: "DELETE",
@@ -485,116 +510,208 @@ const UserList = ({ collection, id }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${userToken}`,
         },
-        body: JSON.stringify({ uid: u.id, institutionId }),
-      }
-      );
+      });
 
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to delete user");
       }
 
-      // 2) Refresh the list in the UI
       await fetchUsers();
 
       Swal.fire({
         title: "Deleted!",
-        text: "User has been removed.",
+        text: `${u.name} has been removed.`,
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
+        customClass: {
+          popup: 'rounded-xl'
+        }
       });
     } catch (error) {
-      console.error("Error deleting accountant:", error);
-      Swal.fire("Error", error.message || "Failed to delete accountant", "error");
+      console.error("Error deleting user:", error);
+      Swal.fire("Error", error.message || "Failed to delete user", "error");
     }
   };
 
-
   useEffect(() => {
     fetchUsers();
-  }, [collection, id]);
+  }, [collectionName, instId]);
 
-  const openProfilePhotoModal = () => {
-    setIsProfileModalOpen(true);
-    document.body.style.overflow = 'hidden';
+  const openProfilePhotoModal = (user) => {
+    setSelectedUser(user);
+    document.body.style.overflow = "hidden";
   };
 
   const closeProfilePhotoModal = () => {
-    setIsProfileModalOpen(false);
-    document.body.style.overflow = 'unset';
+    setSelectedUser(null);
+    document.body.style.overflow = "unset";
   };
-  return (<>
-    <div className="space-y-3">
+
+  return (
+    <div>
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="animate-pulse flex items-center space-x-4 p-3 bg-gray-100 rounded-lg">
-              <div className="rounded-full bg-gray-300 h-10 w-10"></div>
-              <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse bg-white rounded-xl border border-gray-100 shadow-sm p-4"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="rounded-full bg-gray-200 h-12 w-12"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="flex gap-2 pt-2">
+                    <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                    <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+                  </div>
+                </div>
+                <div className="rounded-full bg-gray-200 h-8 w-8"></div>
               </div>
             </div>
           ))}
         </div>
-      ) : Users.length === 0 ? (
-        <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-          <p className="text-gray-500">No User assigned</p>
+      ) : users.length === 0 ? (
+        <div className="text-center py-8 bg-white rounded-xl border border-dashed border-gray-300">
+          <div className="mx-auto bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mb-3">
+            <FiUser className="text-gray-500 text-2xl" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-800">No users found</h3>
+          <p className="text-gray-500 mt-1">Add new users to get started</p>
         </div>
-      ) : (<>
-
-        <AnimatePresence>
-          {Users.map((u) => (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <FaUserTie className="text-gray-600 mr-2" />
-                  <h4 className="font-medium text-gray-700 capitalize">{u.role || "Invalid Role"}</h4>
-                </div>
-              </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <AnimatePresence>
+            {users.map((u) => (
               <motion.div
                 key={u.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex justify-between items-center bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                whileHover={{ y: -5 }}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
               >
-                <div className="flex items-center">
-                  <div className="w-12 h-12 rounded-full overflow-hidden cursor-pointer">
-                    {u && u.profileImage ? (
-                      <img
-                        onClick={openProfilePhotoModal}
-                        src={u.profileImage}
-                        className="w-full h-full object-cover"
-                        alt="Profile"
-                      />
-                    ) : (
-                      <div className="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto my-auto">
-                        <FaUserTie className="text-indigo-600" />
-                      </div>
-                    )}
+                <div className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div
+                      onClick={() => openProfilePhotoModal(u)}
+                      className="cursor-pointer"
+                    >
+                      {u.profileImage ? (
+                        <img
+                          src={u.profileImage}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-white shadow"
+                          alt="Profile"
+                        />
+                      ) : (
+                        <div className="bg-indigo-100 w-12 h-12 rounded-full flex items-center justify-center">
+                          <FiUser className="text-indigo-600 text-xl" />
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteUser(u)}
+                      className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
+                      title="Remove User"
+                    >
+                      <FiTrash2 className="text-lg" />
+                    </button>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-800">{u.name}</p>
-                    <p className="text-sm text-gray-600 truncate max-w-[120px]">{u.email}</p>
+
+                  <div className="mt-3">
+                    <h3 className="font-semibold text-gray-800 capitalize truncate">{u.name}</h3>
+                    <p className="text-sm text-gray-500 truncate">{u.email}</p>
+
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize whitespace-nowrap">
+                        {u.role}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 whitespace-nowrap">
+                        {u?.privilege?.toLowerCase() === "read" ? "Read Only" : "Read & Write"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteUser(u, u.institutionId)}
-                  className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors cursor-pointer bg-red-100 "
-                  title="Remove Accountant"
-                >
-                  <FiTrash2 />
-                </button>
               </motion.div>
-            </>
-          ))}
-        </AnimatePresence>
-      </>)}
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
+      {/* Profile Photo Modal */}
+      <AnimatePresence>
+        {selectedUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={closeProfilePhotoModal}
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative z-10 max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden"
+            >
+              <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="font-semibold text-gray-800">
+                  {selectedUser.name}'s Profile
+                </h3>
+                <button
+                  onClick={closeProfilePhotoModal}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-8 flex flex-col items-center">
+                <div className="relative">
+                  {selectedUser.profileImage ? (
+                    <img
+                      src={selectedUser.profileImage}
+                      className="w-64 h-64 rounded-full object-cover border-4 border-white shadow-xl"
+                      alt="Profile"
+                    />
+                  ) : (
+                    <div className="w-64 h-64 rounded-full bg-indigo-100 flex items-center justify-center border-4 border-white shadow-xl">
+                      <FiUser className="text-indigo-600 text-6xl" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 text-center">
+                  <h2 className="text-xl font-bold text-gray-800 capitalize">
+                    {selectedUser.name}
+                  </h2>
+                  <p className="text-gray-600 mt-1">{selectedUser.email}</p>
+
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 capitalize">
+                      {selectedUser.role}
+                    </span>
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                      {selectedUser?.privilege?.toLowerCase() === "read"
+                        ? "Read Only"
+                        : "Read & Write"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  </>);
+  );
 };
-
 export default MangeInsitute;

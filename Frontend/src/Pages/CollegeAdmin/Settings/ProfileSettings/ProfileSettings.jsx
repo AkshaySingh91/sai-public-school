@@ -346,7 +346,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                         </div>
                     </div>
 
-                    <div className="text-center md:text-left">
+                    <div className="text-center md:text-left capitalize">
                         <h1 className="text-2xl font-bold">{profile.name || "-"}</h1>
                         <p className="text-white/90 capitalize">{profile.position || profile.role || ""}</p>
                         <p className="text-white/80 text-sm">{profile?.department || "School"} • {profile?.employeeId || ""}</p>

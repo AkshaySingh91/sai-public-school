@@ -671,9 +671,9 @@ const ActionMenu = ({ student, onAction, isOpen, onToggle }) => {
       color: 'text-red-600 hover:text-red-700 hover:bg-red-50'
     }
   ].filter((menu) => {
-    if (userData.role === "superadmin" && menu.action === "StockTransactions") {
+    if (userData.privilege?.toLowerCase() === "read" && menu.action === "StockTransactions") {
       return true;
-    } else if (userData.role !== "superadmin") {
+    } else if (userData.privilege?.toLowerCase() === "both" ) {
       return true
     } return false;
   });

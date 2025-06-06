@@ -209,7 +209,7 @@ export default function WeeklyCollectionChart() {
                     {/* tell them that we dont show cheque pending amount */}
                     <div className="flex items-center gap-2">
                         <Info size={16} className="text-purple-600" />
-                        <span>Only completed anount will shown</span>
+                        <span>Only completed amount will shown</span>
                     </div>
                 </div>
                 <span className="font-medium">

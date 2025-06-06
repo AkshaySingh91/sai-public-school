@@ -26,6 +26,7 @@ import StockDailyBook from './Student/StockMangement/StockDailyBook';
 import ImportExistingStudent from './Student/StudentManagement/ImportExistingStudent';
 import EmployeeForm from './Employee/EmployeeForm';
 import { useAuth } from '../../contexts/AuthContext';
+import NotFound from '../../components/NotFound';
 
 const AdminLayout = () => {
   return (
@@ -115,38 +116,42 @@ const SchoolAdminIndex = () => {
               <Route path='/stockallocate/:studentId' element={<StudentStockAllocation />} />
               <Route path='/stockallocate/:studentId/receipt/:receiptId' element={<StockFeeReceiptPage />} />
               <Route path='/stock/daily-book' element={<StockDailyBook />} />
-            </> :
-            <>
-              {/* dashboard  */}
-              <Route path="/" element={<ReadOnlyDashboard />} />
-              {/* students */}
-              <Route path="/students" element={<ReadOnlyStudentList />} />
-              <Route path="/students/daily-book" element={<ReadOnlyDailyBook />} />
-              <Route path="/students/outstanding-fee" element={<ReadOnlyFeeReportContainer />} />
-              {/* studentfee receipt */}
-              <Route
-                path="/school/student/:studentId/receipt/:receiptId"
-                element={<ReadOnlyFeeReceiptPage />}
-              />
-              {/* employee */}
-              <Route path="/employee" element={<ReadOnlyEmployeeList />} />
-              <Route path="/employee/:uid" element={<ReadOnlyEmployeeDetail />} />
-              <Route path="/fee-structure" element={<ReadOnlyFeeStructure />} />
-              <Route path="/payment-structure" element={<ReadOnlyPaymentStructure />} />
-              {/* setting - for profile or personal data update & school data readonly */}
-              <Route path="/settings" element={<ReadOnlySettings />} />
-              {/* bus */}
-              <Route path="/buslist" element={<ReadOnlyBusList />} />
-              <Route path='/busdest' element={<ReadOnlyBusDestination />} />
-              <Route path='/busallocate' element={<ReadOnlyBusAllocation />} />
-              {/* stock */}
-              <Route path='/stocklist' element={<ReadOnlyStockList />} />
-              <Route path='/stockgroup' element={<ReadOnlyStockGroup />} />
-              <Route path='/stockallocate' element={<ReadOnlyStockAllocate />} />
-              <Route path='/stockallocate/:studentId' element={<ReadOnlyStudentStockAllocation />} />
-              <Route path='/stockallocate/:studentId/receipt/:receiptId' element={<ReadOnlyStockFeeReceiptPage />} />
-              <Route path='/stock/daily-book' element={<ReadOnlyStockDailyBook />} />
-            </>
+              <Route path="*" element={<NotFound />} />)
+
+            </> : (userData.privilege?.toLowerCase() === "read" ?
+              <>
+                {/* dashboard  */}
+                <Route path="/" element={<ReadOnlyDashboard />} />
+                {/* students */}
+                <Route path="/students" element={<ReadOnlyStudentList />} />
+                <Route path="/students/daily-book" element={<ReadOnlyDailyBook />} />
+                <Route path="/students/outstanding-fee" element={<ReadOnlyFeeReportContainer />} />
+                {/* studentfee receipt */}
+                <Route
+                  path="/student/:studentId/receipt/:receiptId"
+                  element={<ReadOnlyFeeReceiptPage />}
+                />
+                {/* employee */}
+                <Route path="/employee" element={<ReadOnlyEmployeeList />} />
+                <Route path="/employee/:uid" element={<ReadOnlyEmployeeDetail />} />
+                <Route path="/fee-structure" element={<ReadOnlyFeeStructure />} />
+                <Route path="/payment-structure" element={<ReadOnlyPaymentStructure />} />
+                {/* setting - for profile or personal data update & school data readonly */}
+                <Route path="/settings" element={<ReadOnlySettings />} />
+                {/* bus */}
+                <Route path="/buslist" element={<ReadOnlyBusList />} />
+                <Route path='/busdest' element={<ReadOnlyBusDestination />} />
+                <Route path='/busallocate' element={<ReadOnlyBusAllocation />} />
+                {/* stock */}
+                <Route path='/stocklist' element={<ReadOnlyStockList />} />
+                <Route path='/stockgroup' element={<ReadOnlyStockGroup />} />
+                <Route path='/stockallocate' element={<ReadOnlyStockAllocate />} />
+                <Route path='/stockallocate/:studentId' element={<ReadOnlyStudentStockAllocation />} />
+                <Route path='/stockallocate/:studentId/receipt/:receiptId' element={<ReadOnlyStockFeeReceiptPage />} />
+                <Route path='/stock/daily-book' element={<ReadOnlyStockDailyBook />} />
+                {/* <Route path="*" element={<NotFound />} /> */}
+              </> : <Route path="*" element={<NotFound />} />
+            )
         }
       </Route>
     </Routes>

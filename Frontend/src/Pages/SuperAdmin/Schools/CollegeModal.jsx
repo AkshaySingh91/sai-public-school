@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
-import { auth } from "../config/firebase";
+import { auth } from "../../../config/firebase";
+
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 export default function CollegeModal({ onClose, onCollegeAdded }) {
     const [formData, setFormData] = useState({
@@ -61,10 +65,9 @@ export default function CollegeModal({ onClose, onCollegeAdded }) {
 
         setLoading(true);
         try {
-            const url =
-                import.meta.env.VITE_NODE_ENV === "Development"
-                    ? `http://localhost:${import.meta.env.VITE_PORT}/api/superadmin/settings/college/`
-                    : `${import.meta.env.VITE_DOMAIN_PROD}/api/superadmin/settings/college/`;
+            const url = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}/api/superadmin/settings/college/`
+                : `${VITE_DOMAIN_PROD}/api/superadmin/settings/college/`;
 
             const response = await fetch(url, {
                 method: "POST",
@@ -330,28 +333,6 @@ export default function CollegeModal({ onClose, onCollegeAdded }) {
                                             value={formData.collegeReceiptHeader}
                                             onChange={(e) =>
                                                 setFormData({ ...formData, collegeReceiptHeader: e.target.value })
-                                            }
-                                            className="w-full px-2 py-1 border rounded-lg"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-gray-600 mb-2">Lab Fee Header</label>
-                                        <input
-                                            type="text"
-                                            value={formData.labFeeHeader}
-                                            onChange={(e) =>
-                                                setFormData({ ...formData, labFeeHeader: e.target.value })
-                                            }
-                                            className="w-full px-2 py-1 border rounded-lg"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-gray-600 mb-2">Stock Receipt</label>
-                                        <input
-                                            type="text"
-                                            value={formData.stockReceiptHeader}
-                                            onChange={(e) =>
-                                                setFormData({ ...formData, stockReceiptHeader: e.target.value })
                                             }
                                             className="w-full px-2 py-1 border rounded-lg"
                                         />

@@ -20,7 +20,6 @@ const AdminSidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const sidebarRef = useRef();
   const { school } = useInstitution();
-  console.log(school)
   let menuItems;
   if (userData.role === "superadmin") {
     menuItems = school.type?.toLowerCase() === "school" ? [
@@ -92,6 +91,7 @@ const AdminSidebar = () => {
           { text: "Fee Structure", path: "/college/fee-structure" },
         ],
       },
+      { icon: Building2Icon, text: "Manage Institution", path: "/manage-institute" },
       { icon: FiSettings, text: "Settings", path: "/college/settings" },
     ];;
   } else {
@@ -105,8 +105,12 @@ const AdminSidebar = () => {
           { text: "All Student", path: "/school/students" },
           { text: "Daily Book", path: "/school/students/daily-book" },
           { text: "Outstanding Fees", path: "/school/students/outstanding-fee" },
-          { text: "Add Student", path: "/school/students/add" },
-          { text: "Import Student", path: "/school/students/import" },
+          ...(userData.privilege?.toLowerCase() === "both"
+            ? [{ text: "Add Student", path: "/school/students/add" }]
+            : []),
+          ...(userData.privilege?.toLowerCase() === "both"
+            ? [{ text: "Import Student", path: "/school/students/import" }]
+            : []),
         ],
       },
       {
@@ -320,8 +324,8 @@ const AdminSidebar = () => {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-sm font-semibold text-gray-800 truncate">
-                            {school?.schoolName || "Current School"}
+                          <h3 className="text-sm font-semibold text-gray-800 truncate capitalize">
+                            {(school?.type?.toLowerCase() == "school" ? school?.schoolName : school?.collegeName) || "Current Institute"}
                           </h3>
                           <p className="text-xs text-gray-500 truncate">
                             {school?.location?.taluka || "Location"}
@@ -348,9 +352,9 @@ const AdminSidebar = () => {
                         }}
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg border-2 border-white">
+                      <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg border-2 border-white capitalize">
                         <span className="text-white font-bold text-xl">
-                          {school?.schoolName?.charAt(0) || "S"}
+                          {(school?.type?.toLowerCase() == "school" ? (school?.schoolName?.charAt(0) || "S") : (school?.collegeName?.charAt(0) || "S")) || "S"}
                         </span>
                       </div>
                     )}
@@ -358,8 +362,8 @@ const AdminSidebar = () => {
 
                   {(!isCollapsed || !isDesktop) && (
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-base font-bold text-gray-900 truncate">
-                        {school?.schoolName || "School Management"}
+                      <h2 className="text-base font-bold text-gray-900 truncate capitalize">
+                        {(school?.type?.toLowerCase() == "school" ? school?.schoolName : school?.collegeName) || "Current Institute"}
                       </h2>
                       {school?.location?.taluka && (
                         <p className="text-xs text-gray-500 truncate flex items-center mt-1">
@@ -367,10 +371,13 @@ const AdminSidebar = () => {
                           {school.location.taluka}
                         </p>
                       )}
-                      <div className="flex items-center mt-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          School Admin
+                      <div className="flex flex-col mt-2">
+                        <span className="inline-flex items-center px-2 py-0.5 w-fit whitespace-nowrap rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                          {
+                            userData.privilege?.toLowerCase() === "read" ? `${userData.role}` : (school.type?.toLowerCase() === "school" ? "School Admin" : "College Admin")
+                          }
                         </span>
+                        <span className='px-3 py-0.5 mt-1 rounded-full text-xs font-medium w-fit whitespace-nowrap bg-blue-100 text-blue-800'>{userData?.privilege?.toLowerCase() === "read" ? "Read Only" : "Read & Write"}</span>
                       </div>
                     </div>
                   )}
@@ -382,7 +389,7 @@ const AdminSidebar = () => {
           {/* Navigation Menu */}
           <nav className="px-2 pb-6 pt-2 relative">
             {/* Absolute positioned collapse button */}
-            {isDesktop && (
+            {isDesktop && !isCollapsed && (
               <div className="absolute -top-4 -right-4 ">
                 <button
                   onClick={toggleCollapse}
@@ -477,8 +484,8 @@ const AdminSidebar = () => {
                       end
                       className={({ isActive }) =>
                         `flex items-center p-3 rounded-xl transition-all duration-300 ease-in-out
-              hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 group
-              ${isActive
+                        hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 group
+                        ${isActive
                           ? "text-blue-600 bg-gradient-to-r from-blue-50 to-indigo-50 font-medium shadow-sm"
                           : "text-gray-700 hover:text-blue-600"
                         } ${isCollapsed && isDesktop ? 'justify-center' : ''}`}

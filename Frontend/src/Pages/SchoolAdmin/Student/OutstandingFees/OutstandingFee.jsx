@@ -26,7 +26,7 @@ const OutstandingFee = ({
     const [showFilters, setShowFilters] = useState(false);
     const classOptions = useMemo(() => {
         const classes = new Set();
-        currentRows.forEach(row => classes.add(row.class));
+        currentRows.forEach(row => classes.add(row.class?.toLowerCase()));
         return ['All', ...Array.from(classes).sort()];
     }, [currentRows]);
     // Filter and sort rows
@@ -35,7 +35,7 @@ const OutstandingFee = ({
 
         // Apply class filter
         if (classFilter !== 'All') {
-            rows = rows.filter(row => row.class === classFilter);
+            rows = rows.filter(row => row.class?.toLowerCase() === classFilter);
         }
 
         // Apply sorting
@@ -332,7 +332,7 @@ const OutstandingFee = ({
                                 <select
                                     value={classFilter}
                                     onChange={(e) => setClassFilter(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full uppercase border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
                                     {classOptions.map(option => (
                                         <option key={option} value={option}>
@@ -449,7 +449,7 @@ const OutstandingFee = ({
                         <tbody className="divide-y divide-gray-200 bg-white">
                             {filteredAndSortedRows.map(row => (
                                 <tr key={row.class} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-3 py-3 pl-6 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10">
+                                    <td className="px-3 py-3 pl-6 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 uppercase">
                                         {row.class}
                                     </td>
                                     <td className="px-3 py-3 text-sm text-gray-600">{row.count}</td>
@@ -485,12 +485,12 @@ const OutstandingFee = ({
                                 {/* <td className="px-3 py-3 text-sm text-gray-600">{formatCurrency(totals.tuitionFeeDiscount)}</td> */}
                                 <td className="px-3 py-3 text-sm text-green-600">{formatCurrency(totals.tuitionFeePaid)}</td>
                                 <td className={`px-3 py-3 text-sm ${(totals.tuitionFeePending || 0) > 0 ? "text-red-600" : "text-green-600"} `}>{formatCurrency(totals.tuitionFeePending)}</td>
-                                
+
                                 <td className="px-3 py-3 text-sm text-green-600">{formatCurrency(totals.netBusFee)}</td>
                                 {/* <td className="px-3 py-3 text-sm text-gray-600">{formatCurrency(totals.busFeeDiscount)}</td> */}
                                 <td className="px-3 py-3 text-sm text-green-600">{formatCurrency(totals.busFeePaid)}</td>
                                 <td className={`px-3 py-3 text-sm ${(totals.busFeePending || 0) > 0 ? "text-red-600" : "text-green-600"} `}>{formatCurrency(totals.busFeePending)}</td>
-                                
+
                                 <td className="px-3 py-3 text-sm text-green-600">{formatCurrency(totals.totalPaid)}</td>
                                 <td className="px-3 py-3 pr-6 text-sm font-medium">
                                     <span className={clsx(

@@ -12,7 +12,7 @@ async function verifyAccountant(req, res, next) {
         const decoded = await admin.auth().verifyIdToken(token);
         const userSnap = await admin.firestore().collection('Users').doc(decoded.uid).get();
 
-        if (!userSnap.exists || !(userSnap.data().role !== 'accountant' || userSnap.data().role !== 'superadmin')) {
+        if (!userSnap.exists) {
             return res.status(403).json({ error: 'Forbidden: not an valid user' });
         }
         req.user = { uid: decoded.uid, ...userSnap.data() };
@@ -24,25 +24,39 @@ async function verifyAccountant(req, res, next) {
 }
 
 // School lookup middleware
-async function fetchSchool(req, res, next) {
+async function fetchInstiute(req, res, next) {
     try {
         if (req.user && req.user.role !== "superadmin") {
+            let collection = "", code = "";
+            if (req.user.institutionType?.toLowerCase() === 'school') {
+                collection = "schools";
+                code = req.user.schoolCode;
+            } else if (req.user.institutionType?.toLowerCase() === 'college') {
+                collection = "colleges"
+                code = req.user.collegeCode;
+            } else {
+                throw new Error("Institute type not recognized");
+            }
             const snap = await admin
                 .firestore()
-                .collection('schools')
-                .where('Code', '==', req.user.schoolCode)
+                .collection(collection)
+                .where('Code', '==', code)
                 .limit(1)
                 .get();
-
             if (snap.empty) {
-                return res.status(404).json({ error: 'School not found' });
+                return res.status(404).json({ error: `${req.user.institutionType} not found` });
             }
-            req.school = snap.docs[0].data();
-        }  
+            if (req.user.institutionType?.toLowerCase() === 'school') {
+                req.school = snap.docs[0].data();
+            } else if (req.user.institutionType?.toLowerCase() === 'college') {
+                console.log(snap.docs[0].data())
+                req.college = snap.docs[0].data();
+            }
+        }
         next();
     } catch (err) {
         next(err);
     }
 }
 
-export { verifyAccountant, fetchSchool };
+export { verifyAccountant, fetchInstiute };

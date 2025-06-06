@@ -33,6 +33,7 @@ export function SchoolProvider({ children }) {
                 // a) Check localStorage for previously selected institution
                 const saved = loadFromLocal("selectedInstitution");
                 if (saved) {
+                    console.log({saved})
                     setSchool(saved);
                     // Also fetch full list of schools AND colleges for the switcher
                     const schoolSnap = await getDocs(collection(db, "schools"));
