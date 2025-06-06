@@ -34,7 +34,7 @@ const initializeApp = async () => {
     try {
         // Apply middleware
         app.use(configureCORS());
-        app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
         // Import routes after Firebase initialization
         const { default: settingsRouter } = await import('./Routes/settings.js');

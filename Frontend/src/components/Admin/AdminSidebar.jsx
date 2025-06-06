@@ -1,93 +1,171 @@
-import { AnimatePresence, motion, useDragControls } from "framer-motion";
-import { FiActivity, FiUsers, FiBook, FiSettings, FiLogOut, FiHome, FiChevronRight, FiShield, FiMenu, FiX } from "react-icons/fi";
+import { AnimatePresence, motion } from "framer-motion";
+import { FiActivity, FiUsers, FiBook, FiSettings, FiLogOut, FiHome, FiChevronRight, FiX } from "react-icons/fi";
 import Swal from "sweetalert2";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffect, useRef, useState } from "react";
 import { TbBus } from "react-icons/tb";
 import { MdOutlineInventory2 } from "react-icons/md";
-import { useSchool } from "../../contexts/SchoolContext";
-import { AiOutlineMenuUnfold, AiOutlineMenuFold } from "react-icons/ai";
-import { ChevronsLeftIcon, ChevronsLeftRight, ChevronsRight, ChevronsRightIcon } from "lucide-react";
+import { useInstitution } from "../../contexts/InstitutionContext";
+import { AiOutlineMenuUnfold } from "react-icons/ai";
+import { ChevronsLeftIcon, ChevronsRightIcon, Building2Icon } from "lucide-react";
 
-const menuItems = [
-  { icon: FiActivity, text: "Dashboard", path: "/" },
-  {
-    icon: FiUsers,
-    text: "Students",
-    path: "/students",
-    subItems: [
-      { text: "All Student", path: "/students" },
-      { text: "Daily Book", path: "/students/daily-book" },
-      { text: "Outstanding Fees", path: "/students/outstanding-fee" },
-      { text: "Add Student", path: "/students/add" },
-      { text: "Import Student", path: "/students/import" },
-    ],
-  },
-  {
-    icon: FiHome,
-    text: "School",
-    path: "/school",
-    subItems: [
-      { text: "Payment Structure", path: "/school/payment-structure" },
-      { text: "Fee Structure", path: "/school/fee-structure" },
-    ],
-  },
-  { icon: FiBook, text: "Employee", path: "/employee" },
-  {
-    icon: TbBus,
-    text: "Bus",
-    path: "/bus",
-    subItems: [
-      { text: "Bus List", path: "/buslist" },
-      { text: "Bus Destination", path: "/busdest" },
-      { text: "Bus Allocation", path: "/busallocate" },
-    ],
-  },
-  {
-    icon: MdOutlineInventory2,
-    text: "Stock Management",
-    path: "/stock",
-    subItems: [
-      { text: "Stock Master", path: "/stocklist" },
-      { text: "Stock Group", path: "/stockgroup" },
-      { text: "Stock Allocation", path: "/stockallocate" },
-      { text: "Stock Daily Book", path: "/stock/daily-book" },
-    ],
-  },
-  { icon: FiSettings, text: "Settings", path: "/settings" },
-];
+
 
 const AdminSidebar = () => {
-  const { logout, role } = useAuth();
+  const { logout, role, userData } = useAuth();
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const sidebarRef = useRef();
-  const { school } = useSchool();
-
-  // Filter menu items based on role
-  const filteredMenuItems = menuItems.map(item => {
-    // For superadmin, remove add/import options from Students
-    if (role === "superadmin" && item.text === "Students") {
-      return {
-        ...item,
-        subItems: item.subItems.filter(
-          subItem => !["Add Student", "Import Student"].includes(subItem.text)
-        )
-      };
-    }
-    // For superadmin, add School management
-    if (role === "superadmin" && item.text === "School") {
-      return {
-        ...item,
-        subItems: [{ text: "Manage Schools", path: "/schools" }, ...item.subItems]
-      };
-    }
-    return item;
-  }).filter(Boolean);
-
+  const { school } = useInstitution();
+  console.log(school)
+  let menuItems;
+  if (userData.role === "superadmin") {
+    menuItems = school.type?.toLowerCase() === "school" ? [
+      { icon: FiActivity, text: "Dashboard", path: "/school" },
+      {
+        icon: FiUsers,
+        text: "Students",
+        path: "/school/students",
+        subItems: [
+          { text: "All Student", path: "/school/students" },
+          { text: "Daily Book", path: "/school/students/daily-book" },
+          { text: "Outstanding Fees", path: "/school/students/outstanding-fee" },
+          { text: "Add Student", path: "/school/students/add" },
+          { text: "Import Student", path: "/school/students/import" },
+        ],
+      },
+      {
+        icon: FiHome,
+        text: "School",
+        path: "/school",
+        subItems: [
+          { text: "Payment Structure", path: "/school/payment-structure" },
+          { text: "Fee Structure", path: "/school/fee-structure" },
+        ],
+      },
+      { icon: FiBook, text: "Employee", path: "/school/employee" },
+      {
+        icon: TbBus,
+        text: "Bus",
+        path: "/school/bus",
+        subItems: [
+          { text: "Bus List", path: "/school/buslist" },
+          { text: "Bus Destination", path: "/school/busdest" },
+          { text: "Bus Allocation", path: "/school/busallocate" },
+        ],
+      },
+      {
+        icon: MdOutlineInventory2,
+        text: "Stock Management",
+        path: "/stock",
+        subItems: [
+          { text: "Stock Master", path: "/school/stocklist" },
+          { text: "Stock Group", path: "/school/stockgroup" },
+          { text: "Stock Allocation", path: "/school/stockallocate" },
+          { text: "Stock Daily Book", path: "/school/stock/daily-book" },
+        ],
+      },
+      { icon: FiSettings, text: "Settings", path: "/school/settings" },
+      { icon: Building2Icon, text: "Manage Institution", path: "/manage-institute" },
+    ] : [
+      { icon: FiActivity, text: "Dashboard", path: "/college" },
+      {
+        icon: FiUsers,
+        text: "Students",
+        path: "/college/students",
+        subItems: [
+          { text: "All Student", path: "/college/students" },
+          { text: "Daily Book", path: "/college/students/daily-book" },
+          { text: "Outstanding Fees", path: "/college/students/outstanding-fee" },
+          { text: "Add Student", path: "/college/students/add" },
+        ],
+      },
+      {
+        icon: FiHome,
+        text: "College",
+        path: "/college",
+        subItems: [
+          { text: "Payment Structure", path: "/college/payment-structure" },
+          { text: "Fee Structure", path: "/college/fee-structure" },
+        ],
+      },
+      { icon: FiSettings, text: "Settings", path: "/college/settings" },
+    ];;
+  } else {
+    menuItems = userData.institutionType?.toLowerCase() === "school" ? [
+      { icon: FiActivity, text: "Dashboard", path: "/school" },
+      {
+        icon: FiUsers,
+        text: "Students",
+        path: "/school/students",
+        subItems: [
+          { text: "All Student", path: "/school/students" },
+          { text: "Daily Book", path: "/school/students/daily-book" },
+          { text: "Outstanding Fees", path: "/school/students/outstanding-fee" },
+          { text: "Add Student", path: "/school/students/add" },
+          { text: "Import Student", path: "/school/students/import" },
+        ],
+      },
+      {
+        icon: FiHome,
+        text: "School",
+        path: "/school",
+        subItems: [
+          { text: "Payment Structure", path: "/school/payment-structure" },
+          { text: "Fee Structure", path: "/school/fee-structure" },
+        ],
+      },
+      { icon: FiBook, text: "Employee", path: "/school/employee" },
+      {
+        icon: TbBus,
+        text: "Bus",
+        path: "/school/bus",
+        subItems: [
+          { text: "Bus List", path: "/school/buslist" },
+          { text: "Bus Destination", path: "/school/busdest" },
+          { text: "Bus Allocation", path: "/school/busallocate" },
+        ],
+      },
+      {
+        icon: MdOutlineInventory2,
+        text: "Stock Management",
+        path: "/stock",
+        subItems: [
+          { text: "Stock Master", path: "/school/stocklist" },
+          { text: "Stock Group", path: "/school/stockgroup" },
+          { text: "Stock Allocation", path: "/school/stockallocate" },
+          { text: "Stock Daily Book", path: "/school/stock/daily-book" },
+        ],
+      },
+      { icon: FiSettings, text: "Settings", path: "/school/settings" },
+    ] : [
+      { icon: FiActivity, text: "Dashboard", path: "/college" },
+      {
+        icon: FiUsers,
+        text: "Students",
+        path: "/college/students",
+        subItems: [
+          { text: "All Student", path: "/college/students" },
+          { text: "Daily Book", path: "/college/students/daily-book" },
+          { text: "Outstanding Fees", path: "/college/students/outstanding-fee" },
+          { text: "Add Student", path: "/college/students/add" },
+        ],
+      },
+      {
+        icon: FiHome,
+        text: "College",
+        path: "/college",
+        subItems: [
+          { text: "Payment Structure", path: "/college/payment-structure" },
+          { text: "Fee Structure", path: "/college/fee-structure" },
+        ],
+      },
+      { icon: FiSettings, text: "Settings", path: "/college/settings" },
+    ];
+  }
   const toggleSubmenu = (path) => {
     if (isCollapsed && isDesktop) {
       setIsCollapsed(false);
@@ -324,7 +402,7 @@ const AdminSidebar = () => {
             )}
 
             <ul className="space-y-1">
-              {filteredMenuItems.map((item, index) => (
+              {menuItems.map((item, index) => (
                 <motion.li
                   key={item.text}
                   initial={{ opacity: 0, y: 20 }}
@@ -422,7 +500,7 @@ const AdminSidebar = () => {
             <motion.button
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: filteredMenuItems.length * 0.1 }}
+              transition={{ delay: menuItems.length * 0.1 }}
               onClick={() => {
                 handleLogout();
                 !isDesktop && setSidebarOpen(false);

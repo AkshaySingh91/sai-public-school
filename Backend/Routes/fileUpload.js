@@ -4,6 +4,7 @@ import express from 'express';
 import multer from 'multer';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import admin from 'firebase-admin';
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 const BUCKET = process.env.CF_R2_BUCKET;
 const ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
@@ -327,123 +328,7 @@ router.delete('/students/document/:studentId', async (req, res) => {
     }
 });
 // school admin avatar upload
-router.post('/avatar/:adminUid', Imageupload.single('avatar'),
-    async (req, res) => {
-        const { adminUid } = req.params;
-        const file = req.file;
-        if (!file) {
-            return res.status(400).json({ error: 'No file provided.' });
-        }
-        try {
-            // 1) Fetch Accountant doc
-            const adminRef = admin.firestore().collection('Users').doc(adminUid);
-            const adminSnap = await adminRef.get();
-            if (!adminSnap.exists) {
-                return res.status(404).json({ error: 'School Accountant not found.' });
-            }
-            const adminData = adminSnap.data();
-            // 2) Delete old avatar if one exists
-            if (adminData.profileImage && adminData.profileImagePath) {
-                const oldKey = adminData.profileImagePath;
-                try {
-                    await r2.send(
-                        new DeleteObjectCommand({
-                            Bucket: BUCKET,
-                            Key: oldKey,
-                        })
-                    );
-                } catch (delErr) {
-                    // If the key wasn’t there, ignore. But log any other error.
-                    if (!delErr.name.includes('NoSuchKey')) {
-                        console.warn('Warning deleting old avatar:', delErr);
-                    }
-                }
-            }
-            // 3) Upload new file to R2
-            const fileExt = file.originalname.split('.').pop().toLowerCase() || 'png';
-            const timestamp = Date.now();
-            const newKey = `accountant/school/${req.user.uid}/profile-${timestamp}.${fileExt}`;
 
-            await r2.send(
-                new PutObjectCommand({
-                    Bucket: BUCKET,
-                    Key: newKey,
-                    Body: file.buffer,
-                    ContentType: file.mimetype,
-                })
-            );
-            // 4) Build URL from R2_BASE_URL
-            const profileUrl = `${R2_BASE_URL}/${newKey}`;
-            const updatedAt = new Date().toISOString();
-            await adminRef.update({
-                profileImage: profileUrl,
-                profileImagePath: newKey,
-                updatedAt,
-            });
-
-            // 5) Return response
-            return res.status(200).json({
-                message: 'Avatar updated successfully',
-                avatar: {
-                    profileImage: profileUrl,
-                    profileImagePath: newKey,
-                    updatedAt,
-                },
-            });
-        } catch (err) {
-            console.error('Error updating school accountant avatar:', {
-                message: err.message,
-                stack: err.stack,
-                params: req.params,
-                user: req.user.uid,
-            });
-            return res.status(500).json({
-                error: 'Internal server error',
-                details: err.message,
-            });
-        }
-    }
-);
-router.delete('/avatar/:adminUid', async (req, res) => {
-    const { adminUid } = req.params;
-    try {
-        // 1) Fetch Accountant doc
-        const adminRef = admin.firestore().collection('Users').doc(adminUid);
-        const adminSnap = await adminRef.get();
-        if (!adminSnap.exists) {
-            return res.status(404).json({ error: 'School Accountant not found.' });
-        }
-        const adminData = adminSnap.data();
-        // 2) Delete old avatar if one exists
-        if (adminData.profileImage && adminData.profileImagePath) {
-            const oldKey = adminData.profileImagePath;
-            try {
-                await r2.send(
-                    new DeleteObjectCommand({
-                        Bucket: BUCKET,
-                        Key: oldKey,
-                    })
-                );
-            } catch (delErr) {
-                // If the key wasn’t there, ignore. But log any other error.
-                if (!delErr.name.includes('NoSuchKey')) {
-                    console.warn('Warning deleting old avatar:', delErr);
-                }
-            }
-        }
-        await adminRef.update({
-            profileImage: null,
-            profileImagePath: null,
-            updatedAt: new Date().toISOString(),
-        });
-
-        // 4) Respond to client
-        return res.status(200).json({ message: 'Accountant Avatar deleted successfully.' });
-    } catch (err) {
-        console.error(`Error in DELETE /accountant/school/${adminUid}/`, err);
-        return res.status(500).json({ error: 'Internal server error.', details: err.message });
-    }
-});
 router.post('/logo/:schoolId', Imageupload.single('schoolLogo'),
     async (req, res) => {
         const { schoolId } = req.params;
@@ -494,7 +379,7 @@ router.post('/logo/:schoolId', Imageupload.single('schoolLogo'),
             const updatedAt = new Date().toISOString();
             await schoolRef.update({
                 logoUrl,
-                logoImagePath : newKey,
+                logoImagePath: newKey,
                 updatedAt,
             });
 
@@ -503,7 +388,7 @@ router.post('/logo/:schoolId', Imageupload.single('schoolLogo'),
                 message: 'Logo updated successfully',
                 metaData: {
                     logoUrl,
-                    logoImagePath : newKey,
+                    logoImagePath: newKey,
                     updatedAt,
                 },
             });
@@ -521,4 +406,114 @@ router.post('/logo/:schoolId', Imageupload.single('schoolLogo'),
         }
     }
 );
+
+/***********************/
+// accountant avatar upload
+router.get('/avatar/upload-url/:adminUid', async (req, res) => {
+    const { adminUid } = req.params;
+    const { fileType, fileName } = req.query;
+    try {
+        // Generate unique key
+        const fileExt = fileName.split('.').pop().toLowerCase() || 'png';
+        const timestamp = Date.now();
+        const newKey = `accountant/school/${req.user.uid}/profile-${timestamp}.${fileExt}`;
+
+        // Create pre-signed URL
+        const command = new PutObjectCommand({
+            Bucket: BUCKET,
+            Key: newKey,
+            ContentType: fileType,
+        });
+
+        const signedUrl = await getSignedUrl(r2, command, { expiresIn: 600 }); // 10 minutes
+
+        res.status(200).json({
+            signedUrl,
+            key: newKey
+        });
+    } catch (err) {
+        console.error('Error generating pre-signed URL:', err);
+        res.status(500).json({ error: 'Failed to generate upload URL' });
+    }
+});
+router.post('/avatar/update/:adminUid', async (req, res) => {
+    const { adminUid } = req.params;
+    const { newKey, oldKey } = req.body;
+    try {
+        const adminRef = admin.firestore().collection('Users').doc(adminUid);
+        // Delete old avatar if exists
+        if (oldKey) {
+            try {
+                await r2.send(
+                    new DeleteObjectCommand({
+                        Bucket: BUCKET,
+                        Key: oldKey,
+                    })
+                );
+            } catch (delErr) {
+                if (!delErr.name.includes('NoSuchKey')) {
+                    console.warn('Error deleting old avatar:', delErr);
+                }
+            }
+        }
+        // Build public URL
+        const avatarUrl = `${R2_BASE_URL}/${newKey}`;
+        const updatedAt = new Date().toISOString();
+        // Update Firestore
+        await adminRef.update({
+            profileImage: avatarUrl,
+            profileImagePath: newKey,
+            updatedAt,
+        });
+        res.status(200).json({
+            profileImage: avatarUrl,
+            profileImagePath: newKey,
+            updatedAt,
+        });
+    } catch (err) {
+        console.error('Error updating avatar:', err);
+        res.status(500).json({ error: 'Failed to update avatar' });
+    }
+});
+router.delete('/avatar/:adminUid', async (req, res) => {
+    const { adminUid } = req.params;
+    try {
+        // 1) Fetch Accountant doc
+        const adminRef = admin.firestore().collection('Users').doc(adminUid);
+        const adminSnap = await adminRef.get();
+        if (!adminSnap.exists) {
+            return res.status(404).json({ error: 'School Accountant not found.' });
+        }
+        const adminData = adminSnap.data();
+        // 2) Delete old avatar if one exists
+        if (adminData.profileImage && adminData.profileImagePath) {
+            const oldKey = adminData.profileImagePath;
+            try {
+                await r2.send(
+                    new DeleteObjectCommand({
+                        Bucket: BUCKET,
+                        Key: oldKey,
+                    })
+                );
+            } catch (delErr) {
+                // If the key wasn’t there, ignore. But log any other error.
+                if (!delErr.name.includes('NoSuchKey')) {
+                    console.warn('Warning deleting old avatar:', delErr);
+                }
+            }
+        }
+        await adminRef.update({
+            profileImage: null,
+            profileImagePath: null,
+            updatedAt: new Date().toISOString(),
+        });
+
+        // 4) Respond to client
+        return res.status(200).json({ message: 'Accountant Avatar deleted successfully.' });
+    } catch (err) {
+        console.error(`Error in DELETE /accountant/school/${adminUid}/`, err);
+        return res.status(500).json({ error: 'Internal server error.', details: err.message });
+    }
+});
+
 export default router;

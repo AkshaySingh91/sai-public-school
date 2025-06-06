@@ -2,15 +2,18 @@ import React, { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../config/firebase";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, query, collection, where } from "firebase/firestore";
 import logimg from "../assets/LoginImage.png";
+import { useAuth } from "../contexts/AuthContext";
+import Swal from "sweetalert2";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [schoolCode, setSchoolCode] = useState("");
+  const [institutionCode, setInstitutionCode] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
+  const { login: contextLogin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,36 +29,111 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     try {
+      // 1) Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        email,
+        email.trim(),
         password
       );
       const user = userCredential.user;
-      const userDoc = await getDoc(doc(db, "Users", user.uid));
-      if (!userDoc.exists()) throw new Error("User profile not found.");
 
-      const userData = userDoc.data();
-      if (
-        userData.role === "accountant" &&
-        schoolCode !== userData.schoolCode
-      ) {
-        throw new Error("Invalid school code for this accountant.");
+      // 2) Fetch this user’s Firestore profile
+      const userDocSnap = await getDoc(doc(db, "Users", user.uid));
+      if (!userDocSnap.exists()) {
+        throw new Error("User profile not found.");
       }
+      const userData = userDocSnap.data();
+      const { role, institutionId, institutionType, privilege } = userData;
 
-      if (rememberMe) {
-        localStorage.setItem("rememberEmail", email);
-        localStorage.setItem("rememberPassword", password);
+      // institutionId, institutionType will undefined for superadmin
+      
+      // 3) If not superadmin, validate the institutionCode they entered
+      if (role !== "superadmin") {
+        if (!institutionCode.trim()) {
+          throw new Error("You must enter an institution code.");
+        }
+        const code = institutionCode.trim();
+
+        let collectionName = "";
+        if (institutionType?.toLowerCase() === "school") {
+          collectionName = "schools";
+        } else if (institutionType?.toLowerCase() === "college") {
+          collectionName = "colleges";
+        } else {
+          throw new Error("Invalid institution type on your profile.");
+        }
+
+        // Look up the correct collection by Code
+        const instQuery = query(
+          collection(db, collectionName),
+          where("Code", "==", code)
+        );
+        const instSnap = await getDocs(instQuery);
+        if (instSnap.empty) {
+          throw new Error(
+            institutionType.toLowerCase() === "school"
+              ? "Invalid school code."
+              : "Invalid college code."
+          );
+        }
+        const instDoc = instSnap.docs[0];
+        const instDocId = instDoc.id;
+
+        // Verify this user actually belongs to that institution
+        if (institutionId !== instDocId) {
+          throw new Error(
+            `You are not assigned to that ${institutionType.toLowerCase()}.`
+          );
+        }
+
+        // 4) Everything checks out → call contextLogin so AuthContext updates
+        await contextLogin(email.trim(), password);
+
+        // 5) Save “remember me” / currentUser in localStorage
+        if (rememberMe) {
+          localStorage.setItem("rememberEmail", email.trim());
+          localStorage.setItem("rememberPassword", password);
+        } else {
+          localStorage.removeItem("rememberEmail");
+          localStorage.removeItem("rememberPassword");
+        }
+        localStorage.setItem(
+          "currentUser",
+          JSON.stringify({
+            uid: user.uid,
+            role,
+            institutionId,
+            institutionType,
+            privilege,
+            email: user.email,
+            name: userData.name || "",
+          })
+        );
+
+        // 6) Redirect to the appropriate dashboard
+        if (institutionType.toLowerCase() === "school") {
+          navigate("/school", { replace: true });
+        } else {
+          navigate("/college", { replace: true });
+        }
       } else {
-        localStorage.removeItem("rememberEmail");
-        localStorage.removeItem("rememberPassword");
+        // 7) If superadmin: no code required; just log them in
+        await contextLogin(email.trim(), password);
+        if (rememberMe) {
+          localStorage.setItem("rememberEmail", email.trim());
+          localStorage.setItem("rememberPassword", password);
+        } else {
+          localStorage.removeItem("rememberEmail");
+          localStorage.removeItem("rememberPassword");
+        }
+        localStorage.removeItem("selectedInstitution"); // clear any prior institution
+        navigate("/school", { replace: true });
       }
-
-      localStorage.setItem("userRole", userData.role);
-      navigate("/", { replace: true });
     } catch (err) {
       setError(err.message);
+      Swal.fire("Login Failed", err.message, "error");
     }
   };
 
@@ -110,8 +188,8 @@ placeholder-[#2a3e6f] focus:outline-none text-lg focus:ring-4 focus:ring-purple-
               placeholder="School Code (for Accountants)"
               className="w-full px-6 py-4    bg-[#d7d9e9] text-[#2a3e6f] rounded-xl
 placeholder-[#2a3e6f] focus:outline-none text-lg focus:ring-4 focus:ring-purple-300 focus:border-purple-600 transition"
-              value={schoolCode}
-              onChange={(e) => setSchoolCode(e.target.value)}
+              value={institutionCode}
+              onChange={(e) => setInstitutionCode(e.target.value)}
               autoComplete="off"
             />
 

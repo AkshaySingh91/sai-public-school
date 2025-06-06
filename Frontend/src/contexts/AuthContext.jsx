@@ -72,8 +72,27 @@ export function AuthProvider({ children }) {
         const userDoc = await getDoc(doc(db, "Users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
-          setUserData(data);
-          setRole(data.role);
+          /*
+           * Expect data to contain:
+           *   - role: "superadmin" | "accountant" | "teacher" | …
+           *   - institutionId: "<instDocID>" or null
+           *   - institutionType: "school" | "college" or null
+           *   - privilege: "read" | "write" | "both"
+           *   - name, email, etc.
+           */
+          console.log({ data })
+          setUserData({
+            ...data,
+            uid: user.uid,
+            email: user.email,
+            name: data.name || "",
+            role: data.role || null,
+            institutionId: data.institutionId || null,
+            institutionType: data.institutionType || null,
+            privilege: data.privilege || null,
+          });
+          console.log(data)
+          setRole(data.role || null);
         }
       } else {
         setRole(null);

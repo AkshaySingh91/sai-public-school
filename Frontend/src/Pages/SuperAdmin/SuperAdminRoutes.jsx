@@ -1,33 +1,37 @@
 // src/components/SuperAdmin/Index.jsx
 import { Routes, Route, Outlet, useNavigate } from 'react-router-dom';
 
-import AdminDashboard from '../Admin/AdminDashboard';
-import ManageSchools from './Schools/Index';
+import AdminDashboard from '../SchoolAdmin/AdminDashboard';
+import MangeInsitute from './Schools/Index';
 import AdminSidebar from '../../components/Admin/AdminSidebar';
 // employee
-import EmployeeList from '../Admin/Employee/EmployeeList';
-import EmployeeDetail from '../Admin/Employee/EmployeeDetail';
+import EmployeeList from '../SchoolAdmin/Employee/EmployeeList';
+import EmployeeDetail from '../SchoolAdmin/Employee/EmployeeDetail';
 // students
-import StudentList from '../Admin/Student/StudentManagement/StudentList';
-import { StudentDetail } from '../Admin/Student/StudentManagement/StudentDetail';
-import DailyBook from '../Admin/Student/DailyBook/DailyBook';
-import FeeReportContainer from '../Admin/Student/FeeManagement/FeeReportContainer';
-import BusList from '../Admin/Student/BusManagement/BusList';
-import BusDestination from '../Admin/Student/BusManagement/BusDestination';
-import BusAllocation from '../Admin/Student/BusManagement/BusAllocation';
-import StockList from '../Admin/Student/StockMangement/StockList';
-import StockGroup from '../Admin/Student/StockMangement/StockGroup';
-import StockAllocate from '../Admin/Student/StockMangement/StockAllocate';
-import Settings from "../Admin/Settings/Settings"
-import StudentStockAllocation from '../Admin/Student/StockMangement/StudentStockAllocation';
-import StockFeeReceiptPage from '../Admin/Student/StockMangement/StockFeeReceiptPage';
-import StockDailyBook from '../Admin/Student/StockMangement/StockDailyBook';
-import EmployeeForm from '../Admin/Employee/EmployeeForm';
-import { useAuth } from '../../contexts/AuthContext';
-import { useSchool } from '../../contexts/SchoolContext';
-import FeeReceiptPage from '../Admin/Student/Transactions/FeeReceiptPage';
-import PaymentStructure from '../Admin/Schools/SchoolPaymentStructure';
-import FeeStructure from '../Admin/Schools/FeeStructure';
+import StudentList from '../SchoolAdmin/Student/StudentManagement/StudentList';
+import { StudentDetail } from '../SchoolAdmin/Student/StudentManagement/StudentDetail';
+import DailyBook from '../SchoolAdmin/Student/DailyBook/DailyBook';
+import FeeReportContainer from '../SchoolAdmin/Student/FeeManagement/FeeReportContainer';
+import BusList from '../SchoolAdmin/Student/BusManagement/BusList';
+import BusDestination from '../SchoolAdmin/Student/BusManagement/BusDestination';
+import BusAllocation from '../SchoolAdmin/Student/BusManagement/BusAllocation';
+import StockList from '../SchoolAdmin/Student/StockMangement/StockList';
+import StockGroup from '../SchoolAdmin/Student/StockMangement/StockGroup';
+import StockAllocate from '../SchoolAdmin/Student/StockMangement/StockAllocate';
+import Settings from "../SchoolAdmin/Settings/Settings"
+import StudentStockAllocation from '../SchoolAdmin/Student/StockMangement/StudentStockAllocation';
+import StockFeeReceiptPage from '../SchoolAdmin/Student/StockMangement/StockFeeReceiptPage';
+import StockDailyBook from '../SchoolAdmin/Student/StockMangement/StockDailyBook';
+import EmployeeForm from '../SchoolAdmin/Employee/EmployeeForm';
+import { useInstitution } from '../../contexts/InstitutionContext';
+import FeeReceiptPage from '../SchoolAdmin/Student/Transactions/FeeReceiptPage';
+import PaymentStructure from '../SchoolAdmin/Schools/SchoolPaymentStructure';
+import FeeStructure from '../SchoolAdmin/Schools/FeeStructure';
+// college
+import CollegeAdminDashboard from '../CollegeAdmin/Dashboard/CollegeAdminDashboard';
+import NotFound from '../../components/NotFound';
+import AddStudent from '../SchoolAdmin/Student/StudentManagement/AddStudent';
+import ImportExistingStudent from '../SchoolAdmin/Student/StudentManagement/ImportExistingStudent';
 
 const SuperAdminLayout = () => {
   return (
@@ -52,75 +56,50 @@ const SuperAdminLayout = () => {
   );
 };
 
-// super admin routes
-const withReadOnly = (Component) => {
-  return (props) => {
-    const { role } = useAuth();
-    return <Component {...props} readOnly={role === "superadmin"} />;
-  };
-};
-
-// dashboard
-const ReadOnlyDashboard = withReadOnly(AdminDashboard);
-// employee
-const ReadOnlyEmployeeList = withReadOnly(EmployeeList);
-const ReadOnlyEmployeeDetail = withReadOnly(EmployeeDetail);
-// students
-const ReadOnlyStudentList = withReadOnly(StudentList);
-const ReadOnlyDailyBook = withReadOnly(DailyBook);  //daily transactions
-const ReadOnlyFeeReportContainer = withReadOnly(FeeReportContainer);  //for outstanding fee for all class & student
-const ReadOnlyFeeReceiptPage = withReadOnly(FeeReceiptPage);  //for outstanding fee for all class & student
-// bus
-const ReadOnlyBusList = withReadOnly(BusList); // all buses of school
-const ReadOnlyBusDestination = withReadOnly(BusDestination); // all destionation coverd by bus  
-const ReadOnlyBusAllocation = withReadOnly(BusAllocation); // all student allocated to bus
-// stock
-const ReadOnlyStockList = withReadOnly(StockList); // all stock of school
-const ReadOnlyStockGroup = withReadOnly(StockGroup); // all stock group of school
-const ReadOnlyStockAllocate = withReadOnly(StockAllocate); // all student purchase to stock
-const ReadOnlyStockDailyBook = withReadOnly(StockDailyBook); // daily transaction of stock
-const ReadOnlyStudentStockAllocation = withReadOnly(StudentStockAllocation); // daily transaction of stock
-const ReadOnlyStockFeeReceiptPage = withReadOnly(StockFeeReceiptPage); // daily transaction of stock
-// school struc
-const ReadOnlyFeeStructure = withReadOnly(FeeStructure); // daily transaction of stock
-const ReadOnlyPaymentStructure = withReadOnly(PaymentStructure); // daily transaction of stock
-const ReadOnlySettings = withReadOnly(Settings); // daily transaction of stock
-
 const SuperAdminIndex = () => {
+  const { school } = useInstitution();
   return (
     <Routes>
       <Route element={<SuperAdminLayout />}>
-        {/* dashboard  */}
-        <Route path="/" element={<ReadOnlyDashboard />} />
-        {/* manage school, super admin have seprate component */}
-        <Route path="/schools" element={<ManageSchools />} />
-        <Route path="/school/fee-structure" element={<ReadOnlyFeeStructure />} />
-        <Route path="/school/payment-structure" element={<ReadOnlyPaymentStructure />} />
-        {/* employee */}
-        <Route path="/employee" element={<ReadOnlyEmployeeList />} />
-        <Route path="/employee/:uid" element={<ReadOnlyEmployeeDetail />} />
-        {/* students */}
-        <Route path="/students" element={<ReadOnlyStudentList />} />
-        <Route path="/students/daily-book" element={<ReadOnlyDailyBook />} />
-        <Route path="/students/outstanding-fee" element={<ReadOnlyFeeReportContainer />} />
-        {/* studentfee receipt */}
-        <Route
-          path="/student/:studentId/receipt/:receiptId"
-          element={<ReadOnlyFeeReceiptPage />}
-        />
-        {/* setting - for profile or personal data update & school data readonly */}
-        <Route path="/settings" element={<ReadOnlySettings />} />
-        {/* bus */}
-        <Route path="/buslist" element={<ReadOnlyBusList />} />
-        <Route path='/busdest' element={<ReadOnlyBusDestination />} />
-        <Route path='/busallocate' element={<ReadOnlyBusAllocation />} />
-        {/* stock */}
-        <Route path='/stocklist' element={<ReadOnlyStockList />} />
-        <Route path='/stockgroup' element={<ReadOnlyStockGroup />} />
-        <Route path='/stockallocate' element={<ReadOnlyStockAllocate />} />
-        <Route path='/stockallocate/:studentId' element={<ReadOnlyStudentStockAllocation />} />
-        <Route path='/stockallocate/:studentId/receipt/:receiptId' element={<ReadOnlyStockFeeReceiptPage />} />
-        <Route path='/stock/daily-book' element={<ReadOnlyStockDailyBook />} />
+        {
+          school.type?.toLowerCase() == "school" ?
+            <>
+              <Route path="/school/" element={<AdminDashboard />} />
+              {/* student */}
+              <Route path="/school/students" element={<StudentList />} />
+              <Route path="/school/students/add" element={<AddStudent />} />
+              <Route path="/school/student/:studentId" element={<StudentDetail />} />
+              <Route path="/school/students/daily-book" element={<DailyBook />} />
+              {/* employee */}
+              <Route path="/school/employee" element={<EmployeeList />} />
+              <Route path="/school/employee/:uid" element={<EmployeeDetail />} />
+              <Route path="/school/employee/add" element={<EmployeeForm />} />
+              <Route path="/school/payment-structure" element={<PaymentStructure />} />
+              <Route path="/school/fee-structure" element={<FeeStructure />} />
+              <Route path="/school/students/outstanding-fee" element={<FeeReportContainer />} />
+              <Route path="/school/students/import" element={<ImportExistingStudent />} />
+              <Route path="/school/student/:studentId/receipt/:receiptId" element={<FeeReceiptPage />} />
+              <Route path="/school/settings" element={<Settings />} />
+              <Route path="/school/buslist" element={<BusList />} />
+              <Route path='/school/busdest' element={<BusDestination />} />
+              <Route path='/school/busallocate' element={<BusAllocation />} />
+              <Route path='/school/stocklist' element={<StockList />} />
+              <Route path='/school/stockgroup' element={<StockGroup />} />
+              <Route path='/school/stockallocate' element={<StockAllocate />} />
+              <Route path='/school/stockallocate/:studentId' element={<StudentStockAllocation />} />
+              <Route path='/school/stockallocate/:studentId/receipt/:receiptId' element={<StockFeeReceiptPage />} />
+              <Route path='/school/stock/daily-book' element={<StockDailyBook />} />
+              <Route path="*" element={<NotFound />} />
+            </>
+            : (school.type?.toLowerCase() == "college" ?
+              <>
+                <Route path="/college" element={<CollegeAdminDashboard />} />
+                <Route path="*" element={<NotFound />} />
+              </>
+              :
+              <Route path="*" element={<NotFound />} />)
+        }
+        <Route path='/manage-institute' element={<MangeInsitute />} />
       </Route>
     </Routes>
   );

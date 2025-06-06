@@ -48,7 +48,7 @@ router.get('/school', async (req, res) => {
     }
 });
 // superadmin will delete accountant from specific school
-router.delete("/accountants/:accountantId", async (req, res) => {
+router.delete("/user/:", async (req, res) => {
     const { accountantId } = req.params;
     const { uid } = req.body;
     if (!uid) {
@@ -297,76 +297,225 @@ router.post("/school", async (req, res) => {
             .json({ error: error.message || "Internal server error while creating school." });
     }
 });
-// delete school rarely use
-router.delete("/schools/:schoolId", async (req, res) => {
-    const { schoolId } = req.params;
+router.post("/college", async (req, res) => {
     try {
-        // 1. Read the school document to extract its schoolCode
-        const schoolRef = admin.firestore().collection("schools").doc(schoolId);
-        const schoolSnap = await schoolRef.get();
-        if (!schoolSnap.exists) {
-            return res
-                .status(404)
-                .json({ success: false, error: "School not found." });
-        }
+        const {
+            collegeName,
+            Code: rawCode,
+            location,
+            academicYear,
+            courses,
+            departments,
+            // header
+            collegeReceiptHeader,
+            feeIdCount,
+            // receipt count
+            tuitionReceiptCount,
+            // contact
+            mobile,
+            email,
+            paymentModes,
+            feeTypes,
+            studentsType,
+            type,
+        } = req.body;
 
-        const schoolData = schoolSnap.data();
-        const schoolCode = schoolData.Code;
-        if (!schoolCode) {
+        // Validate `collegeName`
+        if (typeof collegeName !== "string" || collegeName.trim().length === 0) {
             return res
                 .status(400)
-                .json({ success: false, error: "schoolCode is missing." });
-        } 
-        // 2. Delete the school document itself
-        await schoolRef.delete();
+                .json({ error: "Invalid or missing 'collegeName' (must be a non-empty string)." });
+        }
 
-        // 3. Query all accountants for that school
-        const accountantsQuery = admin
+        // Helper: check non-empty array of strings
+        function isNonEmptyStringArray(arr) {
+            return (
+                Array.isArray(arr) &&
+                arr.length > 0 &&
+                arr.every((el) => typeof el === "string" && el.trim().length > 0)
+            );
+        }
+
+        if (!isNonEmptyStringArray(courses)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'courses' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(departments)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'departments' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(paymentModes)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'paymentModes' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(feeTypes)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'feeTypes' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(studentsType)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'studentsType' (must be a non-empty array of strings)." });
+        }
+
+        // Generate random 6-character code
+        function generateRandomCode() {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            let code = "";
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // Determine final college code (uppercase). If none provided, auto-generate.
+        let collegeCode = "";
+        if (typeof rawCode === "string" && rawCode.trim().length > 0) {
+            collegeCode = rawCode.trim();
+        } else {
+            let tries = 0;
+            do {
+                if (tries >= 5) {
+                    return res
+                        .status(500)
+                        .json({ error: "Could not generate a unique college code. Try again later." });
+                }
+                collegeCode = generateRandomCode();
+                tries++;
+                const dupSnap = await admin
+                    .firestore()
+                    .collection("colleges")
+                    .where("Code", "==", collegeCode)
+                    .limit(1)
+                    .get();
+                if (dupSnap.empty) break;
+            } while (true);
+        }
+
+        // Check case-insensitive uniqueness in "colleges"
+        const existingQuery = admin
             .firestore()
-            .collection("Users")
-            .where("schoolCode", "==", schoolCode)
-            .where("role", "==", "accountant");
-
-        const accountantSnapshot = await accountantsQuery.get();
-        if (accountantSnapshot.empty) {
-            // No accountants found; we can return immediately
-            return res.json({
-                success: true,
-                message:
-                    "School deleted. No associated accountants were found to delete.",
+            .collection("colleges")
+            .where("Code", "==", collegeCode)
+            .limit(1);
+        const existingSnap = await existingQuery.get();
+        if (!existingSnap.empty) {
+            const existingData = existingSnap.docs[0].data();
+            return res.status(400).json({
+                error: `College "${existingData.collegeName}" with code "${collegeCode}" already exists.`,
             });
         }
 
-        // 4. For Firestore, we’ll batch‐delete all the document refs
+        // Construct the new college document
+        const newCollegeData = {
+            collegeName: collegeName.trim(),
+            Code: collegeCode,
+            courses: courses.map((s) => s.trim()),
+            departments: departments.map((s) => s.trim()),
+            paymentModes: paymentModes.map((s) => s.trim()),
+            feeTypes: feeTypes.map((s) => s.trim()),
+            studentsType: studentsType.map((s) => s.trim()),
+            accounts: [],
+            location,
+            academicYear,
+            // headers
+            collegeReceiptHeader,
+            feeIdCount,
+            // receipt counts
+            tuitionReceiptCount,
+            // contact
+            mobile,
+            email,
+            type: "college",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        // Write to Firestore
+        const docRef = await admin.firestore().collection("colleges").add(newCollegeData);
+
+        return res.status(201).json({ success: true, id: docRef.id });
+    } catch (error) {
+        console.error("Error in POST api/superadmin/setting/college:", error);
+        return res
+            .status(500)
+            .json({ error: error.message || "Internal server error while creating college." });
+    }
+});
+
+// delete school rarely use
+router.delete("/:collectionName/:instId", async (req, res) => {
+    let { instId, collectionName } = req.params;
+    if (collectionName?.toLowerCase() === "schools") {
+        collectionName = "schools";
+    } else if (collectionName?.toLowerCase() === "colleges") {
+        collectionName = "colleges";
+    } else {
+        return res
+            .status(400)
+            .json({ success: false, error: "Invalid collection name." });
+    }
+    try {
+        // 1) Read and delete the institution document
+        const instRef = admin.firestore().collection(collectionName).doc(instId);
+        const instSnap = await instRef.get();
+        if (!instSnap.exists) {
+            return res
+                .status(404)
+                .json({ success: false, error: `${collectionName} not found.` });
+        }
+        // 2. Delete the school document itself
+        await instRef.delete();
+        // 2) Query all users whose institutionId === instId
+        const usersQuery = admin
+            .firestore()
+            .collection("Users")
+            .where("institutionId", "==", instId);
+
+        const usersSnapshot = await usersQuery.get();
+        if (usersSnapshot.empty) {
+            return res.json({
+                success: true,
+                message: `${collectionName} deleted. No associated users to delete.`,
+            });
+        }
+        // 3) Batch-delete all matching Users docs from Firestore,
+        //    and collect promises to delete Auth users by UID
         const batch = admin.firestore().batch();
         const deletionPromises = [];
 
-        accountantSnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const uidToDelete = data.uid || docSnap.id;
-            // a) Queue Firestore document deletion
-            batch.delete(docSnap.ref);
-
-            // b) Schedule Auth user deletion
+        usersSnapshot.forEach((userDoc) => {
+            const data = userDoc.data();
+            const uidToDelete = data.uid || userDoc.id; // fallback to doc ID if no uid field
+            // Queue Firestore doc deletion
+            batch.delete(userDoc.ref);
+            // Queue Auth user deletion
             if (uidToDelete) {
-                deletionPromises.push(admin.auth().deleteUser(uidToDelete).catch((err) => {
-                    // Catch per‐user errors so one failure doesn’t block the entire list
-                    console.error(
-                        `Failed to delete Auth user (uid=${uidToDelete}):`,
-                        err
-                    );
-                }));
+                deletionPromises.push(
+                    admin
+                        .auth()
+                        .deleteUser(uidToDelete)
+                        .catch((err) => {
+                            console.error(
+                                `Failed to delete Auth user (uid=${uidToDelete}):`,
+                                err
+                            );
+                        })
+                );
             }
         });
-        // 5. Commit Firestore batch (delete all matched accountant docs)
+        // 4) Commit Firestore batch
         await batch.commit();
-        // 6. Wait for all Auth‐deletion promises to resolve
+        // 5) Wait for all Auth deletions to finish
         await Promise.all(deletionPromises);
         return res.json({
             success: true,
-            message:
-                "School and all associated accountants (Firestore + Auth) have been deleted.",
+            message: `${collectionName} and all associated users deleted.`,
         });
+
     } catch (error) {
         console.error("Error deleting school and accountants:", error);
         return res

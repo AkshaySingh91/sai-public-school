@@ -1,15 +1,16 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { SchoolProvider } from "./contexts/SchoolContext";
+import { SchoolProvider } from "./contexts/InstitutionContext";
 import Login from "./components/Login";
 import { useAuth } from "./contexts/AuthContext";
-import { useSchool } from "./contexts/SchoolContext";
+import { useInstitution } from "./contexts/InstitutionContext";
 import LoadingScreen from "./components/Loader";
 import SuperAdminRoutes from "./Pages/SuperAdmin/SuperAdminRoutes";
-import AdminRoutes from "./Pages/Admin/AdminRoutes";
+import SchoolAdminRoutes from "./Pages/SchoolAdmin/SchoolAdminRoutes";
+import CollegeAdminRoutes from "./Pages/CollegeAdmin/CollegeAdminRoutes";
 import NotFound from "./components/NotFound"
-import EmployeeFormWithToken from "./Pages/Admin/Employee/EmployeeFormWithToken"; // Add this
+import EmployeeFormWithToken from "./Pages/SchoolAdmin/Employee/EmployeeFormWithToken"; // Add this
 
 const App = () => {
   return (
@@ -29,8 +30,9 @@ const App = () => {
 };
 
 const ProtectedRoutes = () => {
-  const { currentUser, role } = useAuth();
-  const { school, loading: schoolLoading } = useSchool();
+  const { currentUser, role, userData } = useAuth();
+  const { institutionType } = userData;
+  const { school, loading: schoolLoading } = useInstitution();
 
   // first check if user logged in & exist in database
   if (!currentUser) {
@@ -44,11 +46,12 @@ const ProtectedRoutes = () => {
   if (!school && role !== "superadmin") {
     return <Navigate to="/login" replace />;
   }
-
+  console.log(institutionType)
   return (<>
     <Routes>
       {role === "superadmin" && <Route path="/*" element={<SuperAdminRoutes />} />}
-      {role === "accountant" && <Route path="/*" element={<AdminRoutes />} />}
+      {institutionType?.toLowerCase() === "school" && <Route path="/school/*" element={<SchoolAdminRoutes />} />}
+      {institutionType?.toLowerCase() === "college" && <Route path="/college/*" element={<CollegeAdminRoutes />} />}
       <Route path="*" element={<NotFound />} />
     </Routes>
   </>);

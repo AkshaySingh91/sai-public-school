@@ -36,10 +36,18 @@ router.get('/school', async (req, res) => {
     }
 });
 
-router.put('/school', async (req, res) => {
+router.put('/school/:schoolId', async (req, res) => {
     try {
-        if (!req.user || !req.user.schoolCode) {
-            return res.status(401).json({ error: "Unauthorized - School code missing" });
+        const { schoolId } = req.params;
+        console.log(schoolId)
+        const scholRef = admin.firestore().collection('schools').doc(schoolId);
+        const schoolSnap = await scholRef.get();
+        const data = schoolSnap.data();
+        if (!schoolSnap.exists) {
+            return res.status(404).json({ error: 'School not found.' });
+        }
+        if (!req.user) {
+            return res.status(401).json({ error: "Unauthorized - User" });
         }
         const { schoolName,
             divisions: d,
@@ -74,7 +82,7 @@ router.put('/school', async (req, res) => {
             return res.status(400).json({ error: "stockReceiptCount must be a number" });
         }
         const schoolQuery = await admin.firestore().collection('schools')
-            .where('Code', '==', req.user.schoolCode)
+            .where('Code', '==', data.Code)
             .get();
 
         // Check if school exists
@@ -101,14 +109,7 @@ router.put('/school', async (req, res) => {
             stockReceiptCount: stockReceiptCount || 0,
             mobile,
             email
-        };
-        // Reset receipt counts if academic year changes
-        // if (academicYear !== schoolData.academicYear) {
-        //     updateData.tuitionReceiptCount = 0;
-        //     updateData.busReceiptCount = 0;
-        //     updateData.stockReceiptCount = 0;
-        //     updateData.feeIdCount = 0;
-        // }
+        }; 
         await schoolDoc.ref.update(updateData);
 
         res.json({
