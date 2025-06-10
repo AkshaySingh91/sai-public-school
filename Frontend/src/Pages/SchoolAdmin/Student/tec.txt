@@ -18,7 +18,7 @@ schoolSchema:
   "createdAt": "2025-04-14T15:24:46.945Z",
   "feeTypes": ["AcademicFee", "TuitionFee"],
   "location": "asdfasd",
-  "logoURL": "",
+  "logoImage": "",
   "paymentModes": ["CASH", "GPAY"],
   "schoolName": "asdfasdf",
   "studentsType": ["DSS", "DS", "DSR"]
@@ -86,7 +86,7 @@ give complete & beautiful dashboard with best UI use as many line of code as you
   }
   "createdAt": "14 May 2025 at 18:12:55 UTC+5:30",
   "div": "B",
-  "divisions": ["A"],
+  "divisions": "A",
   "dob": "1212-12-12",
   "fatherName": "sdf",
   "feeId": "FEE-L4DVZV",

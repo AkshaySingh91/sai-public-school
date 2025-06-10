@@ -294,7 +294,7 @@ export default function PersonalInfo({ formData, setFormData, studentId, schoolD
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section title="Personal Information">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-">
             <InputField
               icon={<User />}
               label="First Name"

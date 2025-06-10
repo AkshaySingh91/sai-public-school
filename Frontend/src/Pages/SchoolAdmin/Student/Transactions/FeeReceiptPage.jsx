@@ -7,11 +7,11 @@ import FeeReceipt from './FeeReceipt';
 import { useInstitution } from '../../../../contexts/InstitutionContext';
 
 export default function FeeReceiptPage() {
-    const { studentId, receiptId } = useParams();
+    const { studentId, receiptId, receiptType } = useParams();
     const { school } = useInstitution();
     const [student, setStudent] = useState(null);
     const [transaction, setTransaction] = useState(null);
-    
+
     // Fetch student and transaction
     useEffect(() => {
         const fetchStudentAndTransaction = async () => {
@@ -23,7 +23,8 @@ export default function FeeReceiptPage() {
                 setStudent(studentData);
 
                 // Find the specific transaction
-                const tx = (studentData.transactions || []).find(t => t.receiptId == receiptId);
+                // we use receiptType to avoid confict btw 2 different types of fee receipts of same id 
+                const tx = (studentData.transactions || []).find(t => t.receiptId == receiptId && t.feeType?.toLowerCase() == receiptType?.toLowerCase());
                 if (!tx) return;
 
                 // Verify transaction has historical snapshot

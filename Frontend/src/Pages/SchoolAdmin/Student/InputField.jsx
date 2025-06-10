@@ -14,7 +14,7 @@ export const InputField = ({ icon, label, textarea = false, ...props }) => (
         ) : (
             <input
                 {...props}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none capitalize"
             />
         )}
     </div>

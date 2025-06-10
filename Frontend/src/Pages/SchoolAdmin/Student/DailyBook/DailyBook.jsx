@@ -283,7 +283,7 @@ export default function DailyBook() {
   const handleAction = async (action, transaction) => {
     switch (action) {
       case 'details':
-        navigate(`/school/student/${transaction.studentId}/receipt/${transaction.receiptId}`)
+        navigate(`/school/student/${transaction.studentId}/receipt/${transaction.feeType?.toLowerCase()}/${transaction.receiptId}`)
         break;
       case 'profile':
         navigate(`/school/student/${transaction.studentId}`)
@@ -564,7 +564,7 @@ export default function DailyBook() {
                         <td className={`px-2 py-2 font-medium break-words ${t.status !== "completed" ? "opacity-50" : ""} `}>
                           {t.status === "completed" ? (
                             <Link
-                              to={`/school/student/${t.studentId}/receipt/${t.receiptId}`}
+                              to={`/school/student/${t.studentId}/receipt/${t.feeType?.toLowerCase()}/${t.receiptId}`}
                             >
                               {t.receiptId}
                             </Link>

@@ -17,12 +17,12 @@ export const SelectField = ({ icon, label, value, onChange, options, required = 
         {options.map((option) =>
           typeof option === 'object' ? (
             // If the option is an object, we can display the label and use the id as the value
-            <option className="uppercase" key={option.value} value={option.value}>
+            <option className="" key={option.value} value={option.value}>
               {option.label}
             </option>
           ) : (
             // If it's just a string, display the string as both value and label
-            <option className="uppercase" key={option} value={option}>
+            <option className="" key={option} value={option}>
               {option}
             </option>
           )

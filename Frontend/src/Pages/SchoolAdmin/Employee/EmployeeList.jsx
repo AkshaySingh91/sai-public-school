@@ -566,10 +566,10 @@ const EmployeeList = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 my-auto relative">
-                            {employee.avatar && employee?.avatar?.avatarUrl ?
+                            {employee.profileImage && employee.profileImagePath ?
                               <img
                                 className="h-12 w-12 rounded-full object-cover border-2 border-purple-100"
-                                src={employee?.avatar?.avatarUrl}
+                                src={employee?.profileImage}
                                 alt={`${employee.firstName} ${employee.lastName}`}
                               /> :
                               <div className="w-12 h-12 bg-purple-100 rounded-full mx-auto flex items-center justify-center">

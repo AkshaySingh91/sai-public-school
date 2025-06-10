@@ -90,7 +90,7 @@ export default function StudentProfile({
             {student.fname} {student.fatherName || ""} {student.lname}
           </h2>
           <p className="text-gray-600 mt-1 font-medium">
-            Class : <span className="uppercase">{student.class}</span> &ndash; Division : <span className="uppercase">{student.div}</span>
+            Class : <span className="capitalize">{student.class}</span> &ndash; Division : <span className="uppercase">{student.div}</span>
           </p>
           <p className="text-sm text-violet-700 font-mono mt-2">
             FeeID: {student.feeId}

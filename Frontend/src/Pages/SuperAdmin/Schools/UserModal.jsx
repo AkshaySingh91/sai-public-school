@@ -132,8 +132,8 @@ export default function UserModal({ institute, onClose, onUserAdded }) {
             const userToken = await user.getIdToken();
             const url =
                 import.meta.env.VITE_NODE_ENV === "Development"
-                    ? `http://localhost:${import.meta.env.VITE_PORT}/api/superadmin/settings/user/`
-                    : `${import.meta.env.VITE_DOMAIN_PROD}/api/superadmin/settings/user/`;
+                    ? `http://localhost:${import.meta.env.VITE_PORT}/api/superadmin/user/`
+                    : `${import.meta.env.VITE_DOMAIN_PROD}/api/superadmin/user/`;
 
             // Build payload. Depending on institute type, add schoolCode or collegeCode
             const payload = {
@@ -152,7 +152,6 @@ export default function UserModal({ institute, onClose, onUserAdded }) {
             } else {
                 payload.collegeCode = institute.Code;
             }
-            console.log(payload)
             const response = await fetch(url, {
                 method: "POST",
                 headers: {

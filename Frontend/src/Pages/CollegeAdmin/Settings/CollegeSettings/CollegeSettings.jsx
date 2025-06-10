@@ -23,8 +23,8 @@ const CollegeSettings = ({ college, setCollege }) => {
     const [collegeReceiptHeader, setCollegeReceiptHeader] = useState(college.collegeReceiptHeader || "")
     const [tuitionReceiptCount, settuitionReceiptCount] = useState(college.tuitionReceiptCount || 0)
     const [feeIdCount, setFeeIdCount] = useState(college.feeIdCount || 0)
-    const [schoolEmail, setSchoolEmail] = useState(college.email || "")
-    const [schoolMobile, setSchoolMobile] = useState(college.mobile || "")
+    const [collegeEmail, setCollegeEmail] = useState(college.email || "")
+    const [collegeMobile, setCollegeMobile] = useState(college.mobile || "")
     // file upload
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -45,14 +45,6 @@ const CollegeSettings = ({ college, setCollege }) => {
         const academicYearPattern = /^\d{2}-\d{2}$/;
         const mobilePattern = /^\d{10}$/;
 
-        if (div.trim() !== '' && !validPattern.test(div)) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Invalid input',
-                text: 'Please enter comma-separated values like: A, B, C, etc.'
-            });
-        }
-
         if (courses.trim() !== '' && !validPattern.test(courses)) {
             return Swal.fire({
                 icon: 'error',
@@ -67,7 +59,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                 text: 'Please enter valid academic year: 24-25,25-26, etc.'
             });
         }
-        if (schoolMobile && schoolMobile.trim() !== '' && !mobilePattern.test(schoolMobile)) {
+        if (collegeMobile && collegeMobile.trim() !== '' && !mobilePattern.test(collegeMobile)) {
             return Swal.fire({
                 icon: 'error',
                 title: 'Invalid input',
@@ -80,21 +72,17 @@ const CollegeSettings = ({ college, setCollege }) => {
             .filter(s => s.trim())
             .map(s => s.trim());
 
-        const updatedSchool = {
+        const updatedCollege = {
             ...college,
             collegeName,
             courses: coursesArr,
             academicYear,
-            collegeLocation,
+            location: collegeLocation,
             feeIdCount,
             collegeReceiptHeader,
-            busReceiptHeader,
-            stockReceiptHeader,
             tuitionReceiptCount,
-            busReceiptCount,
-            stockReceiptCount,
-            email: schoolEmail,
-            mobile: schoolMobile,
+            email: collegeEmail,
+            mobile: collegeMobile,
         };
 
         let userToken;
@@ -118,14 +106,14 @@ const CollegeSettings = ({ college, setCollege }) => {
         try {
             // 1) Update the college details
             const resDetails = await
-                fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/college/${s.id}` : `${VITE_DOMAIN_PROD}/api/admin/settings/college/${s.id}`,
+                fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/college/${c.id}` : `${VITE_DOMAIN_PROD}/api/college/${c.id}`,
                     {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
                             Authorization: `Bearer ${userToken}`
                         },
-                        body: JSON.stringify(updatedSchool)
+                        body: JSON.stringify(updatedCollege)
                     });
 
             if (!resDetails.ok) {
@@ -174,7 +162,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                 },
             });
             // Use XMLHttpRequest to track upload progress and get back the JSON
-            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/college/logo/${s.id}` : `${VITE_DOMAIN_PROD}/api/admin/college/logo/${s.id}`
+            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/college/logo/${c.id}` : `${VITE_DOMAIN_PROD}/api/admin/college/logo/${c.id}`
 
             const uploadResult = await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
@@ -212,7 +200,7 @@ const CollegeSettings = ({ college, setCollege }) => {
 
             setCollege(prev => ({
                 ...prev,
-                logoUrl: metaData.logoUrl,
+                logoImage: metaData.logoImage,
                 logoImagePath: metaData.logoImagePath
             }));
 
@@ -453,9 +441,9 @@ const CollegeSettings = ({ college, setCollege }) => {
                         <input
                             disabled={userData.privilege?.toLowerCase() === "read"}
                             type="text"
-                            value={schoolEmail}
+                            value={collegeEmail}
                             onChange={(e) => {
-                                setSchoolEmail(e.target.value)
+                                setCollegeEmail(e.target.value)
                             }}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all capitalize"
                             placeholder="eg; demo@gmail.com"
@@ -468,9 +456,9 @@ const CollegeSettings = ({ college, setCollege }) => {
                         <input
                             disabled={userData.privilege?.toLowerCase() === "read"}
                             type="text"
-                            value={schoolMobile}
+                            value={collegeMobile}
                             onChange={(e) => {
-                                setSchoolMobile(e.target.value)
+                                setCollegeMobile(e.target.value)
                             }}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all capitalize"
                             placeholder="eg; 9822841280"
@@ -486,9 +474,9 @@ const CollegeSettings = ({ college, setCollege }) => {
                     <div className="w-full">
                         <label className="block text-sm font-medium text-gray-700 mb-3">College Logo</label>
                         <div className="flex items-center gap-6">
-                            <div className={`relative ${!college.logoUrl ? 'bg-gray-50' : ''} border-2 border-dashed border-gray-300 rounded-xl p-4 w-32 h-32 flex items-center justify-center transition-colors hover:border-purple-500`}>
-                                {college.logoUrl ? (
-                                    <img src={college.logoUrl} className="w-full h-full object-contain" alt="college Logo" />
+                            <div className={`relative ${!college.logoImage ? 'bg-gray-50' : ''} border-2 border-dashed border-gray-300 rounded-xl p-4 w-32 h-32 flex items-center justify-center transition-colors hover:border-purple-500`}>
+                                {college.logoImage ? (
+                                    <img src={college.logoImage} className="w-full h-full object-contain" alt="college Logo" />
                                 ) : (
                                     <div className="text-center">
                                         <Upload size={24} className="text-gray-400 mx-auto mb-2" />

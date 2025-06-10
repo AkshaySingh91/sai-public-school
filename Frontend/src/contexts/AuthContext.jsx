@@ -80,7 +80,6 @@ export function AuthProvider({ children }) {
            *   - privilege: "read" | "write" | "both"
            *   - name, email, etc.
            */
-          console.log({ data })
           setUserData({
             ...data,
             uid: user.uid,
@@ -91,7 +90,6 @@ export function AuthProvider({ children }) {
             institutionType: data.institutionType || null,
             privilege: data.privilege || null,
           });
-          console.log(data)
           setRole(data.role || null);
         }
       } else {

@@ -66,8 +66,8 @@ export default function CollegeModal({ onClose, onCollegeAdded }) {
         setLoading(true);
         try {
             const url = VITE_NODE_ENV === "Development"
-                ? `http://localhost:${VITE_PORT}/api/superadmin/settings/college/`
-                : `${VITE_DOMAIN_PROD}/api/superadmin/settings/college/`;
+                ? `http://localhost:${VITE_PORT}/api/superadmin/college/`
+                : `${VITE_DOMAIN_PROD}/api/superadmin/college/`;
 
             const response = await fetch(url, {
                 method: "POST",

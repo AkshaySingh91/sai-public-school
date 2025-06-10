@@ -28,49 +28,23 @@ const configureCORS = () => {
         credentials: true
     });
 };
-// Configure file upload 
 
 const initializeApp = async () => {
     try {
-        // Apply middleware
         app.use(configureCORS());
         app.use(express.json({ limit: '10mb' }));
 
-        // Import routes after Firebase initialization
-        const { default: settingsRouter } = await import('./Routes/settings.js');
-        const { default: superadminSettings } = await import('./Routes/superadminSettings.js');
-        const { default: fileUpload } = await import('./Routes/fileUpload.js');
+        // Import routes after Firebase initialization 
+        const { default: commonSchoolRoutes } = await import('./Routes/commonSchoolRoutes.js');
+        const { default: commonCollegeRoutes } = await import('./Routes/commonCollegeRoutes.js');
+        const { default: adminRoutes } = await import('./Routes/adminRoutes.js'); // for profile 
+        const { default: superadminRoutes } = await import('./Routes/superadminRoutes.js'); // for profile 
 
-        // Apply routes
-        app.use('/api/admin/school', verifyAccountant, fileUpload);
-        app.use('/api/admin/settings', verifyAccountant, fetchInstiute, settingsRouter);
-        app.use('/api/superadmin/settings', verifyAccountant, superadminSettings);
+        app.use('/api/school', verifyAccountant, commonSchoolRoutes);
+        app.use('/api/college', verifyAccountant, commonCollegeRoutes);
+        app.use('/api/admin', verifyAccountant, adminRoutes);
+        app.use('/api/superadmin', verifyAccountant, superadminRoutes);
 
-        // Superadmin route
-        app.post('/api/superadmin/schools/create-accountant', async (req, res) => {
-            try {
-                const { name, email, password, phone, schoolCode } = req.body;
-                if (!name || !email || !password || !schoolCode) {
-                    return res.status(400).json({ error: 'Missing required fields' });
-                }
-                const userRec = await admin.auth().createUser({
-                    email,
-                    password,
-                    displayName: name,
-                    phoneNumber: phone || undefined,
-                });
-                await admin.firestore().collection('Users').doc(userRec.uid).set({
-                    name, email, phone: phone || null,
-                    schoolCode, role: 'accountant',
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                });
-                res.json({ uid: userRec.uid, message: 'Accountant created' });
-            } catch (err) {
-                console.error(err);
-                res.status(500).json({ error: err.message });
-            }
-        });
-        // Error handling
         app.use((err, req, res, next) => {
             console.error('[Server Error]', err);
             res.status(500).json({ error: 'Internal server error' });

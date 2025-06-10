@@ -1,18 +1,8 @@
 // src/Pages/SchoolAdmin/Students/StudentDetail.jsx
 import { useState, useEffect } from "react";
-import { redirect, useParams } from "react-router-dom";
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  query,
-  collection,
-  where,
-  getDocs,
-  deleteDoc
-} from "firebase/firestore";
-import app, { db } from "../../../../config/firebase.js";
-import { useAuth } from "../../../../contexts/AuthContext.jsx";
+import { useParams } from "react-router-dom";
+import { doc, getDoc, updateDoc, query, collection, where, getDocs, deleteDoc } from "firebase/firestore";
+import { db } from "../../../../config/firebase.js";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { nanoid } from "nanoid";
@@ -25,6 +15,7 @@ import PersonalInfo from "./PersonalInfo.jsx";
 import StudentDocumentTab from "../Documents/StudentDocumentTab.jsx"
 import { motion, AnimatePresence } from 'framer-motion'
 import { ReceiptText, History } from 'lucide-react'
+import NotFound from "../../../../components/NotFound.jsx"
 
 
 export const getNewClassFees = async (schoolCode, newClass, targetAcademicYear, student, englishMedium) => {
@@ -186,39 +177,53 @@ export function StudentDetail() {
     amount: "",
     remark: "",
   });
-  const { school: schoolData, refresh } = useInstitution();
+  const { school: schoolData, refresh, setSchool } = useInstitution();
   const navigate = useNavigate();
   const tabLabels = ["Student Details", "Fee Details", "Transactions", "Documents"]
-
+  const [error, setError] = useState(null);
   // first the student data will fetch using id /student/id using student data we will set form, student previous transaction, school details
   const fetchData = async () => {
+    setLoading(true);
     try {
       const studentDoc = await getDoc(doc(db, "students", studentId));
-      if (!studentDoc.exists()) throw new Error("Student not found");
-      const studentData = { id: studentDoc.id, ...studentDoc.data() };
-      setStudent(studentData);
-      setFormData(studentData);
+      if (studentDoc.exists()) {
+        const studentData = { id: studentDoc.id, ...studentDoc.data() };
+        if (studentData.schoolCode !== school.Code) {
+          setStudent(null);
+          setError("Student not found or unauthorized access"); // Set error state
+          return null; // Return null instead of JSX
+        }
+        setStudent(studentData);
+        setFormData(studentData);
 
-      setNewTransaction((prev) => ({
-        ...prev,
-        academicYear: studentData.academicYear,
-        paymentMode: schoolData.paymentModes?.[0] || "",
-        account: schoolData.accounts?.[0]?.AccountNo || "",
-        feeType: "",
-      }));
+        setNewTransaction((prev) => ({
+          ...prev,
+          academicYear: studentData.academicYear,
+          paymentMode: schoolData.paymentModes?.[0] || "",
+          account: schoolData.accounts?.[0]?.AccountNo || "",
+          feeType: "",
+        }));
 
-      // Fetch transactions
-      if (studentData.transactions) {
-        setTransactions(studentData.transactions);
+        // Fetch transactions
+        if (studentData.transactions) {
+          setTransactions(studentData.transactions);
+        }
+        return studentData;
+      } else {
+        setStudent(null);
+        setError("Student not found");
+        return null;
       }
     } catch (error) {
+      setStudent(null);
+      setError(error.message);
       Swal.fire("Error", error.message, "error");
+      return null;
     } finally {
       setLoading(false);
     }
   };
   useEffect(() => {
-    setLoading(true);
     fetchData();
   }, [studentId, school.Code]);
   // Modify handleStudentUpdate to handle academic year changes
@@ -502,19 +507,19 @@ export function StudentDetail() {
       Swal.fire({
         title: 'Processing...',
         html: `
-    <div style="
-      border: 3px solid rgba(102, 117, 255, 0.2);
-      border-radius: 50%;
-      border-top: 3px solid #6675ff;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
-    "></div>
-    <p style="margin-top: 1rem; color: #4a5568; font-weight: 400;">
-      Securely processing your transaction...
-    </p>
-  `,
+          <div style="
+            border: 3px solid rgba(102, 117, 255, 0.2);
+            border-radius: 50%;
+            border-top: 3px solid #6675ff;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+          "></div>
+          <p style="margin-top: 1rem; color: #4a5568; font-weight: 400;">
+            Securely processing your transaction...
+          </p>
+        `,
         background: 'linear-gradient(135deg, #f0f2ff 0%, #f8f5ff 100%)', // Soft blue/purple
         color: '#2d3748', // Dark text
         allowOutsideClick: false,
@@ -544,7 +549,16 @@ export function StudentDetail() {
           });
         }
       }
-      refresh()
+      // update receipt count in school context
+      if (newTransaction.paymentMode.toLowerCase() !== 'cheque') {
+        if (feeType?.toLowerCase() == "busfee") {
+          setSchool(prev => ({ ...prev, busReceiptCount: prev.busReceiptCount + 1 }));
+        } else {
+          setSchool(prev => ({ ...prev, tuitionReceiptCount: prev.tuitionReceiptCount + 1 }));
+        }
+      }
+      setTransactions(prev => ([...prev, transaction]));
+      setStudent(prev => ({ ...prev, allFee: updatedFees }));
       Swal.fire("Success!", "Transaction recorded with historical context", "success");
     } catch (error) {
       Swal.fire("Error", error.message, "error");
@@ -554,13 +568,15 @@ export function StudentDetail() {
   const handleTransactionStatusUpdate = async (tempReceiptId, newStatus) => {
     try {
       const transaction = transactions.find((t) => t.tempReceiptId === tempReceiptId);
-      let receiptId;
-      if (transaction.feeType?.toLowerCase() == "busfee") {
-        receiptId = (Number(schoolData.busReceiptCount) || 0) + 1;
-      } else {
-        receiptId = (Number(schoolData.tuitionReceiptCount) || 0) + 1;
-      }
       if (!transaction) throw new Error("Transaction not found");
+
+      let receiptId;
+      if (transaction.feeType.toLowerCase() === "busfee") {
+        receiptId = Number(schoolData.busReceiptCount || 0) + 1;
+      } else {
+        receiptId = Number(schoolData.tuitionReceiptCount || 0) + 1;
+      }
+
       const updatedTransactions = transactions.map((t) =>
         t.tempReceiptId === tempReceiptId ? {
           // update status
@@ -603,25 +619,28 @@ export function StudentDetail() {
         const schoolsRef = collection(db, 'schools');
         const q = query(schoolsRef, where("Code", "==", school.Code));
         const querySnapshot = await getDocs(q);
+
         if (querySnapshot.empty) throw new Error("School not found");
+
         const schoolDoc = querySnapshot.docs[0];
         if (transaction.feeType?.toLowerCase() == "busfee") {
           await updateDoc(doc(db, 'schools', schoolDoc.id), {
             busReceiptCount: receiptId
           });
+          // update school context
+          setSchool(prev => ({ ...prev, busReceiptCount: prev.busReceiptCount + 1 }));
         } else {
           await updateDoc(doc(db, 'schools', schoolDoc.id), {
             tuitionReceiptCount: receiptId
           });
+          // update school context
+          setSchool(prev => ({ ...prev, tuitionReceiptCount: prev.tuitionReceiptCount + 1 }));
         }
       }
 
       setStudent((prev) => ({ ...prev, allFee: updatedFees }));
       setTransactions(updatedTransactions);
-      fetchData()
       Swal.fire("Success!", "Transaction status updated", "success");
-      // On popullate school data 
-      refresh()
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
@@ -874,6 +893,9 @@ export function StudentDetail() {
         Swal.fire("Error", error.message, "error");
       }
     }
+  }
+  if (!student && !loading) {
+    return <NotFound />;
   }
   return (
     <>{

@@ -1,11 +1,11 @@
 // src/Pages/SchoolAdmin/Students/AddStudent.jsx
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, addDoc, doc, getDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../../config/firebase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import Swal from 'sweetalert2';
-import { User, Users, BookOpen, GraduationCap, Calendar, Clock, Wallet, Hash, ReceiptRussianRuble } from 'lucide-react';
+import { User, Users, BookOpen, GraduationCap, Calendar, Clock, Wallet, Hash } from 'lucide-react';
 import { SelectField } from '../SelectField';
 import { InputField } from "../InputField"
 import { useInstitution } from '../../../../contexts/InstitutionContext';
@@ -14,16 +14,19 @@ import showStudentSummary from "./ShowStudentSummary"
 export default function AddStudent() {
   const { userData } = useAuth();
   const navigate = useNavigate();
-  const { school, refresh } = useInstitution();
+  const { school, setSchool } = useInstitution();
+  const [classes, setClasses] = useState([]);
+  const [divisions, setDivisions] = useState([]);
+
   const [formData, setFormData] = useState({
-    fname: 'fname',
-    fatherName: 'father',
-    lname: 'lname',
-    motherName: 'mother',
-    class: '3rd',
-    div: 'A',
-    type: 'DSS',
-    gender: 'Male',
+    fname: '',
+    fatherName: '',
+    lname: '',
+    motherName: '',
+    class: '',
+    div: '',
+    type: '',
+    gender: '',
     dob: "2025-05-29",
     academicYear: school?.academicYear || "25-26",
     penNo: "",
@@ -35,15 +38,43 @@ export default function AddStudent() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    try {
+      if (school) {
+        const c = school.class && school.class.length ? school.class.map(c => c.toLowerCase()) : ["nursery", "jrkg", "srkg", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
+        setClasses(c)
+        const d = school.divisions && school.divisions.length ? school.divisions.map(c => c.toLowerCase()) : ["a", "b", "c", "d", "semi"];
+        setDivisions(d)
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "error",
+        text: error.message
+      })
+    }
+  }, [school])
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // setSubmitting(true);
+    setSubmitting(true);
+    const loadingToast = Swal.fire({
+      title: 'Processing...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
     const getNewClassFees = async (newClass, targetAcademicYear, englishMedium) => {
       try {
         const fsRef = doc(db, "feeStructures", userData.schoolCode);
         const fsSnap = await getDoc(fsRef);
         if (!fsSnap.exists()) {
           console.error("Fee structure document not found");
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Fee structure document not found',
+          })
           return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
         }
 
@@ -67,7 +98,6 @@ export default function AddStudent() {
             `Using latest available structure for ${yearStructure.year}`
           );
         }
-
         if (!yearStructure) {
           console.warn("No fee structures available");
           return { AdmissionFee: 0, tuitionFee: 0, total: 0 };
@@ -180,22 +210,21 @@ export default function AddStudent() {
         createdAt: new Date()
       };
       const isConfirmed = await showStudentSummary(studentData);
-      console.log(isConfirmed)
       if (!isConfirmed) return;
 
-      await addDoc(collection(db, 'students'), studentData);
+      const newStudent = await addDoc(collection(db, 'students'), studentData)
       // update school feeIdCount
       await updateDoc(doc(db, 'schools', school.id), {
         feeIdCount: feeId
       });
-      await refresh()
+      setSchool(prev => ({ ...prev, feeIdCount: feeId }))
       Swal.fire({
         icon: 'success',
         title: 'Student Added!',
         text: 'Student record created successfully',
         confirmButtonColor: '#6366f1'
       });
-      navigate('/students');
+      navigate(`/school/student/${newStudent.id}`);
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -246,25 +275,25 @@ export default function AddStudent() {
                   icon={<User className="w-5 h-5" />}
                   label="First Name"
                   value={formData.fname}
-                  onChange={e => setFormData({ ...formData, fname: e.target.value })}
+                  onChange={e => setFormData({ ...formData, fname: e.target.value?.toLowerCase() })}
                   required
                 />
                 <InputField
                   label="Middle Name"
                   value={formData.fatherName}
-                  onChange={e => setFormData({ ...formData, fatherName: e.target.value })}
+                  onChange={e => setFormData({ ...formData, fatherName: e.target.value?.toLowerCase() })}
                 />
                 <InputField
                   label="Last Name"
                   value={formData.lname}
-                  onChange={e => setFormData({ ...formData, lname: e.target.value })}
+                  onChange={e => setFormData({ ...formData, lname: e.target.value?.toLowerCase() })}
                   required
                 />
                 <SelectField
                   label="Gender"
                   value={formData.gender}
-                  onChange={e => setFormData({ ...formData, gender: e.target.value })}
-                  options={['Male', 'Female', 'Other']}
+                  onChange={e => setFormData({ ...formData, gender: e.target.value?.toLowerCase() })}
+                  options={['male', 'female', 'other']}
                   required
                 />
                 <InputField
@@ -288,13 +317,13 @@ export default function AddStudent() {
                 <InputField
                   label="Father's Name"
                   value={formData.fatherName}
-                  onChange={e => setFormData({ ...formData, fatherName: e.target.value })}
+                  onChange={e => setFormData({ ...formData, fatherName: e.target.value?.toLowerCase() })}
                   required
                 />
                 <InputField
                   label="Mother's Name"
                   value={formData.motherName}
-                  onChange={e => setFormData({ ...formData, motherName: e.target.value })}
+                  onChange={e => setFormData({ ...formData, motherName: e.target.value?.toLowerCase() })}
                   required
                 />
               </div>
@@ -311,23 +340,26 @@ export default function AddStudent() {
                   icon={<GraduationCap className="w-5 h-5" />}
                   label="Class"
                   value={formData.class}
-                  onChange={e => setFormData({ ...formData, class: e.target.value })}
-                  options={school.class}
+                  onChange={e => setFormData({ ...formData, class: e.target.value?.toLowerCase() })}
+                  options={classes}
                   required
+                  className="capitalize w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none appearance-none transition-all z-0"
                 />
                 <SelectField
                   icon={<Hash className="w-5 h-5" />}
                   label="Division"
                   value={formData.div}
-                  onChange={e => setFormData({ ...formData, div: e.target.value })}
-                  options={school.divisions}
+                  onChange={e => setFormData({ ...formData, div: e.target.value?.toLowerCase() })}
+                  options={divisions}
+                  className="capitalize w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none appearance-none transition-all z-0"
                 />
                 <SelectField
                   icon={<Wallet className="w-5 h-5" />}
                   label="Student Type"
                   value={formData.type}
-                  onChange={e => setFormData({ ...formData, type: e.target.value })}
+                  onChange={e => setFormData({ ...formData, type: e.target.value?.toLowerCase() })}
                   options={(school.studentsType || []).map(t => t?.toLowerCase())}
+                  className="capitalize w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none appearance-none transition-all z-0"
                   required
                 />
                 <InputField

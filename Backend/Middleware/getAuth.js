@@ -49,7 +49,6 @@ async function fetchInstiute(req, res, next) {
             if (req.user.institutionType?.toLowerCase() === 'school') {
                 req.school = snap.docs[0].data();
             } else if (req.user.institutionType?.toLowerCase() === 'college') {
-                console.log(snap.docs[0].data())
                 req.college = snap.docs[0].data();
             }
         }

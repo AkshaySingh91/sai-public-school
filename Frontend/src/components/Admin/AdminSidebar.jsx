@@ -299,16 +299,14 @@ const AdminSidebar = () => {
                     >
                       <ChevronsLeftIcon className="w-5 h-5" />
                     </button>
-                    // <div className="absolute -top-4 -right-4 ">
-                    // </div>
                   )}
                   {(!isCollapsed || !isDesktop) && school && (
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-100">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 mr-3">
-                          {school?.logoUrl ? (
+                          {school?.logoImage ? (
                             <img
-                              src={school.logoUrl}
+                              src={school.logoImage}
                               alt="School logo"
                               className="w-10 h-10 object-cover rounded-lg shadow-sm"
                               onError={(e) => {
@@ -342,22 +340,31 @@ const AdminSidebar = () => {
               ) : (
                 <div className={`flex ${isCollapsed && isDesktop ? 'flex-col items-center space-y-2' : 'items-center space-x-3'}`}>
                   <div className="flex-shrink-0">
-                    {school?.logoUrl ? (
-                      <img
-                        src={school.logoUrl}
-                        alt="School logo"
-                        className="w-12 h-12 object-cover rounded-xl shadow-lg border-2 border-white"
-                        onError={(e) => {
-                          e.target.src = "https://placehold.co/56x56/6366f1/white?text=S";
-                        }}
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg border-2 border-white capitalize">
-                        <span className="text-white font-bold text-xl">
-                          {(school?.type?.toLowerCase() == "school" ? (school?.schoolName?.charAt(0) || "S") : (school?.collegeName?.charAt(0) || "S")) || "S"}
-                        </span>
-                      </div>
-                    )}
+                    {
+                      isDesktop && isCollapsed ? (
+                        <button
+                          onClick={toggleCollapse}
+                          className="bg-gray-200 hover:bg-gray-100 p-2 rounded-xl shadow-lg border border-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 z-20 cursor-pointer outline-0"
+                          aria-label="Expand sidebar"
+                        >
+                          <ChevronsLeftIcon className="w-5 h-5" />
+                        </button>) : (school?.logoImage ? (
+                          <img
+                            src={school.logoImage}
+                            alt="School logo"
+                            className="w-12 h-12 object-cover rounded-xl shadow-lg border-2 border-white"
+                            onError={(e) => {
+                              e.target.src = "https://placehold.co/56x56/6366f1/white?text=S";
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg border-2 border-white capitalize">
+                            <span className="text-white font-bold text-xl">
+                              {(school?.type?.toLowerCase() == "school" ? (school?.schoolName?.charAt(0) || "S") : (school?.collegeName?.charAt(0) || "S")) || "S"}
+                            </span>
+                          </div>
+                        ))
+                    }
                   </div>
 
                   {(!isCollapsed || !isDesktop) && (

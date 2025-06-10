@@ -15,7 +15,7 @@ const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 const StudentDocumentTab = ({ student, setStudent }) => {
     const [newDoc, setNewDoc] = useState({ name: '', file: null });
     const [uploading, setUploading] = useState(false);
-    const [deletingIndex, setDeletingIndex] = useState(null);
+    const [deletingDoc, setDeletingDoc] = useState(null);
     const [activeSection, setActiveSection] = useState('documents');
     const { studentId } = useParams();
     const { school } = useInstitution();
@@ -34,59 +34,85 @@ const StudentDocumentTab = ({ student, setStudent }) => {
             Swal.fire('Error', 'Please provide document name and select a file', 'error');
             return;
         }
-        setUploading(true);
-        let progressDialog;
+        let uploadBarModal;
         try {
+            setUploading(true);
+            // 1. Show a spinner while we request the signed URL
+            uploadBarModal = Swal.fire({
+                title: 'Preparing upload…',
+                html: '<div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+            });
+
             const userToken = await currentUser.getIdToken();
             validateDocument(newDoc.file);
-            // 1. create FormData 
-            const formData = new FormData();
-            formData.append('file', newDoc.file);
-            formData.append('fileName', newDoc.name);
+            const uploadUrlEndpoint = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}/api/school/student/document/upload-url/${studentId}/${school.id}?fileType=${newDoc.file.type}&orignalFileName=${newDoc.file.name}&fileName=${newDoc.name}`
+                : `${VITE_DOMAIN_PROD}/api/school/student/document/upload-url/${studentId}/${school.id}?fileType=${newDoc.file.type}&orignalFileName=${newDoc.file.name}&fileName=${newDoc.name}`;
 
-            // 2. Show a loader (spinner) instead of a progress bar
-            Swal.fire({
-                title: 'Uploading Document...',
-                html: 'Please wait while we process your file.',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                },
+            const urlResponse = await fetch(uploadUrlEndpoint, {
+                headers: { Authorization: 'Bearer ' + userToken }
             });
-            // 3. make request with XMLHttpRequest (we can keep onprogress if you want, but it's no longer displayed)
-            const url =
-                VITE_NODE_ENV === 'Development'
-                    ? `http://localhost:${VITE_PORT}/api/admin/school/students/document/${studentId}`
-                    : `${VITE_DOMAIN_PROD}/api/admin/school/students/document/${studentId}`;
 
-            const uploadResult = await new Promise((resolve, reject) => {
+            if (!urlResponse.ok) {
+                throw new Error('Failed to get upload URL');
+            }
+
+            const { signedUrl, key: newKey } = await urlResponse.json();
+
+            // 2. Close the spinner modal and open the progress‐bar modal
+            Swal.close();
+            Swal.fire({
+                title: 'Uploading…',
+                html: `
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+          <div id="upload-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
+        <div class="mt-2 text-sm">
+          <span id="uploaded-size">0KB</span> / 
+          <span id="total-size">${(newDoc.file.size / 1024).toFixed(1)}KB</span>
+        </div>
+        <div class="mt-1" id="upload-percent">0% Complete</div>
+      `,
+                showConfirmButton: false,
+                allowOutsideClick: false
+            });
+            // 3. Perform the actual PUT upload with progress
+            await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', url);
-                xhr.setRequestHeader('Authorization', 'Bearer ' + userToken);
+                xhr.open('PUT', signedUrl);
+                xhr.setRequestHeader('Content-Type', newDoc.file.type);
 
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const json = JSON.parse(xhr.responseText);
-                            resolve(json);
-                        } catch (parseErr) {
-                            reject(new Error('Invalid JSON from server'));
-                        }
-                    } else {
-                        reject(new Error(`Upload failed with status ${xhr.status}`));
-                    }
+                xhr.upload.onprogress = (event) => {
+                    if (!event.lengthComputable) return;
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    document.getElementById('upload-bar').style.width = `${percent}%`;
+                    document.getElementById('upload-percent').innerText = `${percent}% Complete`;
+                    document.getElementById('uploaded-size').innerText = `${(event.loaded / 1024).toFixed(1)}KB`;
                 };
 
-                xhr.onerror = () => reject(new Error('Network error during upload'));
-
-                xhr.send(formData);
+                xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Upload failed with status ${xhr.status}`)));
+                xhr.onerror = () => reject(new Error('Network error'));
+                xhr.send(newDoc.file);
             });
 
-            // 4. Close the loader
-            Swal.close();
+            // 4. Update Firestore & cleanup
+            const updateEndpoint = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}/api/school/student/document/update/${studentId}`
+                : `${VITE_DOMAIN_PROD}/api/school/student/document/update/${studentId}`;
+            const response = await fetch(updateEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + userToken
+                },
+                body: JSON.stringify({ newKey, fileName: newDoc.name, orignalFileName: newDoc.file.name, fileType: newDoc.file.type })
+            });
+            if (!response.ok) throw new Error('Failed to update profile');
 
-            const { metaData } = uploadResult;
-
+            const { metaData } = await response.json();
             // 5. Create document data and update local state as before
             const documentData = {
                 name: metaData.name,
@@ -138,7 +164,7 @@ const StudentDocumentTab = ({ student, setStudent }) => {
 
     };
 
-    const handleDeleteDocument = async (index) => {
+    const handleDeleteDocument = async (storagePath) => {
         const confirmed = await Swal.fire({
             title: 'Delete Document?',
             text: "This action cannot be undone!",
@@ -149,12 +175,11 @@ const StudentDocumentTab = ({ student, setStudent }) => {
         });
 
         if (!confirmed.isConfirmed) return;
-
-        setDeletingIndex(index);
+        setDeletingDoc(storagePath);
         try {
-            if (!(student.documents && student.documents[index])) return;
+            if (!(student.documents && student.documents.length && student.documents.find(doc => doc.storagePath === storagePath))) return;
             // 1) Identify the document metadata
-            const documentToDelete = student.documents[index];
+            const documentToDelete = student.documents.find(doc => doc.storagePath === storagePath);
 
             if (!documentToDelete.storagePath || !documentToDelete.name || !documentToDelete.url || !documentToDelete.type || !documentToDelete.uploadedAt || typeof documentToDelete.storagePath !== 'string') {
                 return Swal.fire({
@@ -166,8 +191,8 @@ const StudentDocumentTab = ({ student, setStudent }) => {
             const userToken = await currentUser.getIdToken();
             const url =
                 VITE_NODE_ENV === 'Development'
-                    ? `http://localhost:${VITE_PORT}/api/admin/school/students/document/${studentId}`
-                    : `${VITE_DOMAIN_PROD}/api/admin/school/students/document/${studentId}`;
+                    ? `http://localhost:${VITE_PORT}/api/school/student/document/${studentId}`
+                    : `${VITE_DOMAIN_PROD}/api/school/student/document/${studentId}`;
 
             const response = await fetch(url, {
                 method: 'DELETE',
@@ -183,8 +208,7 @@ const StudentDocumentTab = ({ student, setStudent }) => {
             }
             //3. Update local state
             setStudent((prev) => {
-                const newDocs = [...(prev.documents || [])];
-                newDocs.splice(index, 1);
+                const newDocs = [...(prev.documents || [])].filter(doc => doc.storagePath !== storagePath);
                 return { ...prev, documents: newDocs };
             });
 
@@ -193,7 +217,7 @@ const StudentDocumentTab = ({ student, setStudent }) => {
             console.error('Delete error:', err);
             Swal.fire('Error', err.message || 'Could not delete document', 'error');
         } finally {
-            setDeletingIndex(null);
+            setDeletingDoc(null);
         }
     };
     const handlePreview = (url, type) => {
@@ -457,13 +481,13 @@ const StudentDocumentTab = ({ student, setStudent }) => {
                                                     </td>
                                                     <td>
                                                         <button
-                                                            onClick={() => handleDeleteDocument(i)}
-                                                            disabled={deletingIndex === i}
+                                                            onClick={() => handleDeleteDocument(doc.storagePath)}
+                                                            disabled={deletingDoc === doc.storagePath}
                                                             className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                                             aria-label={`Delete ${doc.name}`}
                                                         >
                                                             <Trash2 className="-ml-0.5 mr-1.5 h-4 w-4 text-red-500" aria-hidden="true" />
-                                                            {deletingIndex === i ? 'Deleting...' : 'Delete'}
+                                                            {deletingDoc === doc.storagePath ? 'Deleting...' : 'Delete'}
                                                         </button>
                                                     </td>
                                                 </tr>

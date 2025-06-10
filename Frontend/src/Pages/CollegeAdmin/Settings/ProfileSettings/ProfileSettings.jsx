@@ -317,7 +317,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-8 text-white">
-                <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex flex-col md:flex-row items-center gap-6 capitalize">
                     <div className="relative group">
                         <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 shadow-lg">
                             {profile.profileImage ? (

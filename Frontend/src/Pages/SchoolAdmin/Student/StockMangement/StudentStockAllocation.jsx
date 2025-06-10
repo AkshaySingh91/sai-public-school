@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "../../../../config/firebase";
 import { doc, getDoc, query, updateDoc, collection, where, getDocs, arrayUnion, writeBatch } from "firebase/firestore";
@@ -9,13 +9,13 @@ import Swal from "sweetalert2"
 import NotFound from "../../../../components/NotFound"
 import { FileTextIcon, User } from "lucide-react";
 import { motion } from "framer-motion";
-import { ShoppingCart, ReceiptText, History, IndianRupee, CheckCircle, AlertTriangle, Info } from "lucide-react";
+import { ShoppingCart, ReceiptText, History, IndianRupee, CheckCircle, AlertTriangle } from "lucide-react";
 import { useAuth } from "../../../../contexts/AuthContext";
 import StudentStockProfilCard from "./StudentStockProfilCard";
 
 const StudentStockAllocation = () => {
     const { studentId } = useParams();
-    const { school, refresh } = useInstitution();
+    const { school, setSchool } = useInstitution();
     const [student, setStudent] = useState(null);
     const [stockItems, setStockItems] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
@@ -29,12 +29,8 @@ const StudentStockAllocation = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 5; // Set your preferred page size
     const { userData } = useAuth();
+    const [paginatedTransactions, setPaginatedTransaction] = useState([]);
 
-    // Slice transactions based on pagination
-    const paginatedTransactions = transactions.slice(
-        (currentPage - 1) * pageSize,
-        currentPage * pageSize
-    );
     // this remark will user if student get some discount
     const [remark, setRemark] = useState("");
 
@@ -120,6 +116,11 @@ const StudentStockAllocation = () => {
             setTransactions(student.StockPaymentDetail)
         }
     }, [student])
+    // Slice transactions based on pagination
+    useEffect(() => {
+        setPaginatedTransaction(transactions.slice((currentPage - 1) * pageSize, currentPage * pageSize))
+    }, [transactions, currentPage, pageSize])
+
     const handleSelectItem = (itemId) => {
         setSelectedItems(items => items.map(item =>
             item.id === itemId ? { ...item, selected: !item.selected } : item
@@ -176,13 +177,17 @@ const StudentStockAllocation = () => {
             // update stockReceiptCount from school
             const schoolsRef = collection(db, 'schools');
             const q = query(schoolsRef, where("Code", "==", school.Code));
+
             const querySnapshot = await getDocs(q);
             if (querySnapshot.empty) throw new Error("School not found");
             const schoolDoc = querySnapshot.docs[0];
+
             await updateDoc(doc(db, 'schools', schoolDoc.id), {
                 stockReceiptCount: stockReceiptCount
             });
-
+            setSchool((prev) => ({ ...prev, stockReceiptCount }));
+            setStudent(prev => ({ ...prev, StockPaymentDetail: [...transactions, paymentData] }))
+            setTransactions((prev) => [...prev, paymentData]);
             // Show success message and print receipt
             Swal.fire({
                 icon: 'success',
@@ -195,8 +200,6 @@ const StudentStockAllocation = () => {
                 confirmButtonColor: '#2563eb',
             });
             // update studen bec on updating trans StudentsStockPaymentHistory will not update due to conditional rendering
-            refresh()
-            // setStudent(prev => ({ ...prev, StockPaymentDetail: [...transactions, paymentData] }))
         } catch (error) {
             console.error('Payment error:', error);
             Swal.fire({
@@ -234,8 +237,7 @@ const StudentStockAllocation = () => {
             await updateDoc(studentRef, {
                 StockPaymentDetail: updatedTransactions
             });
-            // setTransactions(updatedTransactions);
-            refresh()
+            setTransactions(updatedTransactions)
             Swal.fire('Deleted!', 'Stock transaction removed successfully.', 'success');
         } catch (error) {
             Swal.fire('Error', error.message, 'error');

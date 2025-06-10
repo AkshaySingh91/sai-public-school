@@ -1,6 +1,22 @@
 import express from 'express';
 import admin from 'firebase-admin';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
+
 const router = express.Router();
+
+const BUCKET = process.env.CF_R2_BUCKET;
+const ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
+const R2_BASE_URL = process.env.R2_BASE_URL || `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`;
+
+const r2 = new S3Client({
+    region: 'auto', // R2 uses a single “auto” region
+    endpoint: `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+        accessKeyId: process.env.CF_R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.CF_R2_SECRET_ACCESS_KEY,
+    },
+});
 
 // superadmin profile get & put operation
 router.get('/profile', async (req, res) => {
@@ -24,230 +40,136 @@ router.put('/profile', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
-// superadmin school info  
-router.get('/school', async (req, res) => {
-    if (!req.query.schoolCode) {
-        return res.status(400).json({ error: "Missing Query parameter" });
+// /api/superadmin/avatar/upload-url/:adminId
+router.get('/avatar/upload-url/:superAdminId', async (req, res) => {
+    // check if requesting user have right privilege
+    if (!req.user || req.user.privilege !== "both") {
+        return res.status(400).json({ message: "User should have write  privilege" });
     }
-    const { schoolCode } = req.query;
+
     try {
-        const snap = await admin
-            .firestore()
-            .collection("schools")
-            .where("Code", "==", schoolCode)
-            .limit(1)
-            .get();
-        if (snap.empty) {
-            return res.status(404).json({ error: "School not found" });
+        const { superAdminId } = req.params;
+        const { fileType, fileName } = req.query;
+        const superAdminRef = admin.firestore().collection('Users').doc(superAdminId);
+        const superAdminSnap = await superAdminRef.get();
+        const superAdminData = superAdminSnap.data();
+        if (!superAdminSnap.exists) {
+            return res.status(404).json({ error: 'Superadmin not found.' });
         }
-        return res.json(snap.docs[0].data());
+        if (superAdminData.role !== "superadmin") {
+            return res.status(404).json({ error: 'Role is not a Superadmin.' });
+        }
+        // Generate unique key
+        const fileExt = fileName.split('.').pop().toLowerCase() || 'png';
+        const timestamp = Date.now();
+        const newKey = `superadmin/avatar-${timestamp}.${fileExt}`;
+
+        // Create pre-signed URL
+        const command = new PutObjectCommand({
+            Bucket: BUCKET,
+            Key: newKey,
+            ContentType: fileType,
+        });
+
+        const signedUrl = await getSignedUrl(r2, command, { expiresIn: 600 }); // 10 minutes
+
+        res.status(200).json({
+            signedUrl,
+            key: newKey
+        });
     } catch (err) {
-        console.error("[GET /superadmin/school] Error:", err);
-        return res.status(500).json({ error: "Internal server error", details: err.message });
+        console.error('Error generating pre-signed URL:', err);
+        res.status(500).json({ error: 'Failed to generate upload URL' });
     }
 });
-router.get('/college', async (req, res) => {
-    if (!req.query.collegeCode) {
-        return res.status(400).json({ error: "Missing Query parameter" });
+// api/superadmin/avatar/update
+router.post('/avatar/update/:superAdminId', async (req, res) => {
+    // check if requesting user have right privilege
+    if (!req.user || req.user.privilege !== "both") {
+        return res.status(400).json({ message: "User should have write  privilege" });
     }
-    const { collegeCode } = req.query;
-    console.log({ collegeCode })
+
+    const { superAdminId } = req.params;
+    const { newKey, oldKey } = req.body;
     try {
-        const snap = await admin
-            .firestore()
-            .collection("colleges")
-            .where("Code", "==", collegeCode)
-            .limit(1)
-            .get();
-        if (snap.empty) {
-            return res.status(404).json({ error: "College not found" });
-        }
-        return res.json(snap.docs[0].data());
-    } catch (err) {
-        console.error("[GET /superadmin/school] Error:", err);
-        return res.status(500).json({ error: "Internal server error", details: err.message });
-    }
-});
-router.post("/college", async (req, res) => {
-    try {
-        const {
-            collegeName,
-            Code: rawCode,
-            location,
-            academicYear,
-            courses,
-            departments,
-            // header
-            collegeReceiptHeader,
-            feeIdCount,
-            // receipt count
-            tuitionReceiptCount,
-            // contact
-            mobile,
-            email,
-            paymentModes,
-            feeTypes,
-            studentsType,
-        } = req.body;
-
-        // Validate `collegeName`
-        if (typeof collegeName !== "string" || collegeName.trim().length === 0) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'collegeName' (must be a non-empty string)." });
-        }
-
-        // Helper: check non-empty array of strings
-        function isNonEmptyStringArray(arr) {
-            return (
-                Array.isArray(arr) &&
-                arr.length > 0 &&
-                arr.every((el) => typeof el === "string" && el.trim().length > 0)
-            );
-        }
-
-        if (!isNonEmptyStringArray(courses)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'courses' (must be a non-empty array of strings)." });
-        }
-        if (!isNonEmptyStringArray(departments)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'departments' (must be a non-empty array of strings)." });
-        }
-        if (!isNonEmptyStringArray(paymentModes)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'paymentModes' (must be a non-empty array of strings)." });
-        }
-        if (!isNonEmptyStringArray(feeTypes)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'feeTypes' (must be a non-empty array of strings)." });
-        }
-        if (!isNonEmptyStringArray(studentsType)) {
-            return res
-                .status(400)
-                .json({ error: "Invalid or missing 'studentsType' (must be a non-empty array of strings)." });
-        }
-
-        // Generate random 6-character code
-        function generateRandomCode() {
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            let code = "";
-            for (let i = 0; i < 6; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return code;
-        }
-
-        // Determine final college code (uppercase). If none provided, auto-generate.
-        let collegeCode = "";
-        if (typeof rawCode === "string" && rawCode.trim().length > 0) {
-            collegeCode = rawCode.trim();
-        } else {
-            let tries = 0;
-            do {
-                if (tries >= 5) {
-                    return res
-                        .status(500)
-                        .json({ error: "Could not generate a unique college code. Try again later." });
+        const superAdminRef = admin.firestore().collection('Users').doc(superAdminId);
+        // Delete old avatar if exists
+        if (oldKey) {
+            try {
+                await r2.send(
+                    new DeleteObjectCommand({
+                        Bucket: BUCKET,
+                        Key: oldKey,
+                    })
+                );
+            } catch (delErr) {
+                if (!delErr.name.includes('NoSuchKey')) {
+                    console.warn('Error deleting old avatar:', delErr);
                 }
-                collegeCode = generateRandomCode();
-                tries++;
-                const dupSnap = await admin
-                    .firestore()
-                    .collection("colleges")
-                    .where("Code", "==", collegeCode)
-                    .limit(1)
-                    .get();
-                if (dupSnap.empty) break;
-            } while (true);
+            }
         }
-
-        // Check case-insensitive uniqueness in "colleges"
-        const existingQuery = admin
-            .firestore()
-            .collection("colleges")
-            .where("Code", "==", collegeCode)
-            .limit(1);
-        const existingSnap = await existingQuery.get();
-        if (!existingSnap.empty) {
-            const existingData = existingSnap.docs[0].data();
-            return res.status(400).json({
-                error: `College "${existingData.collegeName}" with code "${collegeCode}" already exists.`,
-            });
-        }
-
-        // Construct the new college document
-        const newCollegeData = {
-            collegeName: collegeName.trim(),
-            Code: collegeCode,
-            courses: courses.map((s) => s.trim()),
-            departments: departments.map((s) => s.trim()),
-            paymentModes: paymentModes.map((s) => s.trim()),
-            feeTypes: feeTypes.map((s) => s.trim()),
-            studentsType: studentsType.map((s) => s.trim()),
-            accounts: [],
-            location,
-            academicYear,
-            // headers
-            collegeReceiptHeader,
-            feeIdCount,
-            // receipt counts
-            tuitionReceiptCount,
-            // contact
-            mobile,
-            email,
-            type: "college",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        // Write to Firestore
-        const docRef = await admin.firestore().collection("colleges").add(newCollegeData);
-
-        return res.status(201).json({ success: true, id: docRef.id });
-    } catch (error) {
-        console.error("Error in POST api/superadmin/setting/college:", error);
-        return res
-            .status(500)
-            .json({ error: error.message || "Internal server error while creating college." });
+        // Build public URL
+        const avatarImage = `${R2_BASE_URL}/${newKey}`;
+        const updatedAt = new Date().toISOString();
+        // Update Firestore
+        await superAdminRef.update({
+            profileImage: avatarImage,
+            profileImagePath: newKey,
+            updatedAt,
+        });
+        res.status(200).json({
+            profileImage: avatarImage,
+            profileImagePath: newKey,
+            updatedAt,
+        });
+    } catch (err) {
+        console.error('Error updating avatar:', err);
+        res.status(500).json({ error: 'Failed to update avatar' });
     }
 });
-
-// superadmin will delete accountant from specific school
-router.delete("/user/:institutionId/:userId", async (req, res) => {
-    const { institutionId, userId } = req.params;
-    if (!userId || !institutionId) {
-        return res.status(400).json({ error: "Missing userId or institutionId in request." });
-    }
+router.delete('/avatar/:superAdminId', async (req, res) => {
+    const { superAdminId } = req.params;
     try {
-        // 1) Delete Firestore document
-        const userDocRef = admin.firestore().collection("Users").doc(userId);
-        const userSnapshot = await userDocRef.get();
-        if (!userSnapshot.exists) {
-            return res.status(404).json({ error: "User not found in Firestore." });
+        // 1) Fetch Accountant doc
+        const superAdminRef = admin.firestore().collection('Users').doc(superAdminId);
+        const superAdminSnap = await superAdminRef.get();
+        if (!superAdminSnap.exists) {
+            return res.status(404).json({ error: 'Superadmin not found.' });
         }
-        // Optionally verify that this user truly belongs to that institutionId:
-        const data = userSnapshot.data();
-        if (data.institutionId !== institutionId) {
-            return res.status(403).json({ error: "User does not belong to this institution." });
+        const superAdminData = superAdminSnap.data();
+        // 2) Delete old avatar if one exists
+        if (superAdminData.profileImage && superAdminData.profileImagePath) {
+            const oldKey = superAdminData.profileImagePath;
+            try {
+                await r2.send(
+                    new DeleteObjectCommand({
+                        Bucket: BUCKET,
+                        Key: oldKey,
+                    })
+                );
+            } catch (delErr) {
+                // If the key wasn’t there, ignore. But log any other error.
+                if (!delErr.name.includes('NoSuchKey')) {
+                    console.warn('Warning deleting old avatar:', delErr);
+                }
+            }
         }
-        await userDocRef.delete();
+        await superAdminRef.update({
+            profileImage: null,
+            profileImagePath: null,
+            updatedAt: new Date().toISOString(),
+        });
 
-        // 2) Delete the Firebase Auth user
-        await admin.auth().deleteUser(userId);
-
-        return res.json({ success: true, message: "User deleted." });
-    } catch (error) {
-        console.error("Error deleting user:", error);
-        return res.status(500).json({ success: false, error: error.message || "Internal error" });
+        // 4) Respond to client
+        return res.status(200).json({ message: 'Accountant Avatar deleted successfully.' });
+    } catch (err) {
+        console.error(`Error in DELETE /api/admin/avatar/${superAdminId}/`, err);
+        return res.status(500).json({ error: 'Internal server error.', details: err.message });
     }
 });
 
-// superadmin create new accountant for exsisting or new school
+//school & user create or delete  
+// superadmin create new accountant for existing or new school
 router.post("/user", async (req, res) => {
     const { name, email, phone, password, institutionType, institutionId, role, privilege, schoolCode, collegeCode, } = req.body;
     // 1) Basic presence 
@@ -411,7 +333,7 @@ router.post("/user", async (req, res) => {
         // 7) Return success
         return res.status(201).json({ success: true, uid: newUid });
     } catch (error) {
-        console.error("Error in POST /api/superadmin/settings/user:", error);
+        console.error("Error in POST /api/superadmin/user:", error);
         // If Auth user was created but Firestore write failed, clean up:
         if (
             error.code &&
@@ -439,7 +361,35 @@ router.post("/user", async (req, res) => {
             .json({ success: false, error: "Internal server error." });
     }
 });
+// superadmin will delete user from specific school
+router.delete("/user/:institutionId/:userId", async (req, res) => {
+    const { institutionId, userId } = req.params;
+    if (!userId || !institutionId) {
+        return res.status(400).json({ error: "Missing userId or institutionId in request." });
+    }
+    try {
+        // 1) Delete Firestore document
+        const userDocRef = admin.firestore().collection("Users").doc(userId);
+        const userSnapshot = await userDocRef.get();
+        if (!userSnapshot.exists) {
+            return res.status(404).json({ error: "User not found in Firestore." });
+        }
+        // Optionally verify that this user truly belongs to that institutionId:
+        const data = userSnapshot.data();
+        if (data.institutionId !== institutionId) {
+            return res.status(403).json({ error: "User does not belong to this institution." });
+        }
+        await userDocRef.delete();
 
+        // 2) Delete the Firebase Auth user
+        await admin.auth().deleteUser(userId);
+
+        return res.json({ success: true, message: "User deleted." });
+    } catch (error) {
+        console.error("Error deleting user:", error);
+        return res.status(500).json({ success: false, error: error.message || "Internal error" });
+    }
+});
 router.post("/school", async (req, res) => {
     try {
         const {
@@ -593,8 +543,155 @@ router.post("/school", async (req, res) => {
             .json({ error: error.message || "Internal server error while creating school." });
     }
 });
+// college create  
+router.post("/college", async (req, res) => {
+    try {
+        const {
+            collegeName,
+            Code: rawCode,
+            location,
+            academicYear,
+            courses,
+            departments,
+            // header
+            collegeReceiptHeader,
+            feeIdCount,
+            // receipt count
+            tuitionReceiptCount,
+            // contact
+            mobile,
+            email,
+            paymentModes,
+            feeTypes,
+            studentsType,
+        } = req.body;
 
-// delete school rarely use
+        // Validate `collegeName`
+        if (typeof collegeName !== "string" || collegeName.trim().length === 0) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'collegeName' (must be a non-empty string)." });
+        }
+
+        // Helper: check non-empty array of strings
+        function isNonEmptyStringArray(arr) {
+            return (
+                Array.isArray(arr) &&
+                arr.length > 0 &&
+                arr.every((el) => typeof el === "string" && el.trim().length > 0)
+            );
+        }
+
+        if (!isNonEmptyStringArray(courses)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'courses' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(departments)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'departments' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(paymentModes)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'paymentModes' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(feeTypes)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'feeTypes' (must be a non-empty array of strings)." });
+        }
+        if (!isNonEmptyStringArray(studentsType)) {
+            return res
+                .status(400)
+                .json({ error: "Invalid or missing 'studentsType' (must be a non-empty array of strings)." });
+        }
+
+        // Generate random 6-character code
+        function generateRandomCode() {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            let code = "";
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // Determine final college code (uppercase). If none provided, auto-generate.
+        let collegeCode = "";
+        if (typeof rawCode === "string" && rawCode.trim().length > 0) {
+            collegeCode = rawCode.trim();
+        } else {
+            let tries = 0;
+            do {
+                if (tries >= 5) {
+                    return res
+                        .status(500)
+                        .json({ error: "Could not generate a unique college code. Try again later." });
+                }
+                collegeCode = generateRandomCode();
+                tries++;
+                const dupSnap = await admin
+                    .firestore()
+                    .collection("colleges")
+                    .where("Code", "==", collegeCode)
+                    .limit(1)
+                    .get();
+                if (dupSnap.empty) break;
+            } while (true);
+        }
+
+        // Check case-insensitive uniqueness in "colleges"
+        const existingQuery = admin
+            .firestore()
+            .collection("colleges")
+            .where("Code", "==", collegeCode)
+            .limit(1);
+        const existingSnap = await existingQuery.get();
+        if (!existingSnap.empty) {
+            const existingData = existingSnap.docs[0].data();
+            return res.status(400).json({
+                error: `College "${existingData.collegeName}" with code "${collegeCode}" already exists.`,
+            });
+        }
+
+        // Construct the new college document
+        const newCollegeData = {
+            collegeName: collegeName.trim(),
+            Code: collegeCode,
+            courses: courses.map((s) => s.trim()),
+            departments: departments.map((s) => s.trim()),
+            paymentModes: paymentModes.map((s) => s.trim()),
+            feeTypes: feeTypes.map((s) => s.trim()),
+            studentsType: studentsType.map((s) => s.trim()),
+            accounts: [],
+            location,
+            academicYear,
+            // headers
+            collegeReceiptHeader,
+            feeIdCount,
+            // receipt counts
+            tuitionReceiptCount,
+            // contact
+            mobile,
+            email,
+            type: "college",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        // Write to Firestore
+        const docRef = await admin.firestore().collection("colleges").add(newCollegeData);
+
+        return res.status(201).json({ success: true, id: docRef.id });
+    } catch (error) {
+        console.error("Error in POST api/superadmin/setting/college:", error);
+        return res
+            .status(500)
+            .json({ error: error.message || "Internal server error while creating college." });
+    }
+});
+// delete school or college rarely use
 router.delete("/:collectionName/:instId", async (req, res) => {
     let { instId, collectionName } = req.params;
     if (collectionName?.toLowerCase() === "schools") {
@@ -672,5 +769,4 @@ router.delete("/:collectionName/:instId", async (req, res) => {
     }
 })
 
-
-export default router;
+export default router

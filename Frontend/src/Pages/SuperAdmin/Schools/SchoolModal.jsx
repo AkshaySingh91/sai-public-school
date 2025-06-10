@@ -1,6 +1,5 @@
-import React, { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
-import { db, auth } from "../../../config/firebase";
+import { useState } from "react";
+import { auth } from "../../../config/firebase";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 
@@ -68,7 +67,7 @@ const SchoolModal = ({ onClose, onSchoolAdded }) => {
         setLoading(true);
         try {
             // 2) Call backend endpoint instead of addDoc(...)
-            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/school/` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/school/`;
+            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/school/` : `${VITE_DOMAIN_PROD}/api/superadmin/school/`;
             const response = await fetch(url, {
                 method: "POST",
                 headers: {

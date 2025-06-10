@@ -25,7 +25,6 @@ export function SchoolProvider({ children }) {
     };
     const fetchInstitutionData = async () => {
         try {
-            console.log(userData)
             setLoading(true);
             setError('');
             // For superadmins, we don't use userData.schoolCode
@@ -33,7 +32,6 @@ export function SchoolProvider({ children }) {
                 // a) Check localStorage for previously selected institution
                 const saved = loadFromLocal("selectedInstitution");
                 if (saved) {
-                    console.log({saved})
                     setSchool(saved);
                     // Also fetch full list of schools AND colleges for the switcher
                     const schoolSnap = await getDocs(collection(db, "schools"));
@@ -121,6 +119,7 @@ export function SchoolProvider({ children }) {
         school,
         loading,
         error,
+        setSchool,
         switchSchool,  // Renamed from setSchool to be more specific
         refresh: fetchInstitutionData
     };

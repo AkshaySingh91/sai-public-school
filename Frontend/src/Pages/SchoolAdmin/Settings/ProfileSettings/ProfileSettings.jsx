@@ -1,19 +1,18 @@
-import React, { useState } from 'react';
-import { Upload, Trash2, Loader, User } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2, Loader, User } from 'lucide-react';
 import Swal from "sweetalert2";
 import { reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
-import { auth, db } from '../../../../config/firebase'; // Ensure auth is imported correctly
-import { getStorage, ref, deleteObject } from "firebase/storage";
-import { doc, writeBatch, } from "firebase/firestore";
+import { auth } from '../../../../config/firebase'; // Ensure auth is imported correctly
+import { getStorage } from "firebase/storage";
 import { useAuth } from "../../../../contexts/AuthContext"
-import { Camera, Mail, Phone, MapPin, Calendar, Building2, GraduationCap, Shield, X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { Camera, Mail, Phone, MapPin, Calendar, Building2, Shield, Check } from 'lucide-react';
 import PasswordModal from './PasswordModal';
+import { useInstitution } from '../../../../contexts/InstitutionContext';
 
 
 const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
 const VITE_PORT = import.meta.env.VITE_PORT;
 const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
-const VITE_R2_BASE_URL = import.meta.env.VITE_R2_BASE_URL;
 
 const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
     const [localLoading, setLocalLoading] = useState(false);
@@ -30,6 +29,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
         confirmPassword: ''
     });
     const [passwordErrors, setPasswordErrors] = useState({});
+    const { school } = useInstitution();
 
     const validateFile = (file) => {
         if (!ALLOWED_TYPES.includes(file.type)) {
@@ -41,76 +41,77 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
     };
     const handleImageUpload = async (file) => {
         if (!file) return;
+
         try {
             setLocalLoading(true);
+            //1: Spinner while fetching signed URL   
+            Swal.fire({
+                title: 'Preparing upload…',
+                html: `
+                <div class="flex justify-center py-4">
+                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+                </div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+            });
+
             validateFile(file);
             const userToken = await currentUser.getIdToken();
             const oldKey = profile?.profileImagePath || null;
 
-            // 1. Get pre-signed URL from backend
-            const uploadUrlEndpoint = VITE_NODE_ENV === "Development"
-                ? `http://localhost:${VITE_PORT}/api/admin/school/avatar/upload-url/${currentUser.uid}?fileType=${file.type}&fileName=${file.name}`
-                : `${VITE_DOMAIN_PROD}/api/admin/school/avatar/upload-url/${currentUser.uid}?fileType=${file.type}&fileName=${file.name}`;
+            // fetch pre-signed URL
+            const base = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}`
+                : VITE_DOMAIN_PROD;
+            const uploadUrlEndpoint = `${base}/api/admin/avatar/upload-url/${currentUser.uid}/${school.id}`
+                + `?fileType=${encodeURIComponent(file.type)}&fileName=${encodeURIComponent(file.name)}`;
+
             const urlResponse = await fetch(uploadUrlEndpoint, {
                 headers: { Authorization: 'Bearer ' + userToken }
             });
-
-            if (!urlResponse.ok) {
-                throw new Error('Failed to get upload URL');
-            }
-
+            if (!urlResponse.ok) throw new Error('Failed to get upload URL');
             const { signedUrl, key: newKey } = await urlResponse.json();
 
-            // 2. Show progress dialog
+            // 2: Progress-bar while uploading file   
+            Swal.close();
             Swal.fire({
-                title: 'Uploading...',
+                title: 'Uploading…',
                 html: `
                 <div class="w-full bg-gray-200 rounded-full h-2.5">
-                    <div id="upload-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                <div id="upload-bar" class="bg-blue-600 h-2.5 rounded-full" style="width:0%"></div>
                 </div>
                 <div class="mt-2 text-sm">
-                    <span id="uploaded-size">0KB</span> / 
-                    <span id="total-size">${(file.size / 1024).toFixed(1)}KB</span>
+                <span id="uploaded-size">0KB</span> /
+                <span id="total-size">${(file.size / 1024).toFixed(1)}KB</span>
                 </div>
                 <div class="mt-1" id="upload-percent">0% Complete</div>
             `,
                 showConfirmButton: false,
-                allowOutsideClick: false
+                allowOutsideClick: false,
             });
-
-            // 3. Upload directly to R2
+            // actual PUT to R2 with progress
             await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('PUT', signedUrl);
                 xhr.setRequestHeader('Content-Type', file.type);
 
-                xhr.upload.onprogress = (event) => {
-                    if (event.lengthComputable) {
-                        const percent = Math.round((event.loaded / event.total) * 100);
-                        const uploadedKB = (event.loaded / 1024).toFixed(1);
-                        const totalKB = (event.total / 1024).toFixed(1);
-
-                        document.getElementById('upload-bar').style.width = `${percent}%`;
-                        document.getElementById('upload-percent').innerText = `${percent}% Complete`;
-                        document.getElementById('uploaded-size').innerText = `${uploadedKB}KB`;
-                        document.getElementById('total-size').innerText = `${totalKB}KB`;
-                    }
+                xhr.upload.onprogress = (e) => {
+                    if (!e.lengthComputable) return;
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    document.getElementById('upload-bar').style.width = `${pct}%`;
+                    document.getElementById('upload-percent').innerText = `${pct}% Complete`;
+                    document.getElementById('uploaded-size').innerText = `${(e.loaded / 1024).toFixed(1)}KB`;
                 };
 
-                xhr.onload = () => {
-                    if (xhr.status === 200) resolve();
-                    else reject(new Error(`Upload failed with status ${xhr.status}`));
-                };
-
+                xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
                 xhr.onerror = () => reject(new Error('Network error'));
                 xhr.send(file);
             });
 
-            // 4. Update Firestore and delete old avatar
-            const updateEndpoint = VITE_NODE_ENV === "Development"
-                ? `http://localhost:${VITE_PORT}/api/admin/school/avatar/update/${currentUser.uid}`
-                : `${VITE_DOMAIN_PROD}/api/admin/school/avatar/update/${currentUser.uid}`;
-
+            //    Finalize: update backend & state   
+            const updateEndpoint = `${base}/api/admin/avatar/update/${currentUser.uid}`;
             const updateResponse = await fetch(updateEndpoint, {
                 method: 'POST',
                 headers: {
@@ -119,53 +120,29 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                 },
                 body: JSON.stringify({ newKey, oldKey })
             });
+            if (!updateResponse.ok) throw new Error('Failed to update profile');
 
-            if (!updateResponse.ok) {
-                throw new Error('Failed to update profile');
-            }
+            const { profileImage, profileImagePath, updatedAt } = await updateResponse.json();
+            setProfile(prev => ({ ...prev, profileImage, profileImagePath, updatedAt }));
 
-            // Update local state
-            const avatarUrl = `${VITE_R2_BASE_URL}/${newKey}`;
-            setProfile(prev => ({
-                ...prev,
-                profileImage: avatarUrl,
-                profileImagePath: newKey
-            }));
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Upload Successful!',
-                text: 'Profile image updated',
-                timer: 1500
-            });
-
-        } catch (err) {
+            Swal.fire({ icon: 'success', title: 'Upload Successful!', timer: 1500, showConfirmButton: false });
+        }
+        catch (err) {
             console.error('Upload Error:', err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Upload Failed',
-                text: err.message
-            });
-        } finally {
+            Swal.close();
+            Swal.fire({ icon: 'error', title: 'Upload Failed', text: err.message });
+        }
+        finally {
             setLocalLoading(false);
         }
     };
 
     const handleDeleteImage = async () => {
         try {
-            setLocalLoading(true);
             const oldKey = profile?.profileImagePath || null;
-
             if (!oldKey) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Image Found',
-                    text: 'There is no profile image to delete',
-                });
-                return;
+                return Swal.fire({ icon: 'warning', title: 'No Image Found', text: 'There is no image to delete.' });
             }
-
-            // Confirm deletion
             const result = await Swal.fire({
                 title: 'Delete Image?',
                 text: "This action cannot be undone!",
@@ -173,47 +150,52 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
             });
-
             if (!result.isConfirmed) return;
 
-            const userToken = await currentUser.getIdToken();
-            const url = VITE_NODE_ENV === "Development"
-                ? `http://localhost:${VITE_PORT}/api/admin/school/avatar/${currentUser.uid}`
-                : `${VITE_DOMAIN_PROD}/api/admin/school/avatar/${currentUser.uid}`;
+            setLocalLoading(true);
 
+            // spinner while deleting
+            Swal.fire({
+                title: 'Deleting image…',
+                html: `
+                    <div class="flex justify-center py-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-600"></div>
+                    </div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+            });
+
+            const userToken = await currentUser.getIdToken();
+            const base = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}`
+                : VITE_DOMAIN_PROD;
+            const url = `${base}/api/admin/avatar/${currentUser.uid}`;
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: 'Bearer ' + userToken,
-                },
+                    Authorization: 'Bearer ' + userToken
+                }
             });
+            if (!response.ok) throw new Error('Failed to delete image');
 
-            if (!response.ok) {
-                throw new Error('Failed to delete image');
-            }
-
-            // Update local state
-            setProfile(prev => ({
-                ...prev,
-                profileImage: null,
-                profileImagePath: null
-            }));
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Image Deleted!',
-                showConfirmButton: false,
-                timer: 1500
-            });
-        } catch (err) {
-            console.error('Delete error:', err);
-            Swal.fire('Error', err.message || 'Could not delete image', 'error');
-        } finally {
+            setProfile(prev => ({ ...prev, profileImage: null, profileImagePath: null }));
+            Swal.fire({ icon: 'success', title: 'Image Deleted!', timer: 1500, showConfirmButton: false });
+        }
+        catch (err) {
+            console.error('Delete Error:', err);
+            Swal.close();
+            Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'Could not delete image.' });
+        }
+        finally {
             setLocalLoading(false);
         }
     };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -317,7 +299,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-8 text-white">
-                <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex flex-col md:flex-row items-center gap-6 capitalize">
                     <div className="relative group">
                         <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 shadow-lg">
                             {profile.profileImage ? (
@@ -546,7 +528,7 @@ const FormField = ({ label, value, onChange, type = 'text', disabled = false, re
                 disabled={disabled}
                 required={required}
                 placeholder={placeholder}
-                className={`w-full px-4 py-3 ${Icon ? 'pl-10' : ''} border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${disabled ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                className={`w-full px-4 py-3 ${Icon ? 'pl-10' : ''} border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${disabled ? 'bg-gray-50 text-gray-500' : 'bg-white capitalize'
                     }`}
             />
         </div>

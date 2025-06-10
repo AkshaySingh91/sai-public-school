@@ -34,12 +34,11 @@ const Index = () => {
       let profileUrl = "", collegeUrl = "";
 
       if (userData.role === "superadmin") {
-        profileUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/profile` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/profile`;
-        collegeUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/college?collegeCode=${c.Code}` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/college?collegeCode=${college.Code}`
+        profileUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/profile` : `${VITE_DOMAIN_PROD}/api/superadmin/profile`;
       } else {
-        profileUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/profile` : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`;
-        collegeUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/college?collegeCode=${c.Code}` : `${VITE_DOMAIN_PROD}/api/admin/settings/college?collegeCode=${c.Code}`
+        profileUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/profile` : `${VITE_DOMAIN_PROD}/api/admin/profile`;
       }
+      collegeUrl = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/college?collegeCode=${c.Code}` : `${VITE_DOMAIN_PROD}/api/college?collegeCode=${c.Code}`
       const [profileRes, schoolRes] = await Promise.all([
         fetch(profileUrl, {
           headers: {
@@ -91,9 +90,9 @@ const Index = () => {
       setLoading(true);
       let url = "";
       if (userData.role === "superadmin") {
-        url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/profile` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/profile`
+        url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/profile` : `${VITE_DOMAIN_PROD}/api/superadmin/profile`
       } else {
-        url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/profile` : `${VITE_DOMAIN_PROD}/api/admin/settings/profile`
+        url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/profile` : `${VITE_DOMAIN_PROD}/api/admin/profile`
       }
       const updateResponse = await fetch(url, {
         method: 'PUT',

@@ -75,7 +75,7 @@ const MangeInsitute = () => {
       const isSchool = inst.type === "school";
 
       const collectionName = isSchool ? "schools" : "colleges";
-      const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/settings/${collectionName}/${inst.id}` : `${VITE_DOMAIN_PROD}/api/superadmin/settings/${collectionName}/${inst.id}`;
+      const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/superadmin/${collectionName}/${inst.id}` : `${VITE_DOMAIN_PROD}/api/superadmin/${collectionName}/${inst.id}`;
 
       const response = await fetch(url, {
         method: "DELETE",
@@ -501,8 +501,8 @@ const UserList = ({ collectionName, instId }) => {
     try {
       const url =
         import.meta.env.VITE_NODE_ENV === "Development"
-          ? `http://localhost:${import.meta.env.VITE_PORT}/api/superadmin/settings/user/${instId}/${u.id}`
-          : `${import.meta.env.VITE_DOMAIN_PROD}/api/superadmin/settings/user/${instId}/${u.id}`;
+          ? `http://localhost:${import.meta.env.VITE_PORT}/api/superadmin/user/${instId}/${u.id}`
+          : `${import.meta.env.VITE_DOMAIN_PROD}/api/superadmin/user/${instId}/${u.id}`;
 
       const response = await fetch(url, {
         method: "DELETE",

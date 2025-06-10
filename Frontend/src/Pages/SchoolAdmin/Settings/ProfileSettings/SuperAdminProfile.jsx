@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
-import { Upload, Trash2, Loader, User } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2, Loader, User } from 'lucide-react';
 import Swal from "sweetalert2";
 import { reauthenticateWithCredential, EmailAuthProvider, updatePassword, updateEmail, sendEmailVerification } from 'firebase/auth';
-import { auth, db } from '../../../../config/firebase'; // Ensure auth is imported correctly
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { doc, writeBatch, getDoc } from "firebase/firestore";
+import { auth } from '../../../../config/firebase'; // Ensure auth is imported correctly 
 import { useAuth } from "../../../../contexts/AuthContext"
-import { Camera, Mail, Phone, MapPin, Calendar, Building2, Shield, X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { Camera, Mail, Phone, MapPin, Calendar, Building2, Shield, X, Check } from 'lucide-react';
 import PasswordModal from './PasswordModal';
 import EmailModal from './EmailModal';
+import { useInstitution } from '../../../../contexts/InstitutionContext';
+
+const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
+const VITE_PORT = import.meta.env.VITE_PORT;
+const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const SuperAdminProfile = ({ profile, setProfile, handleProfileUpdate }) => {
     const [localLoading, setLocalLoading] = useState(false);
-    const { currentUser, userData } = useAuth();
-    const storage = getStorage();
+    const { currentUser } = useAuth();
+    const { school } = useInstitution();
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     const [activeTab, setActiveTab] = useState('personal')
@@ -56,20 +59,129 @@ const SuperAdminProfile = ({ profile, setProfile, handleProfileUpdate }) => {
             throw new Error('File size exceeds 5MB limit');
         }
     };
-    // for updating profile image 
-    const handleDeleteImage = async () => {
+    // for updating profile image  
+    const handleImageUpload = async (file) => {
+        if (!file) return;
+
         try {
             setLocalLoading(true);
 
-            if (!profile?.profileImagePath) {
-                Swal.fire({
+            //  1. Spinner while getting URL 
+            Swal.fire({
+                title: 'Preparing upload…',
+                html: `
+                <div class="flex justify-center py-4">
+                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+                </div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            });
+
+            validateFile(file);
+            const userToken = await currentUser.getIdToken();
+            const oldKey = profile?.profileImagePath || null;
+
+            const uploadUrlEndpoint = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}/api/superadmin/avatar/upload-url/${currentUser.uid}?fileType=${file.type}&fileName=${file.name}`
+                : `${VITE_DOMAIN_PROD}/api/superadmin/avatar/upload-url/${currentUser.uid}?fileType=${file.type}&fileName=${file.name}`;
+
+            const urlResponse = await fetch(uploadUrlEndpoint, {
+                headers: { Authorization: 'Bearer ' + userToken }
+            });
+            if (!urlResponse.ok) {
+                throw new Error('Failed to get upload URL');
+            }
+            const { signedUrl, key: newKey } = await urlResponse.json();
+            // 2. Progress bar during actual upload 
+            Swal.close();
+            Swal.fire({
+                title: 'Uploading…',
+                html: `
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="upload-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2 text-sm">
+                    <span id="uploaded-size">0KB</span> / 
+                    <span id="total-size">${(file.size / 1024).toFixed(1)}KB</span>
+                    </div>
+                    <div class="mt-1" id="upload-percent">0% Complete</div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false
+            });
+
+            //  Upload to R2 with progress 
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', signedUrl);
+                xhr.setRequestHeader('Content-Type', file.type);
+
+                xhr.upload.onprogress = (e) => {
+                    if (!e.lengthComputable) return;
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    document.getElementById('upload-bar').style.width = `${percent}%`;
+                    document.getElementById('upload-percent').innerText = `${percent}% Complete`;
+                    document.getElementById('uploaded-size').innerText = `${(e.loaded / 1024).toFixed(1)}KB`;
+                };
+
+                xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+                xhr.onerror = () => reject(new Error('Network error'));
+                xhr.send(file);
+            });
+
+            //  Finalize: update profile & close 
+            const updateEndpoint = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}/api/superadmin/avatar/update/${currentUser.uid}`
+                : `${VITE_DOMAIN_PROD}/api/superadmin/avatar/update/${currentUser.uid}`;
+
+            const updateResponse = await fetch(updateEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + userToken
+                },
+                body: JSON.stringify({ newKey, oldKey })
+            });
+            if (!updateResponse.ok) throw new Error('Failed to update profile');
+
+            const { profileImage, profileImagePath, updatedAt } = await updateResponse.json();
+            setProfile(prev => ({ ...prev, profileImage, profileImagePath, updatedAt }));
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Upload Successful!',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+        catch (err) {
+            console.error('Upload Error:', err);
+            Swal.close();
+            Swal.fire({
+                icon: 'error',
+                title: 'Upload Failed',
+                text: err.message
+            });
+        }
+        finally {
+            setLocalLoading(false);
+        }
+    };
+    const handleDeleteImage = async () => {
+        try {
+            // 1. Check if there’s an image to delete
+            const oldKey = profile?.profileImagePath || null;
+            if (!oldKey) {
+                return Swal.fire({
                     icon: 'warning',
                     title: 'No Image Found',
                     text: 'There is no profile image to delete',
                 });
-                return;
             }
-            // Confirm deletion
+
+            // 2. Ask the user to confirm
             const result = await Swal.fire({
                 title: 'Delete Image?',
                 text: "This action cannot be undone!",
@@ -77,150 +189,71 @@ const SuperAdminProfile = ({ profile, setProfile, handleProfileUpdate }) => {
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
             });
-
             if (!result.isConfirmed) return;
 
-            // Delete from Storage
-            await deleteObject(ref(storage, profile.profileImagePath));
+            setLocalLoading(true);
 
-            // Atomic Firestore update
-            const batch = writeBatch(db);
-            const userRef = doc(db, 'Users', currentUser.uid);
-            batch.update(userRef, {
-                profileImage: null,
-                profileImagePath: null,
-                updatedAt: new Date().toISOString()
+            // 3. Show spinner while deleting
+            Swal.fire({
+                title: 'Deleting image…',
+                html: `
+        <div class="flex justify-center py-4">
+          <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-600"></div>
+        </div>
+      `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false
             });
 
-            await batch.commit();
+            // 4. Perform the DELETE call
+            const userToken = await currentUser.getIdToken();
+            const url = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}/api/superadmin/avatar/${currentUser.uid}`
+                : `${VITE_DOMAIN_PROD}/api/superadmin/avatar/${currentUser.uid}`;
 
-            // Update local state
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + userToken,
+                },
+            });
+            if (!response.ok) {
+                throw new Error('Failed to delete image');
+            }
+
+            // 5. Update local state
             setProfile(prev => ({
                 ...prev,
                 profileImage: null,
                 profileImagePath: null
             }));
 
+            // 6. Show success
             Swal.fire({
                 icon: 'success',
                 title: 'Image Deleted!',
-                showConfirmButton: false,
-                timer: 1500
+                timer: 1500,
+                showConfirmButton: false
             });
-        } catch (err) {
-            console.error('Delete Error:', err);
-            const errorMessage = err.code === 'storage/object-not-found'
-                ? 'Image was already removed'
-                : err.message;
-
+        }
+        catch (err) {
+            console.error('Delete error:', err);
+            Swal.close();  // ensure the spinner modal is closed
             Swal.fire({
                 icon: 'error',
-                title: 'Deletion Failed',
-                html: `<div class="text-red-600">${errorMessage}</div>`,
+                title: 'Error',
+                text: err.message || 'Could not delete image',
             });
-        } finally {
+        }
+        finally {
             setLocalLoading(false);
         }
     };
-    const handleImageUpload = async (file) => {
-        if (!file) return;
 
-        try {
-            setLocalLoading(true);
-            validateFile(file);
-
-            const timestamp = Date.now();
-            const fileExt = file.name.split('.').pop();
-            const newFileName = `superadmin/${currentUser.uid}/${timestamp}.${fileExt}`;
-            const storageRef = ref(storage, newFileName);
-
-            // Show progress dialog
-            let progressDialog;
-            const showProgress = (progress) => {
-                progressDialog = Swal.fire({
-                    title: 'Uploading...',
-                    html: `<div class="w-full bg-gray-200 rounded-full h-2.5">
-                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progress}%"></div>
-              </div>
-              <div class="mt-2">${Math.round(progress)}% Complete</div>`,
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                });
-            };
-
-            // Handle existing image deletion
-            let oldImageDeleted = false;
-            if (profile.profileImagePath) {
-                try {
-                    await deleteObject(ref(storage, profile.profileImagePath));
-                    oldImageDeleted = true;
-                } catch (deleteErr) {
-                    console.warn('Old image deletion warning:', deleteErr);
-                    if (deleteErr.code !== 'storage/object-not-found') throw deleteErr;
-                }
-            }
-
-            // Upload with progress tracking
-            const uploadTask = uploadBytesResumable(storageRef, file);
-
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    showProgress(progress);
-                },
-                (error) => {
-                    Swal.close();
-                    throw error;
-                }
-            );
-
-            await uploadTask;
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            // Atomic Firestore update
-            const batch = writeBatch(db);
-            const userRef = doc(db, 'Users', currentUser.uid);
-            batch.update(userRef, {
-                profileImage: downloadURL,
-                profileImagePath: newFileName,
-                updatedAt: new Date().toISOString()
-            });
-
-            await batch.commit();
-
-            // Update local state
-            setProfile(prev => ({
-                ...prev,
-                profileImage: downloadURL,
-                profileImagePath: newFileName
-            }));
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Profile Image Updated!',
-                showConfirmButton: false,
-                timer: 1500
-            });
-        } catch (err) {
-            console.error('Upload Error:', err);
-
-            // Handle specific storage errors
-            let errorMessage = err.message;
-            if (err.code === 'storage/canceled') {
-                errorMessage = 'Upload was canceled';
-            } else if (err.code === 'storage/retry-limit-exceeded') {
-                errorMessage = 'Upload failed after multiple attempts';
-            }
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Upload Failed',
-                html: `<div class="text-red-600">${errorMessage}</div>`,
-            });
-        } finally {
-            setLocalLoading(false);
-        }
-    };
     // for updating profile data
     const handleSubmit = async (e) => {
         e.preventDefault();

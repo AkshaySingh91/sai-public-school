@@ -1,6 +1,5 @@
-import React from 'react';
 import { History, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../../config/firebase';
 import Swal from 'sweetalert2';
 import { Link } from 'react-router-dom';
@@ -23,16 +22,14 @@ export default function TransactionHistory({ student, transactions, setTransacti
             const newTrans = (transactions || []).filter(
                 (t) => (isCompleted ? t.receiptId : t.tempReceiptId) !== (isCompleted ? tx.receiptId : tx.tempReceiptId)
             );
-            // return
             await updateDoc(ref, { transactions: newTrans });
             setTransactions(newTrans)
-            fetchData()
+            fetchData() //req to fetch updated fees, last year fees
             Swal.fire('Deleted!', 'Transaction removed and fees rolled back.', 'success');
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
         }
     };
-
     return (
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <h3 className="text-xl font-semibold mb-4 flex items-center text-purple-600">
@@ -72,7 +69,7 @@ export default function TransactionHistory({ student, transactions, setTransacti
                                     </td>
                                     <td className=" px-4 py-2 font-mono text-purple-600">
                                         {t.status === 'completed'
-                                            ? <Link to={`/school/student/${student.id}/receipt/${t.receiptId}`}>{t.receiptId}</Link>
+                                            ? <Link to={`/school/student/${student.id}/receipt/${t.feeType?.toLowerCase()}/${t.receiptId}`}>{t.receiptId}</Link>
                                             : <span className="text-gray-400">{t.status}</span>
                                         }
                                     </td>

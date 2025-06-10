@@ -191,7 +191,7 @@ const SchoolSettings = ({ school, setSchool }) => {
         try {
             // 1) Update the school details
             const resDetails = await
-                fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/settings/school/${s.id}` : `${VITE_DOMAIN_PROD}/api/admin/settings/school/${s.id}`,
+                fetch(VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/school/${s.id}` : `${VITE_DOMAIN_PROD}/api/school/${s.id}`,
                     {
                         method: 'PUT',
                         headers: {
@@ -235,87 +235,105 @@ const SchoolSettings = ({ school, setSchool }) => {
     }
     const handleLogoUpload = async (file) => {
         if (!file) return;
-
+        let uploadBarModal;
         try {
             setUploading(true);
-            validateFile(file);
+            // 1. Show a spinner while we request the signed URL
+            uploadBarModal = Swal.fire({
+                title: 'Preparing upload…',
+                html: '<div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+            });
 
             const userToken = await currentUser.getIdToken();
-            const formData = new FormData();
-            formData.append('schoolLogo', file);
-            // Show progress dialog
-            Swal.fire({
-                title: 'Uploading Document...',
-                html: 'Please wait while we process your file.',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                },
-            });
-            // Use XMLHttpRequest to track upload progress and get back the JSON
-            const url = VITE_NODE_ENV === "Development" ? `http://localhost:${VITE_PORT}/api/admin/school/logo/${s.id}` : `${VITE_DOMAIN_PROD}/api/admin/school/logo/${s.id}`
+            validateFile(file);
 
-            const uploadResult = await new Promise((resolve, reject) => {
+            const oldKey = school.logoImagePath || null;
+            const uploadUrlEndpoint = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}/api/school/logo/upload-url/${s.id}?fileType=${file.type}&fileName=${file.name}`
+                : `${VITE_DOMAIN_PROD}/api/school/logo/upload-url/${s.id}?fileType=${file.type}&fileName=${file.name}`;
+
+            const urlResponse = await fetch(uploadUrlEndpoint, {
+                headers: { Authorization: 'Bearer ' + userToken }
+            });
+
+            if (!urlResponse.ok) {
+                throw new Error('Failed to get upload URL');
+            }
+
+            const { signedUrl, key: newKey } = await urlResponse.json();
+
+            // 2. Close the spinner modal and open the progress‐bar modal
+            Swal.close();
+            Swal.fire({
+                title: 'Uploading…',
+                html: `
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="upload-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2 text-sm">
+                    <span id="uploaded-size">0KB</span> / 
+                    <span id="total-size">${(file.size / 1024).toFixed(1)}KB</span>
+                    </div>
+                    <div class="mt-1" id="upload-percent">0% Complete</div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false
+            });
+            // 3. Perform the actual PUT upload with progress
+            await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', url);
-                xhr.setRequestHeader('Authorization', 'Bearer ' + userToken);
+                xhr.open('PUT', signedUrl);
+                xhr.setRequestHeader('Content-Type', file.type);
 
                 xhr.upload.onprogress = (event) => {
-                    if (event.lengthComputable) {
-                        const percent = Math.round((event.loaded / event.total) * 100);
-                        const bar = document.getElementById('upload-bar');
-                        const pctText = document.getElementById('upload-percent');
-                        if (bar) bar.style.width = `${percent}%`;
-                        if (pctText) pctText.innerText = `${percent}% Complete`;
-                    }
+                    if (!event.lengthComputable) return;
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    document.getElementById('upload-bar').style.width = `${percent}%`;
+                    document.getElementById('upload-percent').innerText = `${percent}% Complete`;
+                    document.getElementById('uploaded-size').innerText = `${(event.loaded / 1024).toFixed(1)}KB`;
                 };
 
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const json = JSON.parse(xhr.responseText);
-                            resolve(json);
-                        } catch (parseErr) {
-                            reject(new Error('Invalid JSON from server'));
-                        }
-                    } else {
-                        reject(new Error(`Upload failed with status ${xhr.status}`));
-                    }
-                };
-
-                xhr.onerror = () => reject(new Error('Network error during upload'));
-                xhr.send(formData);
+                xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Upload failed with status ${xhr.status}`)));
+                xhr.onerror = () => reject(new Error('Network error'));
+                xhr.send(file);
             });
-            Swal.close();
-            const { metaData } = uploadResult;
 
-            setSchool(prev => ({
-                ...prev,
-                logoUrl: metaData.logoUrl,
-                logoImagePath: metaData.logoImagePath
-            }));
+            // 4. Update Firestore & cleanup
+            const updateEndpoint = VITE_NODE_ENV === "Development"
+                ? `http://localhost:${VITE_PORT}/api/school/logo/update/${s.id}`
+                : `${VITE_DOMAIN_PROD}/api/school/logo/update/${s.id}`;
+            const response = await fetch(updateEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer ' + userToken
+                },
+                body: JSON.stringify({ newKey, oldKey })
+            });
+            if (!response.ok) throw new Error('Failed to update profile');
+            const { logoImage, logoImagePath, updatedAt } = await response.json();
+            setSchool(prev => ({ ...prev, logoImage, logoImagePath, updatedAt }));
 
             Swal.fire({
                 icon: 'success',
-                title: 'Profile Image Updated!',
-                showConfirmButton: false,
-                timer: 1500
+                title: 'Upload Successful!',
+                timer: 1500,
+                showConfirmButton: false
             });
-        } catch (err) {
+        }
+        catch (err) {
             console.error('Upload Error:', err);
-            // Handle specific storage errors
-            let errorMessage = err.message;
-            if (err.code === 'storage/canceled') {
-                errorMessage = 'Upload was canceled';
-            } else if (err.code === 'storage/retry-limit-exceeded') {
-                errorMessage = 'Upload failed after multiple attempts';
-            }
+            Swal.close();
             Swal.fire({
                 icon: 'error',
                 title: 'Upload Failed',
-                html: `<div class="text-red-600">${errorMessage}</div>`,
+                text: err.message
             });
-        } finally {
+        }
+        finally {
             setUploading(false);
         }
     };
@@ -639,9 +657,9 @@ const SchoolSettings = ({ school, setSchool }) => {
                     <div className="w-full">
                         <label className="block text-sm font-medium text-gray-700 mb-3">School Logo</label>
                         <div className="flex items-center gap-6">
-                            <div className={`relative ${!school.logoUrl ? 'bg-gray-50' : ''} border-2 border-dashed border-gray-300 rounded-xl p-4 w-32 h-32 flex items-center justify-center transition-colors hover:border-purple-500`}>
-                                {school.logoUrl ? (
-                                    <img src={school.logoUrl} className="w-full h-full object-contain" alt="School Logo" />
+                            <div className={`relative ${!school.logoImage ? 'bg-gray-50' : ''} border-2 border-dashed border-gray-300 rounded-xl p-4 w-32 h-32 flex items-center justify-center transition-colors hover:border-purple-500`}>
+                                {school.logoImage && school.logoImagePath ? (
+                                    <img src={school.logoImage} className="w-full h-full object-contain" alt="School Logo" />
                                 ) : (
                                     <div className="text-center">
                                         <Upload size={24} className="text-gray-400 mx-auto mb-2" />
@@ -649,7 +667,7 @@ const SchoolSettings = ({ school, setSchool }) => {
                                     </div>
                                 )}
                                 <input
-                                    disabled={userData.privilege?.toLowerCase() === "read"}
+                                    disabled={userData.privilege?.toLowerCase() === "read" || uploading}
                                     type="file"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     onChange={(e) => handleLogoUpload(e.target.files[0])}

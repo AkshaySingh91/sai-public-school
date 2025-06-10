@@ -34,21 +34,31 @@ const ProtectedRoutes = () => {
   const { institutionType } = userData;
   const { school, loading: schoolLoading } = useInstitution();
 
-  // first check if user logged in & exist in database
+  // 1. Not logged in → login page
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
-  // check is school of which user is logged in is exist in database
+
+  // 2. Still fetching school info → keep loader
   if (schoolLoading) {
     return <LoadingScreen />;
   }
-  // user may be superadmin thus he will not give schoolCode thus school will null but role should be superadmin
+
+  // 3. If the school record doesn't exist and the user isn't a superadmin, force relogin
   if (!school && role !== "superadmin") {
     return <Navigate to="/login" replace />;
   }
-  console.log(institutionType)
   return (<>
     <Routes>
+      <Route
+        index
+        element={
+          <Navigate
+            to={institutionType?.toLowerCase() === "college" ? "/college" : "/school"}
+            replace
+          />
+        }
+      />
       {role === "superadmin" && <Route path="/*" element={<SuperAdminRoutes />} />}
       {institutionType?.toLowerCase() === "school" && <Route path="/school/*" element={<SchoolAdminRoutes />} />}
       {institutionType?.toLowerCase() === "college" && <Route path="/college/*" element={<CollegeAdminRoutes />} />}

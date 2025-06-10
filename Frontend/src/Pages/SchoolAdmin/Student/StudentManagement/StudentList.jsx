@@ -22,6 +22,13 @@ import {
   ChevronLeft,
   ChevronRight,
   SettingsIcon,
+  User,
+  Settings,
+  Calendar,
+  CreditCard,
+  GraduationCap,
+  Users,
+  Phone,
 } from "lucide-react";
 import TableLoader from "../../../../components/TableLoader";
 import { useInstitution } from "../../../../contexts/InstitutionContext";
@@ -29,9 +36,19 @@ import { getNewClassFees } from "./StudentDetail";
 import Swal from "sweetalert2";
 import { motion } from "framer-motion";
 
+const statusStyles = {
+  current: "bg-green-100 text-green-800",
+  new: "bg-blue-100 text-blue-800",
+  inactive: "bg-red-100 text-gray-600",
+};
+
+const typeStyles = {
+  ds: "bg-blue-100 text-blue-700",
+  dss: "bg-purple-100 text-purple-700",
+  dsr: "bg-orange-100 text-orange-700"
+};
 const StudentList = () => {
   const { userData } = useAuth();
-  console.log(userData)
   const { school } = useInstitution();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -592,14 +609,6 @@ const StudentList = () => {
       console.error("PDF generation error:", error);
     }
   };
-
-  const statusStyles = {
-    current: "bg-green-100 text-green-800",
-    new: "bg-blue-100 text-blue-800",
-    inactive: "bg-red-100 text-gray-600",
-  };
-
-
   return (
     <>
       {loading ? (
@@ -671,7 +680,7 @@ const StudentList = () => {
               </motion.button>
 
               {
-                userData.privilege=== "both" && (
+                userData.privilege === "both" && (
                   <>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -696,12 +705,12 @@ const StudentList = () => {
           </div>
 
           {/* Student Table */}
-          <div className="relative">
+          <div className="relative hidden md:block">
             <table className="w-full">
               <thead className="sticky top-0 bg-gradient-to-r from-purple-600 to-violet-700 text-white shadow-sm">
                 <tr>
                   {
-                    userData.privilege=== "both" &&
+                    userData.privilege === "both" &&
                     <th className="p-3 w-12 text-center">
                       <input
                         type="checkbox"
@@ -712,7 +721,7 @@ const StudentList = () => {
                     </th>
                   }
                   {["Academic", "Name", "Type", "Fee ID", "Class", "Div", "Gender", "Father Contact", "Status",
-                    userData.privilege=== "both" ? "Actions" : ""].filter(Boolean).map((header) => (
+                    userData.privilege === "both" ? "Actions" : ""].filter(Boolean).map((header) => (
                       <th
                         key={header}
                         className="p-3 text-left text-sm font-medium uppercase tracking-wider"
@@ -731,7 +740,7 @@ const StudentList = () => {
                     className="hover:bg-purple-50/50 transition-colors"
                   >
                     {
-                      userData.privilege=== "both" &&
+                      userData.privilege === "both" &&
                       <td className="p-3 text-center">
                         <input
                           type="checkbox"
@@ -776,7 +785,7 @@ const StudentList = () => {
                       </span>
                     </td>
                     {
-                      userData.privilege=== "both" &&
+                      userData.privilege === "both" &&
                       <td td className="p-3 text-center">
                         <motion.button
                           whileHover={{ rotate: 90 }}
@@ -792,6 +801,19 @@ const StudentList = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          {/* MOBILE: show cards below md */}
+          <div className="block md:hidden p-4 space-y-4">
+            {students.map(student => (
+              <StudentProfileCard
+                key={student.id}
+                student={student}
+                isSelected={selectedStudents.includes(student.id)}
+                showCheckbox={userData.privilege === "both"}
+                onSelect={() => toggleSelectStudent(student.id)}
+                onEdit={() => navigate(`/school/student/${student.id}`)}
+              />
+            ))}
           </div>
           {/* Pagination */}
           <div className="px-6 py-4 border-t border-purple-100 bg-purple-50">
@@ -936,3 +958,127 @@ const StudentList = () => {
 };
 
 export default StudentList;
+function StudentProfileCard({ student, isSelected, onSelect, onEdit, showCheckbox }) {
+  const getInitials = (fname, lname) => {
+    return `${fname?.charAt(0) || ''}${lname?.charAt(0) || ''}`.toUpperCase();
+  };
+
+  const getAvatarColor = (gender) => {
+    return gender?.toLowerCase() === 'male'
+      ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+      : 'bg-gradient-to-br from-pink-500 to-pink-600';
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-white rounded-xl shadow-sm border-2 transition-all duration-200 hover:shadow-md ${isSelected ? 'border-purple-300 bg-purple-50/30' : 'border-gray-200'
+        }`}
+    >
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            {showCheckbox && (
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-purple-200 text-violet-600 focus:ring-violet-500 mt-1"
+                checked={isSelected}
+                onChange={onSelect}
+              />
+            )}
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${getAvatarColor(student.gender)}`}>
+              {getInitials(student.fname, student.lname)}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center space-x-2">
+                <h3 className="text-lg font-semibold text-gray-900 capitalize">
+                  {student.fname} {student.lname}
+                </h3>
+                <span className={`px-2 py-1 text-xs rounded-full font-medium ${typeStyles[student.type?.toLowerCase()] || typeStyles.regular}`}>
+                  {student.type}
+                </span>
+              </div>
+              <p className="text-gray-500 text-sm capitalize flex items-center">
+                <User size={12} className="mr-1" />
+                {student.fatherName || 'Guardian not specified'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusStyles[student.status?.toLowerCase()] || statusStyles.inactive}`}>
+              <div className={`w-2 h-2 rounded-full mr-1.5 ${student.status?.toLowerCase() === 'active' ? 'bg-green-500' :
+                student.status?.toLowerCase() === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
+                }`}></div>
+              {student.status}
+            </span>
+            {showCheckbox && (
+              <motion.button
+                whileHover={{ rotate: 90 }}
+                transition={{ duration: 0.2 }}
+                onClick={onEdit}
+                className="text-violet-600 hover:text-violet-800 p-1 rounded-lg hover:bg-purple-100"
+              >
+                <Settings size={16} />
+              </motion.button>
+            )}
+          </div>
+        </div>
+
+        {/* Details Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center text-gray-600">
+              <Calendar size={14} className="mr-2" />
+              <span className="text-sm font-medium">Academic Year</span>
+            </div>
+            <p className="text-sm text-gray-900 font-semibold">
+              {student.academicYear || "-"}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center text-gray-600">
+              <CreditCard size={14} className="mr-2" />
+              <span className="text-sm font-medium">Fee ID</span>
+            </div>
+            <p className="text-sm text-gray-900 font-semibold">
+              {student.feeId || "-"}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center text-gray-600">
+              <GraduationCap size={14} className="mr-2" />
+              <span className="text-sm font-medium">Class</span>
+            </div>
+            <p className="text-sm text-gray-900 font-semibold">
+              {student.class} - {student.div}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center text-gray-600">
+              <Users size={14} className="mr-2" />
+              <span className="text-sm font-medium">Gender</span>
+            </div>
+            <p className="text-sm text-gray-900 font-semibold capitalize">
+              {student.gender || "-"}
+            </p>
+          </div>
+
+          <div className="space-y-1 lg:col-span-2">
+            <div className="flex items-center text-gray-600">
+              <Phone size={14} className="mr-2" />
+              <span className="text-sm font-medium">Father's Contact</span>
+            </div>
+            <p className="text-sm text-gray-900 font-semibold">
+              {student.fatherMobile || "-"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
