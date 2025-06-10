@@ -58,6 +58,7 @@ const SuperAdminLayout = () => {
 
 const SuperAdminIndex = () => {
   const { school } = useInstitution();
+  console.log("object")
   return (
     <Routes>
       <Route element={<SuperAdminLayout />}>
@@ -78,7 +79,7 @@ const SuperAdminIndex = () => {
               <Route path="/school/fee-structure" element={<FeeStructure />} />
               <Route path="/school/students/outstanding-fee" element={<FeeReportContainer />} />
               <Route path="/school/students/import" element={<ImportExistingStudent />} />
-              <Route path="/school/student/:studentId/receipt/:receiptId" element={<FeeReceiptPage />} />
+              <Route path="/school/student/:studentId/receipt/:receiptType/:receiptId" element={<FeeReceiptPage />} />
               <Route path="/school/settings" element={<Settings />} />
               <Route path="/school/buslist" element={<BusList />} />
               <Route path='/school/busdest' element={<BusDestination />} />

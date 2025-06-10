@@ -143,11 +143,52 @@ export default function AddStudent() {
       if (!studentType) {
         return Swal.fire({
           icon: 'error',
-          title: `No fee structure found for student type ${formData.type}`,
-          confirmButtonColor: '#6366f1'
+          title: 'Fee Structure Not Found',
+          html: `
+    <div class="text-center space-y-3 p-2">
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 mx-auto max-w-md"> 
+        <p class="text-gray-700 font-medium mb-2">
+          No fee structure configured for:
+        </p>
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+          <div class="flex justify-center items-center space-x-4">
+            <div class="text-center">
+              <span class="text-xs text-red-600 uppercase font-semibold tracking-wide">Class</span>
+              <div class="text-lg font-bold text-gray-800 capitalize bg-red-100 px-3 py-1 rounded-lg mt-1">
+                ${formData.class}
+              </div>
+            </div>
+            <div class="text-red-400 text-xl font-bold">•</div>
+            <div class="text-center">
+              <span class="text-xs text-red-600 uppercase font-semibold tracking-wide">Division</span>
+              <div class="text-lg font-bold text-gray-800 capitalize bg-red-100 px-3 py-1 rounded-lg mt-1">
+                ${formData.div}
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="text-sm text-gray-500 mt-3">
+          Please first add fee structure for this class & div 
+        </p>
+      </div>
+    </div>
+  `,
+          confirmButtonText: 'Got it',
+          confirmButtonColor: '#dc2626',
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl max-w-md',
+            title: 'text-xl font-bold text-red-600 mb-2',
+            htmlContainer: 'text-left py-0',
+            confirmButton: 'font-semibold px-6 py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg transform hover:scale-105 transition-all duration-200'
+          },
+          showClass: {
+            popup: 'animate-fade-in-up'
+          },
+          hideClass: {
+            popup: 'animate-fade-out-down'
+          }
         });
       }
-
       const feeStructure = studentType.feeStructure || {};
       let AdmissionFee = 0;
       let tuitionFee = 0;

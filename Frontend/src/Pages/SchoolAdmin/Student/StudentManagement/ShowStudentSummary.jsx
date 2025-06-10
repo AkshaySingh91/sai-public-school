@@ -29,7 +29,7 @@ const ShowStudentSummary = async (studentData) => {
             </div>
             <div class="flex justify-between items-center py-1.5 border-b border-blue-100">
                 <span class="text-sm font-medium text-gray-600">Class - Div:</span>
-                <span class="text-sm font-bold text-gray-800 bg-white px-2 py-1 rounded-md">${studentData.class} - ${studentData.div.toUpperCase()}</span>
+                <span class="text-sm font-bold text-gray-800 bg-white px-2 py-1 rounded-md capitalize">${studentData.class} - ${studentData.div.toUpperCase()}</span>
             </div>
             <div class="flex justify-between items-center py-1.5 border-b border-blue-100">
                 <span class="text-sm font-medium text-gray-600">Contact:</span>

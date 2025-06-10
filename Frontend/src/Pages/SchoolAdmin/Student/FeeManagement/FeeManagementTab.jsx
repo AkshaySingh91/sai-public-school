@@ -179,10 +179,9 @@ export default function FeeManagement({ student, transactions, handleFeeUpdate, 
                         {
                             !currentYearTotals.TuitionFee && !currentYearTotals.BusFee && !currentYearTotals.MessFee && !currentYearTotals.HostelFee ?
                                 <div className="h-full my-auto font-mono text-center text-xl">
-                                    <text x="50" y="50" textAnchor="middle" dominantBaseline="middle"
-                                        className='text-5xl mt-4 font-bold text-gray-400'>
+                                    <div className="text-5xl mt-4 font-bold text-gray-400">
                                         N/A
-                                    </text>
+                                    </div>
                                 </div> :
                                 <>
                                     <FeeBar label="School Fees" paid={currentYearPaid.TuitionFee} total={currentYearTotals.TuitionFee} />

@@ -11,7 +11,7 @@ export default function FeeReceiptPage() {
     const { school } = useInstitution();
     const [student, setStudent] = useState(null);
     const [transaction, setTransaction] = useState(null);
-
+    console.log("object")
     // Fetch student and transaction
     useEffect(() => {
         const fetchStudentAndTransaction = async () => {
@@ -24,6 +24,7 @@ export default function FeeReceiptPage() {
 
                 // Find the specific transaction
                 // we use receiptType to avoid confict btw 2 different types of fee receipts of same id 
+                console.log(studentData.transactions)
                 const tx = (studentData.transactions || []).find(t => t.receiptId == receiptId && t.feeType?.toLowerCase() == receiptType?.toLowerCase());
                 if (!tx) return;
 
