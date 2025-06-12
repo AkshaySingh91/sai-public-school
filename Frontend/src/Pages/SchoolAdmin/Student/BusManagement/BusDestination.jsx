@@ -94,19 +94,63 @@ function BusDestination() {
   };
 
   const addDestination = async () => {
-    if (!newDestination.name || !newDestination.fee) return;
-    const formattedName = newDestination.name.trim().toLowerCase();
-    const exists = destinations.some(d => d.name.toLowerCase() === formattedName);
-    if (exists) {
-      alert("Destination already exists!");
+    // Input validation
+    if (!newDestination.name || !newDestination.fee) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Incomplete Information',
+        text: 'Please provide both destination name and fee',
+      });
       return;
     }
-    await addDoc(collection(db, "allDestinations"), {
-      name: newDestination?.name?.toLowerCase(),
-      fee: parseFloat(newDestination.fee),
-      academicYear: school.academicYear,
-      schoolCode: school.Code,
+    // Show loading indicator
+    Swal.fire({
+      title: 'Adding Destination...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
     });
+    try {
+      const formattedName = newDestination.name.trim().toLowerCase();
+      const exists = destinations.some(d => d.name.toLowerCase() === formattedName);
+
+      if (exists) {
+        Swal.close();
+        Swal.fire({
+          icon: 'warning',
+          title: 'Destination Exists',
+          text: 'This destination name is already in use',
+        });
+        return;
+      }
+      const newDest = await addDoc(collection(db, "allDestinations"), {
+        name: formattedName,
+        fee: parseFloat(newDestination.fee),
+        academicYear: school.academicYear,
+        schoolCode: school.Code,
+      });
+      setDestinations((prev) => [...prev, {
+        id: newDest.id,
+        name: formattedName,
+        fee: parseFloat(newDestination.fee),
+        academicYear: school.academicYear,
+        schoolCode: school.Code,
+      }]);
+      setShowDestinationModal(false)
+      Swal.fire({
+        icon: 'success',
+        title: 'Destination Added!',
+        text: `${newDestination.name} has been added successfully`,
+        timer: 2500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error('Error adding destination:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Operation Failed',
+        text: `Could not add destination: ${error.message}`,
+      });
+    }
   }
   const assignBus = async (destination, busDocId) => {
     const destRef = doc(db, "allDestinations", destination.id);

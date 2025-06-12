@@ -558,6 +558,7 @@ export function StudentDetail() {
         }
       }
       setTransactions(prev => ([...prev, transaction]));
+      fetchData()
       setStudent(prev => ({ ...prev, allFee: updatedFees }));
       Swal.fire("Success!", "Transaction recorded with historical context", "success");
     } catch (error) {

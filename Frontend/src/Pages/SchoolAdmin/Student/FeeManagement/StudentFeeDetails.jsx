@@ -425,6 +425,7 @@ const StudentFeeDetails = ({
                 { id: 'class', label: 'Class' },
                 { id: 'feeId', label: 'FeeId' },
                 { id: 'lastYear', label: 'L.Y. Bal' },
+                { id: 'tuitionFeeWithDiscount', label: 'Total Tuition' },
                 { id: 'netTuitionFee', label: 'Net Tuition' },
                 { id: 'tuitionFeePaid', label: 'TuitionFee Paid' },
                 { id: 'tuitionFeePending', label: 'TuitionFee Pending' },
@@ -454,7 +455,7 @@ const StudentFeeDetails = ({
                   key={student.class} className="hover:bg-gray-50 transition-colors cursor-pointer">
                   <td className="px-2 py-3 whitespace-nowrap">
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900 capitalize">
+                      <p className="text-xs font-medium text-gray-900 capitalize">
                         {student.fname || '-'} {student.lname || ''}
                       </p>
                       <p className="text-xs text-gray-500 capitalize">
@@ -462,12 +463,13 @@ const StudentFeeDetails = ({
                       </p>
                     </div>
                   </td>
-                  <td className="px-2 py-3 pl-6 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 whitespace-nowrap capitalize">
+                  <td className="px-2 py-3 pl-6 text-xs font-medium text-gray-900 sticky left-0 bg-white z-10 whitespace-nowrap capitalize">
                     {student.class || ""}-
                     <span className="uppercase"> {student.div || ""}</span>
                   </td>
                   <td className="whitespace-nowrap px-2 py-3 text-sm text-gray-600">{student.feeId || ""}</td>
                   <td className="whitespace-nowrap px-2 py-3 text-sm text-gray-600">{formatCurrency(student?.feesDetails?.lastYear || 0)}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-sm text-black bg-">{formatCurrency(student?.feesDetails?.tuitionFeeWithDiscount || 0)}</td>
                   <td className="whitespace-nowrap px-2 py-3 text-sm text-black bg-">{formatCurrency(student?.feesDetails?.netTuitionFee || 0)}</td>
                   <td className="whitespace-nowrap px-2 py-3 text-sm text-green-600">{formatCurrency(student?.feesDetails?.tuitionFeePaid || 0)}</td>
                   <td className={`whitespace-nowrap px-2 py-3 text-sm ${(student?.feesDetails?.tuitionFeePending || 0) > 0 ? "text-red-600" : "text-green-600"} `}>{formatCurrency(student?.feesDetails?.tuitionFeePending || 0)}</td>

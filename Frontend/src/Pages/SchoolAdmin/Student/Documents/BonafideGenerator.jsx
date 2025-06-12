@@ -1,19 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import Swal from 'sweetalert2';
-import { Printer, Download, Save, X, Plus } from 'lucide-react';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { db } from '../../../../config/firebase';
+import { Printer, Download, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { useInstitution } from '../../../../contexts/InstitutionContext';
 
 export default function BonafideGenerator({ student, setStudent }) {
     const { studentId } = useParams();
-    const { userData } = useAuth();
+    const { school } = useInstitution()
     const [showGenerator, setShowGenerator] = useState(false);
     const [bonafideList, setBonafideList] = useState([]);
     const previewRef = useRef();
-    const [school, setSchool] = useState(null);
     const [form, setForm] = useState({
         studentName: `${student.fname} ${student.lname}`,
         className: student.class || '',
@@ -30,25 +26,6 @@ export default function BonafideGenerator({ student, setStudent }) {
     useEffect(() => {
         setBonafideList(student.bonafide || []);
     }, [student.bonafide]);
-    useEffect(() => {
-        const fetchSchool = async () => {
-            try {
-                const schoolsRef = collection(db, 'schools');
-                const q = query(schoolsRef, where('Code', '==', userData.schoolCode));
-                const snap = await getDocs(q);
-
-                if (snap.docs.length > 0) {
-                    const schoolData = snap.docs[0].data();
-                    setSchool({ id: snap.docs[0].id, ...schoolData });
-                }
-            } catch (error) {
-                console.error('Error fetching school:', error);
-                Swal.fire('Error', 'Failed to load school data', 'error');
-            }
-        };
-
-        if (userData?.schoolCode) fetchSchool();
-    }, [userData?.schoolCode]);
 
     const handleChange = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
 

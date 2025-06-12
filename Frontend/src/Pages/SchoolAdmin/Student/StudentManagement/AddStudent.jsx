@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../../config/firebase';
-import { useAuth } from '../../../../contexts/AuthContext';
 import Swal from 'sweetalert2';
 import { User, Users, BookOpen, GraduationCap, Calendar, Clock, Wallet, Hash } from 'lucide-react';
 import { SelectField } from '../SelectField';
@@ -12,7 +11,6 @@ import { useInstitution } from '../../../../contexts/InstitutionContext';
 import showStudentSummary from "./ShowStudentSummary"
 
 export default function AddStudent() {
-  const { userData } = useAuth();
   const navigate = useNavigate();
   const { school, setSchool } = useInstitution();
   const [classes, setClasses] = useState([]);
@@ -65,8 +63,9 @@ export default function AddStudent() {
     });
 
     const getNewClassFees = async (newClass, targetAcademicYear, englishMedium) => {
+      console.log(newClass, targetAcademicYear, englishMedium)
       try {
-        const fsRef = doc(db, "feeStructures", userData.schoolCode);
+        const fsRef = doc(db, "feeStructures", school.Code);
         const fsSnap = await getDoc(fsRef);
         if (!fsSnap.exists()) {
           console.error("Fee structure document not found");
@@ -229,7 +228,7 @@ export default function AddStudent() {
       // from here we have verified all data correctly mostly fees calc 
       const studentData = {
         ...formData,
-        schoolCode: userData.schoolCode,
+        schoolCode: school.Code,
         feeId: feeId,
         allFee: {
           lastYearBalanceFee: 0,
