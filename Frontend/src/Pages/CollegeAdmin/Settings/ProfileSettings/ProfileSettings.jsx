@@ -1,3 +1,4 @@
+import "../../../../index.css"
 import React, { useState } from 'react';
 import { Upload, Trash2, Loader, User } from 'lucide-react';
 import Swal from "sweetalert2";
@@ -349,7 +350,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                     <div className="text-center md:text-left capitalize">
                         <h1 className="text-2xl font-bold">{profile.name || "-"}</h1>
                         <p className="text-white/90 capitalize">{profile.position || profile.role || ""}</p>
-                        <p className="text-white/80 text-sm">{profile?.department || "School"} • {profile?.employeeId || ""}</p>
+                        <p className="text-white/80 text-sm">{profile?.department || "College"} • {profile?.employeeId || ""}</p>
                     </div>
                 </div>
             </div>
@@ -498,7 +499,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                 <div className="mt-8 flex justify-end">
                     <button
                         type="submit"
-                        className="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium"
+                        className="px-8 py-3  text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium"
                         disabled={localLoading}
                     >
                         {localLoading ? (

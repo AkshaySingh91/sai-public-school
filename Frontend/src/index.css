@@ -1,1 +1,42 @@
 @import "tailwindcss";
+
+:root {
+  --color-primary: 255, 255, 255;
+  --color-primary-50: 250, 250, 250;
+  --color-primary-100: rgb(var(--color-primary));
+  --color-primary-200: rgb(var(--color-primary));
+  --color-primary-300: rgb(var(--color-primary));
+  --color-primary-500: rgb(var(--color-primary));
+  --color-primary-700: rgb(var(--color-primary));
+  --color-primary-900: rgb(var(--color-primary));
+
+  --color-secondary: 55, 65, 81;
+  --color-secondary-50: var(--color-secondary);
+  --color-secondary-100: var(--color-secondary);
+  --color-secondary-200: var(--color-secondary);
+  --color-secondary-300: var(--color-secondary);
+  --color-secondary-500: var(--color-secondary);
+  --color-secondary-700: var(--color-secondary);
+  --color-secondary-900: var(--color-secondary);
+
+  --color-accent: 5, 150, 105;
+  --color-accent-50: var(--color-accent);
+  --color-accent-100: var(--color-accent);
+  --color-accent-200: var(--color-accent);
+  --color-accent-300: var(--color-accent);
+  --color-accent-500: var(--color-accent);
+  --color-accent-700: var(--color-accent);
+  --color-accent-900: var(--color-accent);
+
+  --color-surface: 248, 250, 252;
+  --color-text: 31, 41, 55;
+
+  --gradient-primary: linear-gradient(
+    135deg,
+    rgb(var(--color-primary)) 0%,
+    rgb(var(--color-accent)) 100%
+  );
+}
+.demo {
+  background-color: rgb(var(--color-primary-100));
+}

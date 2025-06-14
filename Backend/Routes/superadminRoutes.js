@@ -547,20 +547,19 @@ router.post("/school", async (req, res) => {
 router.post("/college", async (req, res) => {
     try {
         const {
-            collegeName,
+            // basic
             Code: rawCode,
-            location,
-            academicYear,
-            courses,
-            departments,
-            // header
-            collegeReceiptHeader,
-            feeIdCount,
-            // receipt count
-            tuitionReceiptCount,
-            // contact
+            collegeName,
             mobile,
             email,
+            academicYear,
+            
+            location,
+            courses,
+            departments,
+            collegeReceiptHeader,
+            feeIdCount,
+            tuitionReceiptCount,
             paymentModes,
             feeTypes,
             studentsType,

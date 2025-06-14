@@ -1,9 +1,12 @@
+import { useEffect } from "react"
 import { Outlet, Route, Routes } from "react-router-dom";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
 import CollegeAdminDashboard from "./Dashboard/CollegeAdminDashboard"
 import { useAuth } from "../../contexts/AuthContext";
 import NotFound from "../../components/NotFound";
 import CollegeSettings from "./Settings";
+import { ThemeProvider, useTheme } from "../../contexts/ThemeContext";
+import { useInstitution } from "../../contexts/InstitutionContext";
 
 const AdminLayout = () => {
     return (
@@ -35,26 +38,46 @@ const withReadOnly = (Component) => {
 };
 const ReadOnlyDashboard = withReadOnly(CollegeAdminDashboard);
 
-const CollegeAdminIndex = () => {
+// Inner component that uses theme context (must be inside ThemeProvider)
+const AdminRoutes = () => {
     const { userData } = useAuth();
+    const { applyTheme } = useTheme();
+    const { school: college } = useInstitution();
+
+    // Apply theme when college brand colors change
+    useEffect(() => {
+        if (college?.brandColors) {
+            applyTheme(college.brandColors);
+        }
+    }, [college?.brandColors, applyTheme]);
+
     return (
         <Routes>
             <Route element={<AdminLayout />}>
-                {
-                    userData.privilege?.toLowerCase() === "both" ?
-                        <>
-                            <Route path="/" element={<CollegeAdminDashboard />} />
-                            <Route path="/settings" element={<CollegeSettings />} />
-                            <Route path="*" element={<NotFound />} />
-                        </> :
-                        <>
-                            {/* dashboard  */}
-                            <Route path="/" element={<ReadOnlyDashboard />} />
-                            <Route path="*" element={<NotFound />} />
-                        </>
-                }
+                {userData.privilege?.toLowerCase() === "both" ? (
+                    <>
+                        <Route path="/" element={<CollegeAdminDashboard />} />
+                        <Route path="/settings" element={<CollegeSettings />} />
+                        <Route path="*" element={<NotFound />} />
+                    </>
+                ) : (
+                    <>
+                        <Route path="/" element={<ReadOnlyDashboard />} />
+                        <Route path="*" element={<NotFound />} />
+                    </>
+                )}
             </Route>
         </Routes>
+    );
+};
+
+const CollegeAdminIndex = () => {
+    const { school: college } = useInstitution();
+
+    return (
+        <ThemeProvider college={college}>
+            <AdminRoutes />
+        </ThemeProvider>
     );
 };
 

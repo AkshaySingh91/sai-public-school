@@ -58,7 +58,6 @@ const SuperAdminLayout = () => {
 
 const SuperAdminIndex = () => {
   const { school } = useInstitution();
-  console.log("object")
   return (
     <Routes>
       <Route element={<SuperAdminLayout />}>

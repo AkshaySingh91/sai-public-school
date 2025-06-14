@@ -8,7 +8,16 @@ import { TbBus } from "react-icons/tb";
 import { MdOutlineInventory2 } from "react-icons/md";
 import { useInstitution } from "../../contexts/InstitutionContext";
 import { AiOutlineMenuUnfold } from "react-icons/ai";
-import { ChevronsLeftIcon, ChevronsRightIcon, Building2Icon } from "lucide-react";
+import {
+  ChevronsLeftIcon, ChevronsRightIcon, Building2Icon,
+  Home,
+  Users,
+  Calendar,
+  UserPlus,
+  FileText,
+  Settings,
+  IndianRupee,
+} from "lucide-react";
 
 
 
@@ -146,28 +155,41 @@ const AdminSidebar = () => {
       },
       { icon: FiSettings, text: "Settings", path: "/school/settings" },
     ] : [
-      { icon: FiActivity, text: "Dashboard", path: "/college" },
       {
-        icon: FiUsers,
-        text: "Students",
-        path: "/college/students",
-        subItems: [
-          { text: "All Student", path: "/college/students" },
-          { text: "Daily Book", path: "/college/students/daily-book" },
-          { text: "Outstanding Fees", path: "/college/students/outstanding-fee" },
-          { text: "Add Student", path: "/college/students/add" },
-        ],
+        icon: Home,
+        text: 'Dashboard',
+        path: '/college',
       },
       {
-        icon: FiHome,
-        text: "College",
-        path: "/college",
-        subItems: [
-          { text: "Payment Structure", path: "/college/payment-structure" },
-          { text: "Fee Structure", path: "/college/fee-structure" },
-        ],
+        icon: Users,
+        text: 'All Students',
+        path: '/college/students',
       },
-      { icon: FiSettings, text: "Settings", path: "/college/settings" },
+      {
+        icon: IndianRupee,
+        text: 'Outstanding Fees',
+        path: '/college/outstanding-fee',
+      },
+      {
+        icon: Calendar,
+        text: 'Daily Book',
+        path: '/college/daily-book',
+      },
+      {
+        icon: UserPlus,
+        text: 'Applied Students',
+        path: '/college/applied-students',
+      },
+      {
+        icon: FileText,
+        text: 'Admission Form',
+        path: '/college/admission-form',
+      },
+      {
+        icon: Settings,
+        text: 'Settings',
+        path: '/college/settings',
+      },
     ];
   }
   const toggleSubmenu = (path) => {

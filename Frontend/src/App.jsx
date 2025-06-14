@@ -1,4 +1,5 @@
 // src/App.jsx
+import "./index.css"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SchoolProvider } from "./contexts/InstitutionContext";
