@@ -177,7 +177,7 @@ export function StudentDetail() {
     amount: "",
     remark: "",
   });
-  const { school: schoolData, refresh, setSchool } = useInstitution();
+  const { school: schoolData, setSchool } = useInstitution();
   const navigate = useNavigate();
   const tabLabels = ["Student Details", "Fee Details", "Transactions", "Documents"]
   const [error, setError] = useState(null);

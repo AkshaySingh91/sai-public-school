@@ -6,13 +6,14 @@ import { useInstitution } from "../../../../contexts/InstitutionContext";
 import { auth, db } from '../../../../config/firebase';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import AdmissionQR from "./AdmissionQR"
+import CollegeManagement from "./CoursesManagement"
 
 const VITE_NODE_ENV = import.meta.env.VITE_NODE_ENV;
 const VITE_PORT = import.meta.env.VITE_PORT;
 const VITE_DOMAIN_PROD = import.meta.env.VITE_DOMAIN_PROD;
 
 const CollegeSettings = ({ college, setCollege }) => {
-    const { school: c, refresh } = useInstitution();
+    const { school: c, refresh, setSchool: setC } = useInstitution();
     const { userData, currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState('basic');
     const [saving, setSaving] = useState(false);
@@ -96,59 +97,76 @@ const CollegeSettings = ({ college, setCollege }) => {
 
     const saveSection = async (section, data) => {
         setSaving(true);
+
+        // 1️⃣ Authenticate
         let userToken;
         try {
             userToken = await auth.currentUser.getIdToken();
         } catch (err) {
-            Swal.fire({
+            setSaving(false);
+            return Swal.fire({
                 icon: 'error',
                 title: 'Authentication Error',
-                text: 'Could not get user token. Please log in again.'
+                text: 'Could not get user token. Please log in again.',
             });
-            setSaving(false);
-            return;
         }
 
-        try {
-            const endpoint = VITE_NODE_ENV === "Development"
+        // 2️⃣ Show SweetAlert loader
+        Swal.fire({
+            title: 'Saving changes…',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
+
+        // 3️⃣ Determine endpoint
+        const endpoint =
+            VITE_NODE_ENV === 'Development'
                 ? `http://localhost:${VITE_PORT}/api/college/${section}/${c.id}`
                 : `${VITE_DOMAIN_PROD}/api/college/${section}/${c.id}`;
-            console.log(endpoint)
+
+        // 4️⃣ Perform the PUT
+        try {
             const res = await fetch(endpoint, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${userToken}`
+                    Authorization: `Bearer ${userToken}`,
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(data),
             });
 
             if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.error || 'Failed to update college details');
+                const { error } = await res.json();
+                throw new Error(error || 'Failed to update college details.');
             }
 
+            // 5️⃣ On success, replace loader with a success toast
             Swal.fire({
                 icon: 'success',
                 title: 'Saved!',
                 text: 'Changes have been updated successfully.',
                 timer: 1500,
-                showConfirmButton: false
+                showConfirmButton: false,
             });
-            // Refresh college data
+
+            // 6️⃣ Refresh your data
             refresh();
         } catch (err) {
+            // 7️⃣ On failure, replace loader with an error alert
             Swal.fire({
                 icon: 'error',
                 title: 'Save Failed',
-                text: err.message
+                text: err.message,
             });
         } finally {
             setSaving(false);
         }
     };
 
-    // Section handlers
+
+    // basicinfo tab
     const handleSaveBasicInfo = (e) => {
         e.preventDefault();
         // Validation
@@ -174,6 +192,7 @@ const CollegeSettings = ({ college, setCollege }) => {
         saveSection('basic', basicInfo);
     };
 
+    // location tab
     const handleSaveLocation = (e) => {
         e.preventDefault();
 
@@ -189,9 +208,8 @@ const CollegeSettings = ({ college, setCollege }) => {
         saveSection('location', location);
     };
 
-    const handleSaveAcademic = (e) => {
-        e.preventDefault();
-
+    // academic tab
+    const handleSaveAcademic = () => {
         // Validate courses
         if (academicSettings.courses.length === 0) {
             return Swal.fire({
@@ -200,14 +218,17 @@ const CollegeSettings = ({ college, setCollege }) => {
                 text: 'Please add at least one course.'
             });
         }
-
         saveSection('academic', academicSettings);
     };
-
+    useEffect(() => {
+        console.log(academicSettings)
+    }, [academicSettings])
+    // aditional tab
     const handleSaveAdditional = (e) => {
         e.preventDefault();
         saveSection('additional', additionalInfo);
     };
+    // brand tab
     const handleSaveBrandColors = async () => {
         setSaving(true);
 
@@ -254,57 +275,7 @@ const CollegeSettings = ({ college, setCollege }) => {
             setSaving(false);
         }
     };
-    // Course management
-    const handleAddCourse = () => {
-        if (!newCourse.trim()) return;
 
-        setAcademicSettings(prev => ({
-            ...prev,
-            courses: [...prev.courses, newCourse.trim()]
-        }));
-        setNewCourse("");
-    };
-
-    const handleEditCourse = (index) => {
-        setEditingCourse(index);
-        setNewCourse(academicSettings.courses[index]);
-    };
-
-    const handleSaveCourseEdit = () => {
-        if (!newCourse.trim() || editingCourse === null) return;
-
-        const updatedCourses = [...academicSettings.courses];
-        updatedCourses[editingCourse] = newCourse.trim();
-
-        setAcademicSettings(prev => ({
-            ...prev,
-            courses: updatedCourses
-        }));
-
-        setEditingCourse(null);
-        setNewCourse("");
-    };
-
-    const handleDeleteCourse = (index) => {
-        Swal.fire({
-            title: 'Delete Course?',
-            text: `Are you sure you want to delete "${academicSettings.courses[index]}"?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                setAcademicSettings(prev => ({
-                    ...prev,
-                    courses: prev.courses.filter((_, i) => i !== index)
-                }));
-            }
-        });
-    };
-
-    // Logo upload
     const handleLogoUpload = async (file) => {
         if (!file) return;
         let uploadBarModal;
@@ -388,7 +359,7 @@ const CollegeSettings = ({ college, setCollege }) => {
             if (!response.ok) throw new Error('Failed to update profile');
             const { logoImage, logoImagePath, updatedAt } = await response.json();
             setCollege(prev => ({ ...prev, logoImage, logoImagePath, updatedAt }));
-
+            setC(prev => ({ ...prev, logoImage, logoImagePath, updatedAt }));
             Swal.fire({
                 icon: 'success',
                 title: 'Upload Successful!',
@@ -488,7 +459,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`px-4 py-2 font-medium text-sm whitespace-nowrap ${activeTab === tab.id
-                                ? 'text-purple-600 border-b-2 border-purple-600'
+                                ? 'text-green-600 border-b-2 border-green-600'
                                 : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
@@ -517,7 +488,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                         type="text"
                                         value={basicInfo.collegeName}
                                         onChange={(e) => setBasicInfo({ ...basicInfo, collegeName: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                         placeholder="Enter college name"
                                         required
                                     />
@@ -532,7 +503,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                         type="text"
                                         value={basicInfo.academicYear}
                                         onChange={(e) => setBasicInfo({ ...basicInfo, academicYear: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                         placeholder="e.g., 24-25"
                                         required
                                     />
@@ -547,7 +518,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                         type="email"
                                         value={basicInfo.email}
                                         onChange={(e) => setBasicInfo({ ...basicInfo, email: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                         placeholder="contact@college.edu"
                                     />
                                 </div>
@@ -561,7 +532,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                         type="tel"
                                         value={basicInfo.mobile}
                                         onChange={(e) => setBasicInfo({ ...basicInfo, mobile: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                         placeholder="9822841280"
                                         pattern="\d{10}"
                                     />
@@ -573,7 +544,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                     <button
                                         type="submit"
                                         disabled={saving}
-                                        className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
+                                        className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
                                     >
                                         <Save size={18} className="mr-2" />
                                         {saving ? 'Saving...' : 'Save Basic Info'}
@@ -595,7 +566,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                     type="text"
                                     value={location.state}
                                     onChange={(e) => setLocation({ ...location, state: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                     required
                                 />
                             </div>
@@ -609,7 +580,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                     type="text"
                                     value={location.district}
                                     onChange={(e) => setLocation({ ...location, district: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                     required
                                 />
                             </div>
@@ -623,7 +594,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                     type="text"
                                     value={location.taluka}
                                     onChange={(e) => setLocation({ ...location, taluka: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                     required
                                 />
                             </div>
@@ -637,7 +608,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                     type="text"
                                     value={location.landmark}
                                     onChange={(e) => setLocation({ ...location, landmark: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                     required
                                 />
                             </div>
@@ -651,7 +622,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                     type="text"
                                     value={location.pincode}
                                     onChange={(e) => setLocation({ ...location, pincode: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                     required
                                 />
                             </div>
@@ -662,7 +633,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
+                                    className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
                                 >
                                     <Save size={18} className="mr-2" />
                                     {saving ? 'Saving...' : 'Save Location'}
@@ -689,7 +660,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                         ...academicSettings,
                                         feeIdCount: parseInt(e.target.value) || 0
                                     })}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                 />
                             </div>
 
@@ -706,7 +677,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                         ...academicSettings,
                                         tuitionReceiptCount: parseInt(e.target.value) || 0
                                     })}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                 />
                             </div>
 
@@ -720,74 +691,13 @@ const CollegeSettings = ({ college, setCollege }) => {
                                     value={college.Code || "N/A"}
                                     className="w-full px-4 py-3 border border-gray-300 bg-gray-50 rounded-lg"
                                 />
-                            </div>
-
-                            <div className="md:col-span-2">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex flex-col ">
-                                        <div className="flex">
-                                            <p className="text-sm font-medium text-gray-700">
-                                                Offered Courses
-                                            </p>
-                                            <div className='flex px-3 gap-1'>
-                                                <AlertCircle className='w-3 h-3 text-red-600 my-auto ' />
-                                                <span className='text-xs font-medium text-gray-500 leading-0 my-auto'>
-                                                    Based on courses admission form will alter.
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <p className="mt-1 text-xs text-gray-500">After edit or delete click on "save academic details"</p>
-                                    </div>
-                                    <span className="text-xs text-gray-500">
-                                        {academicSettings.courses.length} courses
-                                    </span>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {academicSettings.courses.map((course, index) => (
-                                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <span className="font-medium uppercase">{course}</span>
-                                            {userData.privilege?.toLowerCase() !== "read" && (
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleEditCourse(index)}
-                                                        className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-full"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDeleteCourse(index)}
-                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-full"
-                                                    >
-                                                        <Trash size={16} />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-
-                                    <div className="flex mt-4">
-                                        <input
-                                            disabled={userData.privilege?.toLowerCase() === "read"}
-                                            type="text"
-                                            value={newCourse}
-                                            onChange={(e) => setNewCourse(e.target.value)}
-                                            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                            placeholder={editingCourse !== null ? "Edit course name" : "Add new course"}
-                                        />
-                                        <button
-                                            type="button"
-                                            disabled={userData.privilege?.toLowerCase() === "read" || !newCourse.trim()}
-                                            onClick={editingCourse !== null ? handleSaveCourseEdit : handleAddCourse}
-                                            className="px-4 bg-purple-600 text-black rounded-r-lg hover:bg-purple-700 disabled:bg-gray-300 flex items-center"
-                                        >
-                                            {editingCourse !== null ? "Save" : <Plus size={20} />}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            </div> 
+                            <CollegeManagement
+                                academicSettings={academicSettings}
+                                setAcademicSettings={setAcademicSettings}
+                                userData={userData}
+                                saveSection={saveSection}
+                            />
                         </div>
 
                         {userData.privilege?.toLowerCase() === "both" && (
@@ -795,7 +705,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
+                                    className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
                                 >
                                     <Save size={18} className="mr-2" />
                                     {saving ? 'Saving...' : 'Save Academic Settings'}
@@ -820,7 +730,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                     collegeReceiptHeader: e.target.value
                                 })}
                                 rows="3"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                                 placeholder="Enter header text for receipts"
                             ></textarea>
                             <p className="mt-1 text-sm text-gray-500">
@@ -833,7 +743,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
+                                    className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
                                 >
                                     <Save size={18} className="mr-2" />
                                     {saving ? 'Saving...' : 'Save Additional Info'}
@@ -850,7 +760,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                             <div className="w-full">
                                 <label className="block text-sm font-medium text-gray-700 mb-3">College Logo</label>
                                 <div className="flex items-center gap-6">
-                                    <div className={`relative ${!college.logoImage ? 'bg-gray-50' : ''} border-2 border-dashed border-gray-300 rounded-xl p-4 w-32 h-32 flex items-center justify-center transition-colors hover:border-purple-500`}>
+                                    <div className={`relative ${!college.logoImage ? 'bg-gray-50' : ''} border-2 border-dashed border-gray-300 rounded-xl p-4 w-32 h-32 flex items-center justify-center transition-colors hover:border-green-500`}>
                                         {college.logoImage && college.logoImagePath ? (
                                             <img
                                                 src={college.logoImage}
@@ -979,7 +889,7 @@ const CollegeSettings = ({ college, setCollege }) => {
                                 <button
                                     onClick={handleSaveBrandColors}
                                     disabled={saving}
-                                    className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
+                                    className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all font-medium text-sm flex items-center"
                                 >
                                     {saving ? (
                                         <RefreshCw size={18} className="mr-2 animate-spin" />

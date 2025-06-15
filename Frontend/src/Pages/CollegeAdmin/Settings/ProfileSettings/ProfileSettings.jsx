@@ -317,7 +317,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
     return (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-8 text-white">
+            <div className="bg-gradient-to-r from-green-600 to-blue-600 px-6 py-8 text-white">
                 <div className="flex flex-col md:flex-row items-center gap-6 capitalize">
                     <div className="relative group">
                         <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 shadow-lg">
@@ -334,7 +334,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                             )}
                         </div>
                         <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-2 shadow-lg">
-                            <label className="cursor-pointer text-purple-600 hover:text-purple-700">
+                            <label className="cursor-pointer text-green-600 hover:text-green-700">
                                 <Camera size={16} />
                                 <input
                                     type="file"
@@ -367,7 +367,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                                ? 'border-purple-500 text-purple-600'
+                                ? 'border-green-500 text-green-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                         >
@@ -465,7 +465,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPasswordModal(true)}
-                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                                 >
                                     <Shield size={16} />
                                     Change Password
@@ -499,7 +499,7 @@ const ProfileSettings = ({ profile, setProfile, handleProfileUpdate }) => {
                 <div className="mt-8 flex justify-end">
                     <button
                         type="submit"
-                        className="px-8 py-3  text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium"
+                        className="px-8 py-3  text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 font-medium"
                         disabled={localLoading}
                     >
                         {localLoading ? (
@@ -547,7 +547,7 @@ const FormField = ({ label, value, onChange, type = 'text', disabled = false, re
                 disabled={disabled}
                 required={required}
                 placeholder={placeholder}
-                className={`w-full px-4 py-3 ${Icon ? 'pl-10' : ''} border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${disabled ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                className={`w-full px-4 py-3 ${Icon ? 'pl-10' : ''} border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 ${disabled ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
             />
         </div>

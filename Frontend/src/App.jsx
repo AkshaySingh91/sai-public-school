@@ -12,6 +12,7 @@ import SchoolAdminRoutes from "./Pages/SchoolAdmin/SchoolAdminRoutes";
 import CollegeAdminRoutes from "./Pages/CollegeAdmin/CollegeAdminRoutes";
 import NotFound from "./components/NotFound"
 import EmployeeFormWithToken from "./Pages/SchoolAdmin/Employee/EmployeeFormWithToken"; // Add this
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 const App = () => {
   return (
@@ -49,22 +50,25 @@ const ProtectedRoutes = () => {
   if (!school && role !== "superadmin") {
     return <Navigate to="/login" replace />;
   }
+
   return (<>
-    <Routes>
-      <Route
-        index
-        element={
-          <Navigate
-            to={institutionType?.toLowerCase() === "college" ? "/college" : "/school"}
-            replace
-          />
-        }
-      />
-      {role === "superadmin" && <Route path="/*" element={<SuperAdminRoutes />} />}
-      {institutionType?.toLowerCase() === "school" && <Route path="/school/*" element={<SchoolAdminRoutes />} />}
-      {institutionType?.toLowerCase() === "college" && <Route path="/college/*" element={<CollegeAdminRoutes />} />}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <ThemeProvider college={school}>
+      <Routes>
+        <Route
+          index
+          element={
+            <Navigate
+              to={institutionType?.toLowerCase() === "college" ? "/college" : "/school"}
+              replace
+            />
+          }
+        />
+        {role === "superadmin" && <Route path="/*" element={<SuperAdminRoutes />} />}
+        {institutionType?.toLowerCase() === "school" && <Route path="/school/*" element={<SchoolAdminRoutes />} />}
+        {institutionType?.toLowerCase() === "college" && <Route path="/college/*" element={<CollegeAdminRoutes />} />}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </ThemeProvider>
   </>);
 };
 

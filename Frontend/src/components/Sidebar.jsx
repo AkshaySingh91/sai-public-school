@@ -2,11 +2,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FiActivity, FiUsers, FiBook, FiSettings, FiLogOut, FiHome, FiChevronRight, FiX } from "react-icons/fi";
 import Swal from "sweetalert2";
 import { NavLink } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import { useEffect, useRef, useState } from "react";
 import { TbBus } from "react-icons/tb";
 import { MdOutlineInventory2 } from "react-icons/md";
-import { useInstitution } from "../../contexts/InstitutionContext";
+import { useInstitution } from "../contexts/InstitutionContext";
 import { AiOutlineMenuUnfold } from "react-icons/ai";
 import {
   ChevronsLeftIcon, ChevronsRightIcon, Building2Icon,
@@ -21,7 +21,7 @@ import {
 
 
 
-const AdminSidebar = () => {
+const Sidebar = () => {
   const { logout, role, userData } = useAuth();
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -29,6 +29,7 @@ const AdminSidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const sidebarRef = useRef();
   const { school } = useInstitution();
+
   let menuItems;
   if (userData.role === "superadmin") {
     menuItems = school.type?.toLowerCase() === "school" ? [
@@ -79,29 +80,42 @@ const AdminSidebar = () => {
       { icon: FiSettings, text: "Settings", path: "/school/settings" },
       { icon: Building2Icon, text: "Manage Institution", path: "/manage-institute" },
     ] : [
-      { icon: FiActivity, text: "Dashboard", path: "/college" },
       {
-        icon: FiUsers,
-        text: "Students",
-        path: "/college/students",
-        subItems: [
-          { text: "All Student", path: "/college/students" },
-          { text: "Daily Book", path: "/college/students/daily-book" },
-          { text: "Outstanding Fees", path: "/college/students/outstanding-fee" },
-          { text: "Add Student", path: "/college/students/add" },
-        ],
+        icon: Home,
+        text: 'Dashboard',
+        path: '/college',
       },
       {
-        icon: FiHome,
-        text: "College",
-        path: "/college",
-        subItems: [
-          { text: "Payment Structure", path: "/college/payment-structure" },
-          { text: "Fee Structure", path: "/college/fee-structure" },
-        ],
+        icon: Users,
+        text: 'All Students',
+        path: '/college/students',
+      },
+      {
+        icon: IndianRupee,
+        text: 'Outstanding Fees',
+        path: '/college/outstanding-fee',
+      },
+      {
+        icon: Calendar,
+        text: 'Daily Book',
+        path: '/college/daily-book',
+      },
+      {
+        icon: UserPlus,
+        text: 'Applied Students',
+        path: '/college/applied-students',
+      },
+      {
+        icon: FileText,
+        text: 'Admission Form',
+        path: '/college/admission-form',
+      },
+      {
+        icon: Settings,
+        text: 'Settings',
+        path: '/college/settings',
       },
       { icon: Building2Icon, text: "Manage Institution", path: "/manage-institute" },
-      { icon: FiSettings, text: "Settings", path: "/college/settings" },
     ];;
   } else {
     menuItems = userData.institutionType?.toLowerCase() === "school" ? [
@@ -252,12 +266,11 @@ const AdminSidebar = () => {
   }, [isDesktop]);
 
   const sidebarWidth = isCollapsed && isDesktop ? 'w-20' : 'w-64';
-
   return (
     <>
       {/* Mobile Menu Button */}
       <button
-        className={`lg:hidden fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 active:bg-gray-100 p-3 rounded-xl shadow-lg border border-gray-200 text-violet-600 hover:text-violet-700 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 ${isSidebarOpen ? 'opacity-0 pointer-events-none translate-x-64' : 'opacity-100 translate-x-0'}`}
+        className={`lg:hidden fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 active:bg-gray-100 p-3 rounded-xl shadow-lg border border-gray-200 ${school?.type === "college" ? "text-green-600 hover:text-green-700" : "text-blue-600 hover:text-blue-700"} transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 ${isSidebarOpen ? 'opacity-0 pointer-events-none translate-x-64' : 'opacity-100 translate-x-0'}`}
         onClick={() => setSidebarOpen(true)}
         aria-label="Open menu"
       >
@@ -295,7 +308,7 @@ const AdminSidebar = () => {
         <div className="" style={{ scrollbarWidth: "thin", scrollbarColor: "#e5e7eb transparent" }}>
 
           {/* Header Section */}
-          <div className="sticky top-0 bg-white border-b border-gray-100">
+          <div className={`sticky top-0 ${school?.type === "college" ? "bg-green-50" : "bg-blue-50"} border-b border-gray-100`}>
             {/* Mobile Close Button */}
             {!isDesktop && (
               <div className="flex justify-end p-4 pb-2">
@@ -323,7 +336,7 @@ const AdminSidebar = () => {
                     </button>
                   )}
                   {(!isCollapsed || !isDesktop) && school && (
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-100">
+                    <div className={`bg-gradient-to-r ${school.type === "college" ? "from-green-100 to-emerald-100 border-green-200" : "from-blue-100 to-indigo-100 border-blue-200"} rounded-xl p-3 border`}>
                       <div className="flex items-center">
                         <div className="flex-shrink-0 mr-3">
                           {school?.logoImage ? (
@@ -336,7 +349,7 @@ const AdminSidebar = () => {
                               }}
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                            <div className={`w-10 h-10 bg-gradient-to-br ${school.type === "college" ? "from-green-500 to-emerald-600" : "from-blue-500 to-indigo-600"} rounded-lg flex items-center justify-center shadow-sm`}>
                               <span className="text-white font-bold text-lg">
                                 {school?.schoolName?.charAt(0) || "S"}
                               </span>
@@ -380,7 +393,7 @@ const AdminSidebar = () => {
                             }}
                           />
                         ) : (
-                          <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg border-2 border-white capitalize">
+                          <div className={`w-12 h-12 bg-gradient-to-br ${school.type === "college" ? "from-green-500 to-emerald-600" : "from-blue-500 to-indigo-600"} rounded-xl flex items-center justify-center shadow-lg border-2 border-white capitalize`}>
                             <span className="text-white font-bold text-xl">
                               {(school?.type?.toLowerCase() == "school" ? (school?.schoolName?.charAt(0) || "S") : (school?.collegeName?.charAt(0) || "S")) || "S"}
                             </span>
@@ -406,7 +419,9 @@ const AdminSidebar = () => {
                             userData.privilege?.toLowerCase() === "read" ? `${userData.role}` : (school.type?.toLowerCase() === "school" ? "School Admin" : "College Admin")
                           }
                         </span>
-                        <span className='px-3 py-0.5 mt-1 rounded-full text-xs font-medium w-fit whitespace-nowrap bg-blue-100 text-blue-800'>{userData?.privilege?.toLowerCase() === "read" ? "Read Only" : "Read & Write"}</span>
+                        <span className={`px-3 py-0.5 mt-1 rounded-full text-xs font-medium w-fit whitespace-nowrap ${school.type === "college" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}`}>
+                          {userData?.privilege?.toLowerCase() === "read" ? "Read Only" : "Read & Write"}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -438,96 +453,112 @@ const AdminSidebar = () => {
             )}
 
             <ul className="space-y-1">
-              {menuItems.map((item, index) => (
-                <motion.li
-                  key={item.text}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  {item.subItems ? (
-                    <div className="space-y-1">
-                      <button
-                        onClick={() => toggleSubmenu(item.path)}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 ease-in-out hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 group ${openSubmenu === item.path ? "text-blue-600 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm" : "text-gray-700 hover:text-blue-600"}`}
+              {menuItems.map((item, index) => {
+                const themeClass = school?.type === "college"
+                  ? "from-green-50 to-emerald-50 text-green-600 focus:ring-green-500"
+                  : "from-blue-50 to-indigo-50 text-blue-600 focus:ring-blue-500";
+
+                return (
+                  <motion.li
+                    key={item.text}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    {item.subItems ? (
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => toggleSubmenu(item.path)}
+                          className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 ease-in-out hover:bg-gradient-to-r hover:${themeClass.split(' ')[0]} hover:${themeClass.split(' ')[1]} focus:outline-none focus:ring-2 focus:ring-opacity-50 group ${openSubmenu === item.path ? `text-${school?.type === "college" ? "green" : "blue"}-600 bg-gradient-to-r ${themeClass} shadow-sm` : "text-gray-700 hover:text-gray-800"}`}
+                          title={isCollapsed && isDesktop ? item.text : undefined}
+                        >
+                          <div className={`flex items-center min-w-0 ${isCollapsed && isDesktop ? 'justify-center w-full' : 'flex-1'}`}>
+                            <item.icon className={`text-xl flex-shrink-0 ${isCollapsed && isDesktop ? '' : 'mr-3'} ${openSubmenu === item.path ? `text-${school?.type === "college" ? "green" : "blue"}-600` : "text-blue-500"}`} />
+                            {(!isCollapsed || !isDesktop) && (
+                              <span className="font-medium truncate text-sm">{item.text}</span>
+                            )}
+                          </div>
+                          {(!isCollapsed || !isDesktop) && (
+                            <motion.div
+                              animate={{ rotate: openSubmenu === item.path ? 90 : 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="flex-shrink-0 ml-2"
+                            >
+                              <FiChevronRight className="text-lg" />
+                            </motion.div>
+                          )}
+                        </button>
+
+                        <AnimatePresence>
+                          {openSubmenu === item.path && (!isCollapsed || !isDesktop) && (
+                            <motion.ul
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="pl-10 space-y-1 overflow-hidden"
+                            >
+                              {item.subItems.map((subItem, subIndex) => (
+                                <motion.li
+                                  key={subItem.text}
+                                  initial={{ opacity: 0, x: -20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: subIndex * 0.1 }}
+                                >
+                                  <NavLink
+                                    to={subItem.path}
+                                    onClick={() => !isDesktop && setSidebarOpen(false)}
+                                    className={({ isActive }) =>
+                                      `block py-2 pl-3 pr-2 rounded-lg transition-all duration-200 truncate text-sm group
+                          ${isActive
+                                        ? `text-${school?.type === "college" ? "green" : "blue"}-600 bg-${school?.type === "college" ? "green" : "blue"}-50 font-medium shadow-sm border-l-2 border-${school?.type === "college" ? "green" : "blue"}-500`
+                                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                                      }`
+                                    }
+                                  >
+                                    <span className="flex items-center">
+                                      {subItem.text}
+                                    </span>
+                                  </NavLink>
+                                </motion.li>
+                              ))}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <NavLink
+                        to={item.path}
+                        onClick={() => !isDesktop && setSidebarOpen(false)}
+                        end
+                        className={({ isActive }) => {
+                          const baseTheme = themeClass.split(' ');
+                          const activeColor = school?.type === "college" ? "green" : "blue";
+
+                          return `
+      flex items-center p-3 rounded-xl transition-all duration-300 ease-in-out
+      hover:bg-gradient-to-r hover:${baseTheme[0]} hover:${baseTheme[1]} group
+      ${isActive
+                              ? `text-${activeColor}-600 bg-gradient-to-r ${themeClass} font-medium shadow-sm`
+                              : "text-gray-700 hover:text-gray-800"
+                            }
+      ${isCollapsed && isDesktop ? 'justify-center' : ''}
+    `;
+                        }}
                         title={isCollapsed && isDesktop ? item.text : undefined}
                       >
-                        <div className={`flex items-center min-w-0 ${isCollapsed && isDesktop ? 'justify-center w-full' : 'flex-1'}`}>
-                          <item.icon className={`text-xl flex-shrink-0 ${isCollapsed && isDesktop ? '' : 'mr-3'}`} />
-                          {(!isCollapsed || !isDesktop) && (
-                            <span className="font-medium truncate text-sm">{item.text}</span>
-                          )}
-                        </div>
+                        <item.icon
+                          className={`text-xl flex-shrink-0 ${isCollapsed && isDesktop ? '' : 'mr-3'} ${school?.type === "college" ? "text-green-600" : "text-blue-600"
+                            }`}
+                        />
                         {(!isCollapsed || !isDesktop) && (
-                          <motion.div
-                            animate={{ rotate: openSubmenu === item.path ? 90 : 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="flex-shrink-0 ml-2"
-                          >
-                            <FiChevronRight className="text-lg" />
-                          </motion.div>
+                          <span className="font-medium truncate text-sm">{item.text}</span>
                         )}
-                      </button>
-
-                      <AnimatePresence>
-                        {openSubmenu === item.path && (!isCollapsed || !isDesktop) && (
-                          <motion.ul
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="pl-10 space-y-1 overflow-hidden"
-                          >
-                            {item.subItems.map((subItem, subIndex) => (
-                              <motion.li
-                                key={subItem.text}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: subIndex * 0.1 }}
-                              >
-                                <NavLink
-                                  to={subItem.path}
-                                  onClick={() => !isDesktop && setSidebarOpen(false)}
-                                  className={({ isActive }) =>
-                                    `block py-2 pl-3 pr-2 rounded-lg transition-all duration-200 truncate text-sm group
-                          ${isActive
-                                      ? "text-blue-600 bg-blue-50 font-medium shadow-sm  border-blue-500"
-                                      : "text-gray-600 hover:text-blue-600 hover:bg-gray-50  "
-                                    }`
-                                  }
-                                >
-                                  <span className="flex items-center">
-                                    {subItem.text}
-                                  </span>
-                                </NavLink>
-                              </motion.li>
-                            ))}
-                          </motion.ul>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ) : (
-                    <NavLink
-                      to={item.path}
-                      onClick={() => !isDesktop && setSidebarOpen(false)}
-                      end
-                      className={({ isActive }) =>
-                        `flex items-center p-3 rounded-xl transition-all duration-300 ease-in-out
-                        hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 group
-                        ${isActive
-                          ? "text-blue-600 bg-gradient-to-r from-blue-50 to-indigo-50 font-medium shadow-sm"
-                          : "text-gray-700 hover:text-blue-600"
-                        } ${isCollapsed && isDesktop ? 'justify-center' : ''}`}
-                      title={isCollapsed && isDesktop ? item.text : undefined}
-                    >
-                      <item.icon className={`text-xl flex-shrink-0 ${isCollapsed && isDesktop ? '' : 'mr-3'}`} />
-                      {(!isCollapsed || !isDesktop) && (
-                        <span className="font-medium truncate text-sm">{item.text}</span>
-                      )}
-                    </NavLink>
-                  )}
-                </motion.li>
-              ))}
+                      </NavLink>
+                    )}
+                  </motion.li>
+                );
+              })}
             </ul>
           </nav>
 
@@ -556,4 +587,4 @@ const AdminSidebar = () => {
   );
 };
 
-export default AdminSidebar;
+export default Sidebar;

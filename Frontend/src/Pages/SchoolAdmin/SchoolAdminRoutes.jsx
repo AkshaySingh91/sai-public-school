@@ -1,6 +1,6 @@
 // src/components/Admin/AdminRoutes.jsx
 import { Routes, Route, Outlet, useNavigate } from 'react-router-dom';
-import AdminSidebar from '../../components/Admin/AdminSidebar';
+import Sidebar from '../../components/Sidebar';
 import AdminDashboard from './AdminDashboard';
 import EmployeeList from './Employee/EmployeeList';
 import EmployeeDetail from './Employee/EmployeeDetail';
@@ -34,7 +34,7 @@ const AdminLayout = () => {
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar Container */}
         <div className="flex-shrink-0">
-          <AdminSidebar />
+          <Sidebar />
         </div>
 
         {/* Main Content Container */}

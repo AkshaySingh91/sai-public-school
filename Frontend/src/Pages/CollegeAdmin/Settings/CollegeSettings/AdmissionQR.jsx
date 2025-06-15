@@ -9,7 +9,7 @@ const AdmissionQR = () => {
     const [showShareModal, setShowShareModal] = useState(false);
 
     const collegeCode = college?.Code;
-    const admissionUrl = `${window.location.origin}/admission/${collegeCode}`;
+    const admissionUrl = `${window.location.origin}/college/admission/${collegeCode}`;
     const collegeName = college?.collegeName || 'Our Institution';
 
     const copyToClipboard = () => {
@@ -96,48 +96,48 @@ const AdmissionQR = () => {
 
     return (
         <>
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Admission QR Code</h2>
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <QRCodeSVG
-                            value={admissionUrl}
-                            size={200}
-                            includeMargin={true}
-                            className="qr-code-svg"
-                        />
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Admission QR Code</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <QRCodeSVG
+                        value={admissionUrl}
+                        size={200}
+                        includeMargin={true}
+                        className="qr-code-svg"
+                    />
+                </div>
+                <div className="flex-1">
+                    <p className="text-gray-600 mb-3">
+                        Scan this QR code to access the admission form for {collegeName}
+                    </p>
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                        <p className="text-sm text-gray-600 break-all">{admissionUrl}</p>
                     </div>
-                    <div className="flex-1">
-                        <p className="text-gray-600 mb-3">
-                            Scan this QR code to access the admission form for {collegeName}
-                        </p>
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-                            <p className="text-sm text-gray-600 break-all">{admissionUrl}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                            <button
-                                onClick={copyToClipboard}
-                                className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                            >
-                                <Copy size={16} className="mr-2" />
-                                Copy Link
-                            </button>
-                            <button
-                                onClick={downloadQRCode}
-                                className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                            >
-                                <Download size={16} className="mr-2" />
-                                Download QR
-                            </button>
-                            <button
-                                onClick={() => setShowShareModal(true)}
-                                className="flex items-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-                            >
-                                <Share2 size={16} className="mr-2" />
-                                Share
-                            </button>
-                        </div>
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            onClick={copyToClipboard}
+                            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                            <Copy size={16} className="mr-2" />
+                            Copy Link
+                        </button>
+                        <button
+                            onClick={downloadQRCode}
+                            className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        >
+                            <Download size={16} className="mr-2" />
+                            Download QR
+                        </button>
+                        <button
+                            onClick={() => setShowShareModal(true)}
+                            className="flex items-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                        >
+                            <Share2 size={16} className="mr-2" />
+                            Share
+                        </button>
                     </div>
                 </div>
+            </div>
 
             {/* Share Modal */}
             {showShareModal && (

@@ -164,8 +164,8 @@ const TabButton = ({ active, onClick, icon, label }) => (
   <button
     onClick={onClick}
     className={`px-4 py-2 flex items-center gap-2 transition-colors ${active
-      ? "border-b-2 border-purple-600 text-purple-600"
-      : "text-gray-500 hover:text-purple-500"
+      ? "border-b-2 border-green-600 text-green-600"
+      : "text-gray-500 hover:text-green-500"
       }`}
   >
     {icon} {label}
@@ -204,7 +204,7 @@ const SkeletonLoader = ({ type = "default" }) => {
                 <div className="h-4 bg-gray-200 w-1/4 rounded"></div>
                 <div className="h-10 bg-gray-200 rounded-lg"></div>
               </div>
-              <div className="h-10 bg-purple-200 w-32 rounded-lg"></div>
+              <div className="h-10 bg-green-200 w-32 rounded-lg"></div>
             </div>
           </div>
         </div>

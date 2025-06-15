@@ -2,7 +2,7 @@
 import { Routes, Route, Outlet } from 'react-router-dom';
 import AdminDashboard from '../SchoolAdmin/AdminDashboard';
 import MangeInsitute from './Schools/Index';
-import AdminSidebar from '../../components/Admin/AdminSidebar';
+import Sidebar from '../../components/Sidebar';
 // employee
 import EmployeeList from '../SchoolAdmin/Employee/EmployeeList';
 import EmployeeDetail from '../SchoolAdmin/Employee/EmployeeDetail';
@@ -32,14 +32,18 @@ import NotFound from '../../components/NotFound';
 import AddStudent from '../SchoolAdmin/Student/StudentManagement/AddStudent';
 import ImportExistingStudent from '../SchoolAdmin/Student/StudentManagement/ImportExistingStudent';
 import CollegeSettings from '../CollegeAdmin/Settings/index';
+import CollegeStudentTable from '../CollegeAdmin/Students/CollegeStudentTable/CollegeStudentTable';
+import AppliedStudentList from '../CollegeAdmin/Admission/AppliedStudentList';
+import AppliedStudentDetails from '../CollegeAdmin/Admission/AppliedStudentDetails';
 
 const SuperAdminLayout = () => {
+  const { school } = useInstitution();
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen">
+    <div className={`bg-gradient-to-br ${school.type === "school" ? "from-purple-50 to-blue-50" : "from-green-50 to-emerald-50"}  min-h-screen`}>
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar Container */}
         <div className="flex-shrink-0">
-          <AdminSidebar />
+          <Sidebar />
         </div>
 
         {/* Main Content Container */}
@@ -94,6 +98,9 @@ const SuperAdminIndex = () => {
             : (school.type?.toLowerCase() == "college" ?
               <>
                 <Route path="/college" element={<CollegeAdminDashboard />} />
+                <Route path="/college/students" element={<CollegeStudentTable />} />
+                <Route path="/college/applied-students" element={<AppliedStudentList />} />
+                <Route path="/college/applied-student/:studentId" element={<AppliedStudentDetails />} />
                 <Route path="/college/settings" element={<CollegeSettings />} />
                 <Route path="*" element={<NotFound />} />
               </>

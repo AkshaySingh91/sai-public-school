@@ -1,0 +1,112 @@
+{
+    "fName": "",
+    "middleName": "",
+    "surname": "",
+    "motherName": "",
+    "gender": "",
+    "dateOfBirth": "",
+    "nationality": "",
+    "category": "",
+    "religion": "",
+    "caste": "",
+    "subCaste": "",
+    "placeOfBirth": "",
+    "address": "",
+    "pinCode": "",
+    "fatherInfo": {
+        "name": "",
+        "qualification": "",
+        "occupation": "",
+        "officeAddress": "",
+        "officePhone": "",
+        "phone": "",
+        "email": ""
+    },
+    "motherInfo": {
+        "name": "",
+        "qualification": "",
+        "occupation": "",
+        "officeAddress": "",
+        "officePhone": "",
+        "phone": "",
+        "email": ""
+    },
+    "guardianName": "",
+    "guardianRelation": "",
+    "relativeContactNo": "",
+    "annualIncome": "",
+    "collegeCommunicationMobileNo": [
+        "",
+        ""
+    ],
+    "aadharNo": "",
+    "aadharLinkedMobileNo": "",
+    "email": "",
+    "isHandicap": false,
+    "handicapDetails": {
+        "nature": ""
+    },
+    "bloodGroup": "",
+    "studentWhatsAppNo": "",
+    "schoolHistory": [
+        {
+            "10": {
+                "stream": "",
+                "seatNo": "",
+                "university": "",
+                "monthAndYear": "",
+                "schoolName": "",
+                "obtainedMarks": "",
+                "totalMarks": "",
+                "percentage": ""
+            },
+            "12": {
+                "stream": "",
+                "seatNo": "",
+                "university": "",
+                "monthAndYear": "",
+                "collegeName": "",
+                "obtainedMarks": "",
+                "totalMarks": "",
+                "percentage": ""
+            },
+            "UG": {
+                "stream": "",
+                "seatNo": "",
+                "university": "",
+                "monthAndYear": "",
+                "collegeName": "",
+                "obtainedMarks": "",
+                "totalMarks": "",
+                "percentage": ""
+            },
+            "PG": {
+                "stream": "",
+                "seatNo": "",
+                "university": "",
+                "monthAndYear": "",
+                "collegeName": "",
+                "obtainedMarks": "",
+                "totalMarks": "",
+                "percentage": ""
+            },
+            "Other": {
+                "stream": "",
+                "seatNo": "",
+                "university": "",
+                "monthAndYear": "",
+                "collegeName": "",
+                "obtainedMarks": "",
+                "totalMarks": "",
+                "percentage": ""
+            }
+        }
+    ],
+    "methodOfBed": [
+        "",
+        ""
+    ],
+    "medium": "",
+    "course": "",
+    "updatedAt": ""
+}
